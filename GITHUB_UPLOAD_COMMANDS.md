@@ -324,3 +324,39 @@ Reason: `gh repo view MOVA-hand/MOVA --json viewerPermission` reported `READ` fo
 cd /projects/u6ls/ivy77/Academic-project-page-template
 git push origin master
 ```
+
+## MOVA page push completed after switching to MOVA-hand
+
+After logging in as `MOVA-hand`, the account had admin permission on `MOVA-hand/MOVA`:
+
+```bash
+gh auth status
+gh api user -q .login
+gh repo view MOVA-hand/MOVA --json nameWithOwner,visibility,isPrivate,viewerPermission,url
+```
+
+Observed permission:
+
+```json
+{"nameWithOwner":"MOVA-hand/MOVA","viewerPermission":"ADMIN","visibility":"PUBLIC"}
+```
+
+The local page commit was pushed successfully:
+
+```bash
+cd /projects/u6ls/ivy77/Academic-project-page-template
+git push origin master
+git ls-remote origin refs/heads/master
+```
+
+Remote result:
+
+```text
+d9406393c58a0d7d95416d52bc07740b83bd7c7e refs/heads/master
+```
+
+The top Code button now points to:
+
+```text
+https://github.com/ivyyy77/oasis-hand-code
+```
