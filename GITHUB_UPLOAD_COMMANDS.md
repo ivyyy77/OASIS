@@ -293,3 +293,34 @@ git remote add origin https://github.com/ivyyy77/oasis-hand-code.git
 gh repo view ivyyy77/oasis-hand-code --json visibility -q .visibility
 git push -u origin main
 ```
+
+## MOVA project page link update attempt
+
+The local project page repository is `MOVA-hand/MOVA` on branch `master`. The Code button was updated locally to point to the private staging repository:
+
+```bash
+cd /projects/u6ls/ivy77/Academic-project-page-template
+# staged only the one-line Code href change in index.html
+git commit -m "Update Code link to private GitHub repository"
+git push origin master
+```
+
+Local page commit created:
+
+```text
+d940639 Update Code link to private GitHub repository
+```
+
+Push result:
+
+```text
+remote: Permission to MOVA-hand/MOVA.git denied to ivyyy77.
+fatal: unable to access 'https://github.com/MOVA-hand/MOVA.git/': The requested URL returned error: 403
+```
+
+Reason: `gh repo view MOVA-hand/MOVA --json viewerPermission` reported `READ` for the current account `ivyyy77`, so GitHub rejected pushing the page commit. Grant write/admin access to `ivyyy77` on `MOVA-hand/MOVA`, then run:
+
+```bash
+cd /projects/u6ls/ivy77/Academic-project-page-template
+git push origin master
+```
