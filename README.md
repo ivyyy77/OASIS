@@ -9,16 +9,12 @@ This repository contains the official code release for **OASIS: Occlusion-aware 
 </p>
 
 <p align="center">
-  <b>OASIS reconstructs high-fidelity animatable hand avatars from a single image.</b>
+  <b><i>OASIS</i></b> is a 3DGS-based one-shot hand avatar reconstruction model with efficient adaptation (~5 minutes) and real-time rendering (~390 FPS). We showcase a gallery of one-shot hand avatars that highlights both robustness and diversity: it reconstructs high-fidelity hands under challenging poses, complex textures, and extreme side-view observations, while also supporting human-image inputs and downstream applications such as texture editing and text-to-avatar generation.
 </p>
 
 ## 🚀 Getting Started
 
----
-
 ### 📢 Updates
-
----
 
 - [07/2026] Code released.
 
