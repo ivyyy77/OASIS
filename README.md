@@ -84,10 +84,18 @@ ${DATA_ROOT}/
     masks_removeblack/
     preprocess_ohta_our_full/
 
-example_data/in_the_wild/
-  images/name.png
-  masks/name.png
-  anno/name.pkl
+example_data/text-to-avatar/
+  images/{avatar_3.jpg,iron_man_1.jpg,light_yellow_new.jpg}
+  masks/{avatar_3.png,iron_man_1.png,light_yellow_new.png}
+  anno/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.pkl
+example_data/interhand2.6m/
+  images/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.jpg
+  masks/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.png
+  anno/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.pkl
+example_data/editing/
+  images/rose.jpg
+  masks/{rose.png,rose_edit.png,rose_only.png}
+  anno/rose.pkl
 ```
 
 Generate per-frame InterHand annotations with:
