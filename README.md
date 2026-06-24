@@ -1,10 +1,8 @@
 # OASIS: Occlusion-aware Single-image Hand Avatar Reconstruction via 3D Gaussian Splatting
 
-This repository contains the official code release for **OASIS**, a tailored 3D Gaussian Splatting framework for single-image hand avatar reconstruction.
+This repository contains the official code release for **OASIS: Occlusion-aware Single-image Hand Avatar Reconstruction via 3D Gaussian Splatting**.
 
-Project page: https://mova-hand.github.io/MOVA/
-
-The repository includes the lightweight `data/` source/config package required by the training and finetuning scripts, but does not include datasets, checkpoints, MANO model files, or other third-party assets.
+[![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://mova-hand.github.io/MOVA/)
 
 ## Getting Started
 
