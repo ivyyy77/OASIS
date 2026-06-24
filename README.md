@@ -4,13 +4,19 @@ This repository contains the official code release for **OASIS: Occlusion-aware 
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://mova-hand.github.io/MOVA/)
 
-## Getting Started
+## 🚀 Getting Started
 
-### Updates
+---
+
+### 📢 Updates
+
+---
 
 - [07/2026] Code released.
 
-### Installation
+### ⚙️ Installation
+
+---
 
 We test the CUDA 11.8 environment with Linux, Python 3.10, PyTorch 2.3.0, and torchvision 0.18.0.
 
@@ -34,7 +40,9 @@ pip install git+https://github.com/ashawkey/diff-gaussian-rasterization/
 pip install git+https://github.com/camenduru/simple-knn/
 ```
 
-### Required Assets and Models
+### 📦 Required Assets and Models
+
+---
 
 Place the hand model, segmentation, dense-point, and UV assets under the repository root. Prepared examples use MANO annotation pickle files directly, so no separate HaMeR checkpoint is required for the commands below.
 
@@ -56,7 +64,9 @@ mano_uv/
   original mano template/hand.obj
 ```
 
-### Pre-trained Model
+### 🧠 Pre-trained Model
+
+---
 
 Use the released OASIS checkpoint as the default prior for reconstruction, evaluation, and finetuning.
 
@@ -67,7 +77,9 @@ checkpoint/
 
 Checkpoints will be distributed through the [OASIS GitHub releases](https://github.com/ivyyy77/oasis-hand-code/releases). The filename is parsed automatically by the scripts, so the iteration number should remain in the checkpoint name.
 
-### Data Preparation
+### 🗂️ Data Preparation
+
+---
 
 Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps, following the preprocessing pipeline of [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/) for the detailed data processing steps. For in-the-wild samples, refer to [WiLoR](https://github.com/rolpotamias/WiLoR) for hand localization and reconstruction preprocessing, then convert the WiLoR outputs into the image, mask, and MANO annotation triplets shown below.
 
@@ -108,7 +120,9 @@ python generate_interhand_anno.py \
   --frame test/Capture0/ROM03_RT_No_Occlusion/cam400272/image15012.jpg
 ```
 
-### Inference / One-shot Reconstruction
+### ✨ Inference / One-shot Reconstruction
+
+---
 
 For an in-the-wild image, provide a matching mask and MANO annotation in the sibling folders shown above.
 
@@ -122,7 +136,9 @@ python finetune_wild_id2_ohta.py \
   --animate_to_handavatar=False
 ```
 
-### Training and Evaluation
+### 📈 Training and Evaluation
+
+---
 
 The prior training entry is `train_interhand.py`.
 
@@ -155,7 +171,9 @@ python finetune_interhand_ohta.py \
   --pseudo-views=8
 ```
 
-### Editing Finetune
+### 🎨 Editing Finetune
+
+---
 
 For texture or text-to-avatar editing, use the edit-specific wild-image entry. Place the edited target in `images/`, the foreground mask in `masks/`, the edit mask as `masks/name_edit.png`, and the MANO annotation in `anno/`.
 
@@ -171,13 +189,17 @@ python finetune_edit_wild_ohta.py \
   --pseudo-views=8
 ```
 
-## License and Acknowledgements
+## 📄 License and Acknowledgements
+
+---
 
 The released code is provided under the Apache License 2.0. Please also respect the licenses of MANO, InterHand2.6M, and any downloaded third-party model weights.
 
 We thank [LHM](https://github.com/aigc3d/LHM), [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/), [OHTA](https://github.com/bytedance/OHTA), and [WiLoR](https://github.com/rolpotamias/WiLoR) for their excellent work.
 
-## Citation
+## 📚 Citation
+
+---
 
 ```bibtex
 @inproceedings{oasis2026,
