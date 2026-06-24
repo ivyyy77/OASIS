@@ -71,7 +71,7 @@ Checkpoints will be distributed through the [OASIS GitHub releases](https://gith
 
 ### Data Preparation
 
-Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps. For in-the-wild samples, refer to [WiLoR](https://github.com/rolpotamias/WiLoR) for hand localization and reconstruction preprocessing, then convert the WiLoR outputs into the image, mask, and MANO annotation triplets shown below.
+Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps, following the preprocessing pipeline of [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/) for the detailed data processing steps. For in-the-wild samples, refer to [WiLoR](https://github.com/rolpotamias/WiLoR) for hand localization and reconstruction preprocessing, then convert the WiLoR outputs into the image, mask, and MANO annotation triplets shown below.
 
 ```text
 ${DATA_ROOT}/
