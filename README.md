@@ -191,15 +191,11 @@ python finetune_edit_wild_ohta.py \
 
 ## 📄 License and Acknowledgements
 
----
-
 The released code is provided under the Apache License 2.0. Please also respect the licenses of MANO, InterHand2.6M, and any downloaded third-party model weights.
 
 We thank [LHM](https://github.com/aigc3d/LHM), [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/), [OHTA](https://github.com/bytedance/OHTA), and [WiLoR](https://github.com/rolpotamias/WiLoR) for their excellent work.
 
 ## 📚 Citation
-
----
 
 ```bibtex
 @inproceedings{oasis2026,
