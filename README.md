@@ -71,7 +71,7 @@ Checkpoints will be distributed through the [OASIS GitHub releases](https://gith
 
 ### Data Preparation
 
-Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps. Use [WiLoR](https://github.com/rolpotamias/WiLoR) to detect and crop in-the-wild hand images and estimate the initial MANO parameters. Please follow the WiLoR repository for installation, pretrained weights, MANO_RIGHT.pkl placement, and demo inference. OASIS then consumes the prepared image, mask, and MANO annotation triplets.
+Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps. For in-the-wild samples, refer to [WiLoR](https://github.com/rolpotamias/WiLoR) for hand localization and reconstruction preprocessing. Since WiLoR's native output format is not identical to OASIS, convert the processed results into the image, mask, and MANO annotation triplets shown below.
 
 ```text
 ${DATA_ROOT}/
@@ -90,14 +90,6 @@ example_data/in_the_wild/
   images/name.png
   masks/name.png
   anno/name.pkl
-```
-
-Prepare in-the-wild samples with WiLoR:
-
-```bash
-git clone --recursive https://github.com/rolpotamias/WiLoR.git
-cd WiLoR
-python demo.py --img_folder demo_img --out_folder demo_out --save_mesh --fast
 ```
 
 Generate per-frame InterHand annotations with:
