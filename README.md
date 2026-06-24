@@ -4,6 +4,14 @@ This repository contains the official code release for **OASIS: Occlusion-aware 
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://mova-hand.github.io/MOVA/)
 
+<p align="center">
+  <img src="static/images/teaser.jpg" width="95%" alt="OASIS teaser">
+</p>
+
+<p align="center">
+  <b>OASIS reconstructs high-fidelity animatable hand avatars from a single image.</b>
+</p>
+
 ## 🚀 Getting Started
 
 ---
