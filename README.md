@@ -4,6 +4,8 @@ This repository contains the official code release for **OASIS**, a tailored 3D 
 
 Project page: https://mova-hand.github.io/MOVA/
 
+The repository includes the lightweight `data/` source/config package required by the training and finetuning scripts, but does not include datasets, checkpoints, MANO model files, or other third-party assets.
+
 ## Getting Started
 
 ### Updates
@@ -12,7 +14,7 @@ Project page: https://mova-hand.github.io/MOVA/
 
 ### Installation
 
-The CUDA 11.8 environment follows the installation recipe from [LHM](https://github.com/aigc3d/LHM). We test with Linux, Python 3.10, PyTorch 2.3.0, and torchvision 0.18.0.
+We test the CUDA 11.8 environment with Linux, Python 3.10, PyTorch 2.3.0, and torchvision 0.18.0.
 
 ```bash
 git clone https://github.com/ivyyy77/oasis-hand-code.git
@@ -36,9 +38,9 @@ pip install git+https://github.com/camenduru/simple-knn/
 
 ### Required Assets and Models
 
-Place the hand, body, segmentation, dense-point, and UV assets under the repository root. Prepared examples use MANO annotation pickle files directly, so no separate HaMeR checkpoint is required for the commands below.
+Place the hand model, segmentation, dense-point, and UV assets under the repository root. Prepared examples use MANO annotation pickle files directly, so no separate HaMeR checkpoint is required for the commands below.
 
-Download third-party assets from the official [MANO](https://mano.is.tue.mpg.de/), [SMPL-X](https://smpl-x.is.tue.mpg.de/), [SAM 2](https://github.com/facebookresearch/sam2), [Sapiens](https://github.com/facebookresearch/sapiens), and [BiRefNet](https://github.com/ZhengPeng7/BiRefNet) pages, then keep the filenames and folders as below.
+Download third-party assets from the official [MANO](https://mano.is.tue.mpg.de/), [SAM 2](https://github.com/facebookresearch/sam2), [Sapiens](https://github.com/facebookresearch/sapiens), and [BiRefNet](https://github.com/ZhengPeng7/BiRefNet) pages, then keep the filenames and folders as below.
 
 ```text
 checkpoint/
@@ -48,8 +50,6 @@ pretrained_models/
   dense_sample_points/manohd_semantic.ply
   human_model_files/
     mano/
-    smpl/
-    smplx/
   mano_subdiv/mano_subdiv_2.pth
   sam2/
   sapiens/pretrained/checkpoints/sapiens_1b/
@@ -71,7 +71,7 @@ Checkpoints will be distributed through the [OASIS GitHub releases](https://gith
 
 ### Data Preparation
 
-Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps. Single-image examples use prepared image, mask, and MANO annotation triplets.
+Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps. Use [WiLoR](https://github.com/rolpotamias/WiLoR) to detect and crop in-the-wild hand images and estimate the initial MANO parameters. Please follow the WiLoR repository for installation, pretrained weights, MANO_RIGHT.pkl placement, and demo inference. OASIS then consumes the prepared image, mask, and MANO annotation triplets.
 
 ```text
 ${DATA_ROOT}/
@@ -90,6 +90,14 @@ example_data/in_the_wild/
   images/name.png
   masks/name.png
   anno/name.pkl
+```
+
+Prepare in-the-wild samples with WiLoR:
+
+```bash
+git clone --recursive https://github.com/rolpotamias/WiLoR.git
+cd WiLoR
+python demo.py --img_folder demo_img --out_folder demo_out --save_mesh --fast
 ```
 
 Generate per-frame InterHand annotations with:
@@ -167,9 +175,9 @@ python finetune_edit_wild_ohta.py \
 
 ## License and Acknowledgements
 
-The released code is provided under the Apache License 2.0. Please also respect the licenses of MANO, SMPL-X, InterHand2.6M, and any downloaded third-party model weights.
+The released code is provided under the Apache License 2.0. Please also respect the licenses of MANO, InterHand2.6M, and any downloaded third-party model weights.
 
-We thank [LHM](https://github.com/aigc3d/LHM), [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/), and [OHTA](https://github.com/bytedance/OHTA) for their excellent work.
+We thank [LHM](https://github.com/aigc3d/LHM), [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/), [OHTA](https://github.com/bytedance/OHTA), and [WiLoR](https://github.com/rolpotamias/WiLoR) for their excellent work.
 
 ## Citation
 

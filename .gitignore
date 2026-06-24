@@ -50,3 +50,13 @@ example_data/
 
 .ipynb_checkpoints/
 .DS_Store
+
+# Keep the lightweight dataset source/config package while excluding real data.
+!data/
+!data/**/
+!data/**/*.py
+!data/**/*.yaml
+!data/**/*.yml
+!data/**/*.txt
+!data/**/README.md
+!data/**/put_*
