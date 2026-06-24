@@ -79,7 +79,12 @@ checkpoint/
   iteration_30000.ckpt
 ```
 
-Checkpoints will be distributed through the [OASIS GitHub releases](https://github.com/ivyyy77/oasis-hand-code/releases). The filename is parsed automatically by the scripts, so the iteration number should remain in the checkpoint name.
+Download the pretrained checkpoint from [Google Drive](https://drive.google.com/file/d/1UVMyPexOIp4GT0We31dW5kTJjEd7Wcdw/view?usp=drive_link) and place it under `checkpoint/iteration_30000.ckpt`. The filename is parsed automatically by the scripts, so the iteration number should remain in the checkpoint name.
+
+```bash
+mkdir -p checkpoint
+gdown --fuzzy "https://drive.google.com/file/d/1UVMyPexOIp4GT0We31dW5kTJjEd7Wcdw/view?usp=drive_link" -O checkpoint/iteration_30000.ckpt
+```
 
 ### 🗂️ Data Preparation
 
