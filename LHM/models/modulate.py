@@ -1,4 +1,3 @@
-# Copyright (c) 2023-2024, Zexin He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +19,7 @@ import torch.nn as nn
 class ModLN(nn.Module):
     """
     Modulation with adaLN.
-    
+
     References:
     DiT: https://github.com/facebookresearch/DiT/blob/main/models.py#L101
     """
@@ -34,10 +33,10 @@ class ModLN(nn.Module):
 
     @staticmethod
     def modulate(x, shift, scale):
-        # x: [N, L, D]
-        # shift, scale: [N, D]
+
+
         return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
 
     def forward(self, x: torch.Tensor, mod: torch.Tensor) -> torch.Tensor:
-        shift, scale = self.mlp(mod).chunk(2, dim=-1)  # [N, D]
-        return self.modulate(self.norm(x), shift, scale)  # [N, L, D]
+        shift, scale = self.mlp(mod).chunk(2, dim=-1)
+        return self.modulate(self.norm(x), shift, scale)

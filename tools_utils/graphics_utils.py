@@ -1,13 +1,12 @@
-#
-# Copyright (C) 2023, Inria
-# GRAPHDECO research group, https://team.inria.fr/graphdeco
-# All rights reserved.
-#
-# This software is free for non-commercial, research and evaluation use
-# under the terms of the LICENSE.md file.
-#
-# For inquiries contact  george.drettakis@inria.fr
-#
+
+
+
+
+
+
+
+
+
 
 import torch
 import math
@@ -66,18 +65,18 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     P[1, 2] = (top + bottom) / (top - bottom)
     P[3, 2] = z_sign
     P[2, 2] = z_sign * zfar / (zfar - znear)
-    P[2, 3] = -2 * (zfar * znear) / (zfar - znear) #-(zfar * znear) / (zfar - znear)
+    P[2, 3] = -2 * (zfar * znear) / (zfar - znear)
     return P
 
-# tensor([[ 2.0463e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00],
-#         [ 0.0000e+00,  2.0546e+00,  0.0000e+00,  0.0000e+00],
-#         [ 0.0000e+00,  0.0000e+00,  1.0000e+00, -1.0000e-03],
-#         [ 0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00]]) [12/10 09:44:14]
 
-# tensor([[ 2.0463e+00,  0.0000e+00,  3.9123e-02,  0.0000e+00],
-#         [ 0.0000e+00,  2.0546e+00, -5.0103e-03,  0.0000e+00],
-#         [ 0.0000e+00,  0.0000e+00,  1.0000e+00, -2.0000e-03],
-#         [ 0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00]], device='cuda:0') [12/10 09:42:17]
+
+
+
+
+
+
+
+
 
 def getProjectionMatrix_refine(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
     fx = K[0, 0]
@@ -96,7 +95,7 @@ def getProjectionMatrix_refine(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
     P[1, 2] = -1 + 2 * (cy / H)
 
     P[2, 2] = z_sign * (zfar + znear) / (zfar - znear)
-    P[2, 3] = -1 * z_sign * 2 * zfar * znear / (zfar - znear) # z_sign * 2 * zfar * znear / (zfar - znear)
+    P[2, 3] = -1 * z_sign * 2 * zfar * znear / (zfar - znear)
     P[3, 2] = z_sign
 
     return P

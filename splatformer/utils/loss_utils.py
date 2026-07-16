@@ -7,7 +7,7 @@ class lpips_loss_fn():
             param.requires_grad = False
 
     def __call__(self, x, y):
-        # x  B,H,W,C [0,1]
-        # y  B,H,W,C [0,1]
-        loss = self.lpips(x.permute(0,3,1,2), y.permute(0,3,1,2), normalize=True)#.mean()
+
+
+        loss = self.lpips(x.permute(0,3,1,2), y.permute(0,3,1,2), normalize=True)
         return loss

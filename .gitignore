@@ -4,6 +4,10 @@ __pycache__/
 *.log
 *.out
 *.err
+*.o
+*.so
+*.egg-info/
+build/
 
 logs/
 log/
@@ -50,6 +54,22 @@ example_data/
 
 .ipynb_checkpoints/
 .DS_Store
+.verification/
+pretrained_models
+
+# Local reference / staging helpers.
+GITHUB_UPLOAD_COMMANDS.md
+GITHUB_RELEASE_PLAN.md
+UPLOAD_FILE_LIST.txt
+train_mix_3.py
+train_in_co.py
+test_wild.py
+test_hand.py
+test_hanco.py
+render_piano.py
+finetune_wild_ohta.py
+finetune_wild.py
+finetune_interhand.py
 
 # Keep the lightweight dataset source/config package while excluding real data.
 !data/
@@ -60,3 +80,9 @@ example_data/
 !data/**/*.txt
 !data/**/README.md
 !data/**/put_*
+
+!runtime_assets/
+!runtime_assets/**/
+!runtime_assets/manohd_lbs_weights.pth
+!runtime_assets/mano_uv/change/change_r.npy
+!runtime_assets/mano_uv/original mano template/hand.obj

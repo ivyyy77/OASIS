@@ -11,8 +11,6 @@ import cv2
 def load_image(path, to_rgb=True):
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     return img
-    # img = Image.open(path)
-    # return img.convert('RGB') if to_rgb else img
 
 
 def save_image(image_numpy, image_path):
@@ -53,18 +51,18 @@ def tile_images(images, imgs_per_row=4):
     imgout = np.concatenate(rows, axis=0)
     return imgout
 
-     
+
 class ImageWriter():
     def __init__(self, output_dir, exp_name, clear=True):
         self.image_dir = os.path.join(output_dir, exp_name)
 
-        print("The rendering is saved in " + \
+        print("The rendering is saved in " +\
               colored(self.image_dir, 'cyan'))
-        
-        # remove image dir if it exists
+
+
         if os.path.exists(self.image_dir) and clear:
             shutil.rmtree(self.image_dir)
-        
+
         os.makedirs(self.image_dir, exist_ok=True)
         self.frame_idx = -1
 
@@ -74,12 +72,12 @@ class ImageWriter():
             img_name = f"{self.frame_idx:06d}"
         save_image(image, f'{self.image_dir}/{img_name}.png')
         return self.frame_idx, img_name
-    
+
     def append_obj(self, verts, faces, obj_name=None):
         if obj_name is None:
             obj_name = f"{self.image_dir}/{self.frame_idx:06d}.obj"
         save_obj(verts, faces, obj_name)
-    
+
     def append_ply(self, mesh, ply_name=None, postfix=None):
         if ply_name is None:
             ply_name = f'{self.image_dir}/{self.frame_idx:06d}'
@@ -90,6 +88,6 @@ class ImageWriter():
 
     def finalize(self):
         pass
-    
+
     def skip(self):
         self.frame_idx += 1

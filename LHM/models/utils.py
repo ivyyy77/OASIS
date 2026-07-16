@@ -36,4 +36,3 @@ class StaticParameterTuner:
 
     def get_value(self, step):
         return self.v
-

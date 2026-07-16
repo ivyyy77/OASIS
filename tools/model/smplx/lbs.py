@@ -129,10 +129,10 @@ def get_normal_coord_system(normals):
     e_x = torch.tensor([0., 0., 1.], device=device, dtype=dtype)
 
     basis = torch.zeros(len(normals), 3, 3, dtype=dtype, device=device)
-    # e_z' = e_n
+
     basis[:, 2] = torch.nn.functional.normalize(normals, p=2, dim=-1)
 
-    # e_x' = e_n x e_y except e_n || e_y then e_x' = e_x
+
     normal_parallel_ey_mask = ((basis[:, 2] * e_y[None]).sum(dim=-1).abs() == 1)
     basis[:, 0] = torch.cross(e_y.expand(N, 3), basis[:, 2], dim=-1)
     basis[normal_parallel_ey_mask][:, 0] = e_x[None]
@@ -140,9 +140,9 @@ def get_normal_coord_system(normals):
     basis[normal_parallel_ey_mask][:, 0] = e_x[None]
     basis[:, 0] = torch.nn.functional.normalize(basis[:, 0], p=2, dim=-1)
 
-    # e_y' = e_z' x e_x'
+
     basis[:, 1] = torch.cross(basis[:, 2], basis[:, 0], dim=-1)
-    #basis[:, 1] = torch.nn.functional.normalize(basis[:, 1], p=2, dim=-1)
+
 
     assert torch.all(torch.norm(basis, dim=-1, p=2) > .99)
     return basis
@@ -174,8 +174,8 @@ def vertices2landmarks(
         landmarks: torch.tensor BxLx3, dtype = torch.float32
             The coordinates of the landmarks for each mesh in the batch
     '''
-    # Extract the indices of the vertices for each face
-    # BxLx3
+
+
     batch_size, num_verts = vertices.shape[:2]
     device = vertices.device
 
@@ -247,29 +247,29 @@ def lbs(
     batch_size = max(betas.shape[0], pose.shape[0])
     device, dtype = betas.device, betas.dtype
 
-    # Add shape contribution
-    if shaped_verts is None: #是 none
-        v_shaped = v_template + blend_shapes(betas, shapedirs) # blend_shapes是下面定义的函数，返回的是 per-vertex displacement due to shape deformation
-        # v_template是网格的顶点位置(data_Struct中获得)，
+
+    if shaped_verts is None:
+        v_shaped = v_template + blend_shapes(betas, shapedirs)
+
     else:
         v_shaped = shaped_verts
 
-    # Get the joints
-    # NxJx3 array
-    J = vertices2joints(J_regressor, v_shaped) # 418行的函数，网格顶点发生了位移，关节位置的相应移动后的位置
 
-    # 3. Add pose blend shapes
-    # N x J x 3 x 3
-    ident = torch.eye(3, dtype=dtype, device=device) # 3*3单位矩阵
-    if pose2rot: #为 true
+
+    J = vertices2joints(J_regressor, v_shaped)
+
+
+
+    ident = torch.eye(3, dtype=dtype, device=device)
+    if pose2rot:
         rot_mats = batch_rodrigues(pose.view(-1, 3)).view(
             [batch_size, -1, 3, 3])
 
-        pose_feature = (rot_mats[:, 1:, :, :] - ident).view([batch_size, -1]) # pose参数的特征值 pose_feature
-        # 从 rot_mats 中取出除了第一列（对应于全局旋转）以外的所有列，并减去单位矩阵 ident。最后，结果被展平为一个二维张量
-        # (N x P) x (P, V * 3) -> N x V x 3
-        pose_offsets = torch.matmul( #将 pose_feature 与 posedirs 矩阵相乘，即 旋转矩阵的变化值 * pose PCA的系数，所以得到的是 pose导致的偏移
-            pose_feature, posedirs).view(batch_size, -1, 3) #将结果展平为一个三维张量
+        pose_feature = (rot_mats[:, 1:, :, :] - ident).view([batch_size, -1])
+
+
+        pose_offsets = torch.matmul(
+            pose_feature, posedirs).view(batch_size, -1, 3)
     else:
         pose_feature = pose[:, 1:].view(batch_size, -1, 3, 3) - ident
         rot_mats = pose.view(batch_size, -1, 3, 3)
@@ -277,8 +277,8 @@ def lbs(
         pose_offsets = torch.matmul(pose_feature.view(batch_size, -1),
                                     posedirs).view(batch_size, -1, 3)
 
-    v_posed = pose_offsets + v_shaped # 形状位移后再加上 pose导致的位移，得到的就是 shape+pose变化后的网格的顶点位置
-    if offsets is not None: # 为 none
+    v_posed = pose_offsets + v_shaped
+    if offsets is not None:
         assert faces is not None
         normals = vertex_normals(v_posed, faces[None].expand(v_posed.shape[0], -1, -1))
         B, V, _3 = normals.shape
@@ -286,26 +286,26 @@ def lbs(
         offsets = torch.matmul(normal_coord_sys.permute(0, 1, 3, 2), offsets.unsqueeze(-1)).squeeze(-1)
         v_posed += offsets
 
-    # 4. Get the global joint location
-    J_transformed, A = batch_rigid_transform(rot_mats, J, parents, dtype=dtype) #输入旋转矩阵，shape变化后的关节位置，parents
-    #目的是为了得到 posed之后的关节位置 和 所有关节的相对(相对于根关节的)刚性变换，即一个相对于关节0的变化矩阵？
 
-    # 5. Do skinning:
-    # W is N x V x (J + 1)
+    J_transformed, A = batch_rigid_transform(rot_mats, J, parents, dtype=dtype)
+
+
+
+
     W = lbs_weights.unsqueeze(dim=0).expand([batch_size, -1, -1])
-    # (N x V x (J + 1)) x (N x (J + 1) x 16)
-    num_joints = J_regressor.shape[0] #获取骨骼行数，即数量
-    T = torch.matmul(W, A.view(batch_size, num_joints, 16)) \
-        .view(batch_size, -1, 4, 4) # T是将 W A相乘得到的
 
-    homogen_coord = torch.ones([batch_size, v_posed.shape[1], 1], # 用于表示齐次坐标中的额外一列，初始化为 1
+    num_joints = J_regressor.shape[0]
+    T = torch.matmul(W, A.view(batch_size, num_joints, 16))\
+        .view(batch_size, -1, 4, 4)
+
+    homogen_coord = torch.ones([batch_size, v_posed.shape[1], 1],
                                dtype=dtype, device=device)
-    v_posed_homo = torch.cat([v_posed, homogen_coord], dim=2) # 贴在 (shape+pose变化后的网格的顶点位置) 的后面，得到了一个新的齐次坐标的顶点张量
-    v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, dim=-1)) # 把齐次坐标的顶点和权重相乘
+    v_posed_homo = torch.cat([v_posed, homogen_coord], dim=2)
+    v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, dim=-1))
 
-    verts = v_homo[:, :, :3, 0] # 提取出了前三列，即顶点的三维坐标
+    verts = v_homo[:, :, :3, 0]
 
-    return verts, J_transformed, A, pose_feature #A:所有关节的相对(相对于根关节的)刚性变换 pose_feature:是姿势参数的特征值，即旋转矩阵的变化
+    return verts, J_transformed, A, pose_feature
 
 def blend_shapes2(betas, shape_disps):
     ''' Calculates the per vertex displacement due to the blend shapes
@@ -324,13 +324,13 @@ def blend_shapes2(betas, shape_disps):
         The per-vertex displacement due to shape deformation
     '''
 
-    # [num_points, 50] x [num_points, 3, 50] --> [num_points, 3]
+
     if len(shape_disps.shape) == 3:
         blend_shape = torch.einsum('ml,mkl->mk', [betas, shape_disps])
     return blend_shape
 
 def inverse_pts(pnts_p, betas, transformations, pose_feature, shapedirs, posedirs, lbs_weights, dtype=torch.float32):
-    # pnts_p: num_points, 3
+
     assert len(pnts_p.shape) == 2
     pnts_c = inverse_skinning_pts(pnts_p, transformations, lbs_weights)
     pnts_c = pnts_c - blend_shapes2(betas, shapedirs)
@@ -340,12 +340,12 @@ def inverse_pts(pnts_p, betas, transformations, pose_feature, shapedirs, posedir
     return pnts_c
 
 def pose_correctives(pose_feature, posedirs):
-    # [num_points, 4*9] x [num_points, 4*9, 3] --> [num_points, 3]
+
     pose_correctives = torch.einsum('mi,mik->mk', [pose_feature, posedirs])
     return pose_correctives
 
 def inverse_skinning_pts(pnts_p, transformations, lbs_weights, dtype=torch.float32):
-    # pnts_p: num_points, 3
+
     assert len(pnts_p.shape) == 2
     if pnts_p.shape[0] == 0:
         return pnts_p
@@ -353,25 +353,25 @@ def inverse_skinning_pts(pnts_p, transformations, lbs_weights, dtype=torch.float
     device = pnts_p.device
 
     pnts_p = pnts_p.reshape(num_points, 3)
-    # Do skinning:
-    # W is num_points x (J + 1)
+
+
     W = lbs_weights
-    # T: [num_points, (J + 1)] x [num_points, (J + 1), 16] --> [num_points, 16]
+
     num_joints = W.shape[-1]
     T = torch.einsum('mj, mjk->mk', [W, transformations.view(-1, num_joints, 16)]).view(num_points, 4, 4)
 
     homogen_coord = torch.ones([num_points, 1], dtype=dtype, device=device)
-    # pnts_p: num_points, 4
+
     pnts_p = torch.cat([pnts_p, homogen_coord], dim=1)
-    # v_homo: [num_points, 4, 4] x [num_points, 4, 1] --> [num_points, 4, 1]
+
     v_homo = torch.matmul(torch.inverse(T), torch.unsqueeze(pnts_p, dim=-1))
-    # pnts: [num_points, 3]
+
     pnts = v_homo[:, :3, 0]
 
     return pnts
 
 def forward_pts(pnts_c, betas, transformations, pose_feature, shapedirs, posedirs, lbs_weights, dtype=torch.float32, mask=None):
-    # pnts_c: num_points, 3
+
     assert len(pnts_c.shape) == 2
     if mask is not None:
         pnts_c = pnts_c[mask]
@@ -380,10 +380,10 @@ def forward_pts(pnts_c, betas, transformations, pose_feature, shapedirs, posedir
     num_points = pnts_c.shape[0]
     device = pnts_c.device
 
-    # Add shape contribution
+
     pnts_shaped = pnts_c + blend_shapes2(betas, shapedirs)
 
-    # Add pose blend shapes
+
     pose_offsets = pose_correctives(pose_feature, posedirs)
     assert (pose_offsets.shape == pnts_shaped.shape)
     pnts_posed = pose_offsets + pnts_shaped
@@ -391,29 +391,29 @@ def forward_pts(pnts_c, betas, transformations, pose_feature, shapedirs, posedir
     return forward_skinning_pts(pnts_posed, transformations, lbs_weights, dtype=dtype)
 
 def forward_skinning_pts(pnts_c, transformations, lbs_weights, dtype=torch.float32, mask=None):
-    # pnts_c: num_points, 3
+
     assert len(pnts_c.shape) == 2
     if mask is not None:
         pnts_c = pnts_c[mask]
     if pnts_c.shape[0] == 0:
         return pnts_c
-    # pnts_c: num_points, 3
+
     num_points = pnts_c.shape[0]
     device = pnts_c.device
 
-    # Do skinning:
-    # W is num_points x (J + 1)
+
+
     W = lbs_weights
     num_joints = W.shape[-1]
-    # T: [num_points, (J + 1)] x [num_points, (J + 1), 16] --> [num_points, 16]
+
     T = torch.einsum('mj, mjk->mk', [W, transformations.view(-1, num_joints, 16)]).view(num_points, 4, 4)
 
     homogen_coord = torch.ones([num_points, 1], dtype=dtype, device=device)
-    # v_posed_homo: num_points, 4
+
     v_homo = torch.cat([pnts_c, homogen_coord], dim=1)
-    # v_homo: [num_points, 4, 4] x [num_points, 4, 1] --> [num_points, 4, 1]
+
     v_homo = torch.matmul(T, torch.unsqueeze(v_homo, dim=-1))
-    # pnts: [num_points, 3]
+
     pnts = v_homo[:, :3, 0]
 
     return pnts
@@ -455,9 +455,9 @@ def blend_shapes(betas: Tensor, shape_disps: Tensor) -> Tensor:
         The per-vertex displacement due to shape deformation
     '''
 
-    # Displacement[b, m, k] = sum_{l} betas[b, l] * shape_disps[m, k, l]
-    # i.e. Multiply each shape displacement by its corresponding beta and
-    # then sum them.
+
+
+
     blend_shape = torch.einsum('bl,mkl->bmk', [betas, shape_disps])
     return blend_shape
 
@@ -486,12 +486,12 @@ def batch_rodrigues(
     cos = torch.unsqueeze(torch.cos(angle), dim=1)
     sin = torch.unsqueeze(torch.sin(angle), dim=1)
 
-    # Bx1 arrays
+
     rx, ry, rz = torch.split(rot_dir, 1, dim=1)
     K = torch.zeros((batch_size, 3, 3), dtype=dtype, device=device)
 
     zeros = torch.zeros((batch_size, 1), dtype=dtype, device=device)
-    K = torch.cat([zeros, -rz, ry, rz, zeros, -rx, -ry, rx, zeros], dim=1) \
+    K = torch.cat([zeros, -rz, ry, rz, zeros, -rx, -ry, rx, zeros], dim=1)\
         .view((batch_size, 3, 3))
 
     ident = torch.eye(3, dtype=dtype, device=device).unsqueeze(dim=0)
@@ -507,7 +507,7 @@ def transform_mat(R: Tensor, t: Tensor) -> Tensor:
         Returns:
             - T: Bx4x4 Transformation matrix
     '''
-    # No padding left or right, only add an extra row
+
     return torch.cat([F.pad(R, [0, 0, 0, 1]),
                       F.pad(t, [0, 0, 0, 1], value=1)], dim=2)
 
@@ -544,29 +544,29 @@ def batch_rigid_transform(
     joints = torch.unsqueeze(joints, dim=-1)
 
     rel_joints = joints.clone()
-    rel_joints[:, 1:] -= joints[:, parents[1:]] #计算了每个关节相对于其父关节的相对位置。对 rel_joints 的从第二个关节开始的部分，减去其父关节的位置
+    rel_joints[:, 1:] -= joints[:, parents[1:]]
 
-    transforms_mat = transform_mat( # 返回了每个关节的刚性变换矩阵，四维张量
+    transforms_mat = transform_mat(
         rot_mats.reshape(-1, 3, 3),
         rel_joints.reshape(-1, 3, 1)).reshape(-1, joints.shape[1], 4, 4)
 
-    transform_chain = [transforms_mat[:, 0]] # 获取根节点的刚性变化矩阵
+    transform_chain = [transforms_mat[:, 0]]
     for i in range(1, parents.shape[0]):
-        # Subtract the joint location at the rest pose
-        # No need for rotation, since it's identity when at rest
+
+
         curr_res = torch.matmul(transform_chain[parents[i]],
-                                transforms_mat[:, i]) # 从第二个关节开始循环计算每个关节相对于其父关节的刚性变换矩阵
+                                transforms_mat[:, i])
         transform_chain.append(curr_res)
 
     transforms = torch.stack(transform_chain, dim=1)
 
-    # The last column of the transformations contains the posed joints
-    posed_joints = transforms[:, :, :3, 3] # 从变换张量 transforms 中提取每个关节前三列的值，得到了关节在空间中的位置
 
-    joints_homogen = F.pad(joints, [0, 0, 0, 1]) #为关节张量 joints 添加了额外的一列，用于表示齐次坐标的最后一列
+    posed_joints = transforms[:, :, :3, 3]
+
+    joints_homogen = F.pad(joints, [0, 0, 0, 1])
 
     rel_transforms = transforms - F.pad(
         torch.matmul(transforms, joints_homogen), [3, 0, 0, 0, 0, 0, 0, 0])
-    #变换张量与关节张量 joints_homogen 相乘，得到每个关节在变换后的位置。再将这个结果与transforms相减，得到了相对于根关节的刚性变换矩阵
+
 
     return posed_joints, rel_transforms

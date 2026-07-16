@@ -1,4 +1,3 @@
-# Copyright (c) 2023-2024, Zexin He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,17 +50,17 @@ class LPIPSLoss(nn.Module):
     def forward(self, x, y, is_training: bool = True):
         """
         Assume images are 0-1 scaled and channel first.
-        
+
         Args:
             x: [N, M, C, H, W]
             y: [N, M, C, H, W]
             is_training: whether to use VGG or AlexNet.
-        
+
         Returns:
             Mean-reduced LPIPS loss across batch.
         """
-        # model_name = 'vgg' if is_training else 'alex'
-        # loss_fn = self._get_model(model_name)
+
+
         N, M, C, H, W = x.shape
         x = x.reshape(N*M, C, H, W)
         y = y.reshape(N*M, C, H, W)
@@ -75,36 +74,28 @@ class LPIPSLoss(nn.Module):
     def test(self, x, y, is_training: bool = True):
         """
         Args:
-            x, y: 可以是
-                [N, M, C, H, W]  (多视角/多时间步)
-                [N, C, H, W]     (batch 张图)
-                [C, H, W]        (单张图)
-            is_training: bool, 控制使用的特征网络 (vgg / alex)
 
         Returns:
-            标量 LPIPS 损失 (mean reduced)
         """
-        # model_name = 'vgg' if is_training else 'alex'
-        # loss_fn = self._get_model(model_name)
 
-        # --- 统一输入形状 ---
-        if x.ndim == 3:   # [C,H,W]
-            x = x.unsqueeze(0)  # -> [1,C,H,W]
+
+
+        if x.ndim == 3:
+            x = x.unsqueeze(0)
             y = y.unsqueeze(0)
 
-        if x.ndim == 5:   # [N,M,C,H,W]
+        if x.ndim == 5:
             N, M, C, H, W = x.shape
             x = x.reshape(N*M, C, H, W)
             y = y.reshape(N*M, C, H, W)
-        elif x.ndim == 4: # [N,C,H,W]
+        elif x.ndim == 4:
             N, C, H, W = x.shape
             M = 1
         else:
             raise ValueError(f"Unsupported shape {x.shape}")
 
-        # --- LPIPS 计算 ---
-        image_loss = self.loss_fn(x, y, normalize=True)  # [N*M,1,1,1] or [N*M]
-        image_loss = image_loss.view(-1)            # flatten
+        image_loss = self.loss_fn(x, y, normalize=True)
+        image_loss = image_loss.view(-1)
 
         if M > 1:
             batch_loss = image_loss.view(N, M).mean(dim=1)

@@ -13,7 +13,7 @@ from sklearn.neighbors import KDTree
 import torch
 import os
 
-# simple on-disk cache to avoid repeated expensive subdivision
+
 _DEFAULT_SUBDIV_CACHE_DIR = os.path.join("pretrained_models", "mano_subdiv")
 if not os.path.isdir(os.path.dirname(_DEFAULT_SUBDIV_CACHE_DIR)):
     _DEFAULT_SUBDIV_CACHE_DIR = os.path.join("output", "mano_subdiv")
@@ -44,7 +44,7 @@ def _next_ring(mesh, last_ring, other):
     return res
 
 def extract_spirals(mesh, seq_length, dilation=1):
-    # output: spirals.size() = [N, seq_length]
+
     spirals = []
     one_ring_list = []
     next_ring_list = []
@@ -98,15 +98,14 @@ def smooth(v, f, start, times=1):
         target_list = list(range(v.shape[0]))[0:]
         for idx in target_list:
             indices = one_ring_list[idx]
-            # indices += [idx]
+
             mean = v_org[indices + [idx]].mean(axis=0)
-            v[idx] = mean #(v[idx] - mean) * 0.7 + mean
+            v[idx] = mean
 
     return v, spirals
 
 
 def sub_mano(mano, t, pretrain=None):
-    # if cached result exists on disk, load it and return
     try:
         cache_path = os.path.join(_SUBDIV_CACHE_DIR, f"mano_subdiv_{t}.pth")
         if os.path.exists(cache_path):
@@ -124,24 +123,23 @@ def sub_mano(mano, t, pretrain=None):
 
         print('upsample mano to ', verts.shape[0])
         subdivided_mesh = trimesh.Trimesh(verts, faces)
-        # _ = subdivided_mesh.export(f'smplx/out/subdivided_template_{i}.obj')
 
         new_shapedirs = mano.shapedirs[edges]
-        new_shapedirs = new_shapedirs.mean(dim=1)  # n_edges x 3 x 10
+        new_shapedirs = new_shapedirs.mean(dim=1)
         shapedirs = torch.cat((mano.shapedirs, new_shapedirs), dim=0)
 
-        new_posedirs = mano.posedirs.permute(1, 0).view(n_verts, 3, 135)  # V x 3 x 135
-        new_posedirs = new_posedirs[edges]  # n_edges x 2 x 3 x 135
-        new_posedirs = new_posedirs.mean(dim=1)  # n_edges x 3 x 135
+        new_posedirs = mano.posedirs.permute(1, 0).view(n_verts, 3, 135)
+        new_posedirs = new_posedirs[edges]
+        new_posedirs = new_posedirs.mean(dim=1)
         new_posedirs = new_posedirs.view(len(edges) * 3, 135).permute(1, 0)
         posedirs = torch.cat((mano.posedirs, new_posedirs), dim=1)
 
-        # lbs & J_regressor
+
         new_J_regressor = torch.zeros(16, len(edges)).to(mano.J_regressor.dtype).to(mano.J_regressor.device)
         J_regressor = torch.cat((mano.J_regressor, new_J_regressor), dim=1)
 
-        new_lbs_weights = mano.lbs_weights[edges]  # n_edges x 2 x 16
-        new_lbs_weights = new_lbs_weights.mean(dim=1)  # n_edges x 16
+        new_lbs_weights = mano.lbs_weights[edges]
+        new_lbs_weights = new_lbs_weights.mean(dim=1)
         lbs_weights = torch.cat((mano.lbs_weights, new_lbs_weights), dim=0)
 
         mano.faces = faces.astype('int32')
@@ -152,16 +150,16 @@ def sub_mano(mano, t, pretrain=None):
         mano.shapedirs = shapedirs
 
         mano.J_regressor = J_regressor
-        
+
         if i==0 and t>1 and pretrain is not None:
             pretrain_weight = f'smplx/out/{pretrain}/ckpts/lbs_weights.pth'
             lbs_weights = torch.load(pretrain_weight)
             print('load pretrain', pretrain_weight)
-            
+
         mano.lbs_weights = lbs_weights
 
     mano.update_seal()
-    # attempt to save result to cache for future runs
+
     try:
         cache_path = os.path.join(_SUBDIV_CACHE_DIR, f"mano_subdiv_{t}.pth")
         torch.save({"mano": mano, "edges": edges, "spirals": spirals}, cache_path)

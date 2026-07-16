@@ -1,0 +1,33 @@
+set_seed.seed = 42
+total_steps = 200000
+
+pretrain/build_optimizer.lr_dict = {
+    "base": 1e-3, #Useless
+    "embedding": 1e-3,
+    "backbone": 1e-3,
+    "shs": 1e-3,
+    "scaling": 1e-3,
+    "opacities": 1e-3,
+    "rotation": 1e-3,
+    "xyz": 1e-3
+}
+pretrain/build_optimizer.optimizer_type = 'adam'
+pretrain/build_optimizer.optimizer_params = {'eps': 1e-15}
+pretrain/build_scheduler.total_step = %total_steps
+pretrain/build_scheduler.schedule = 'constant'
+
+
+train2D/build_optimizer.lr_dict = {
+    "base": 3e-5, #Useless
+    "embedding": 3e-5,
+    "backbone": 3e-5,
+    "shs": 3e-5,
+    "scaling": 3e-5,
+    "opacities": 3e-5,
+    "rotation": 3e-5,
+    "xyz": 3e-6
+}
+train2D/build_optimizer.optimizer_type = 'adam'
+train2D/build_optimizer.optimizer_params = {'eps': 1e-15}
+train2D/build_scheduler.total_step = %total_steps
+train2D/build_scheduler.schedule = 'constant'

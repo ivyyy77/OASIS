@@ -17,11 +17,11 @@ def _require_igl():
 def tbn(triangles):
     a, b, c = triangles.unbind(-2)
     n = F.normalize(torch.cross(b - a, c - a, dim=-1), dim=-1)
-    # n = F.normalize(torch.cross(b - a, c - a), dim=-1)
+
     d = b - a
 
-    X = F.normalize(torch.cross(d, n), dim=-1)
-    Y = F.normalize(torch.cross(d, X), dim=-1)
+    X = F.normalize(torch.cross(d, n, dim=-1), dim=-1)
+    Y = F.normalize(torch.cross(d, X, dim=-1), dim=-1)
     Z = F.normalize(d, dim=-1)
 
     return torch.stack([X, Y, Z], dim=3)
@@ -44,7 +44,7 @@ def calculate_centroid(tris, dim=2):
 
 
 def interpolate(xyzs, tris, neighbours, edge_mask):
-    # Currently disabled
+
     return triangle2projection(tris)[0]
     N = xyzs.shape[0]
     factor = 4
@@ -99,51 +99,51 @@ def get_triangles(mesh: trimesh.Trimesh):
             faces = torch.tensor(mesh.F.astype(np.int64), dtype=torch.long)
         else:
             faces = mesh.F.long()
-        return vertices[faces]  
+        return vertices[faces]
 
 def rotation_matrix_to_quaternion(R):
-    # tr = torch.eye(3)[None,...].repeat(R.shape[0], 1, 1).to(R)
-    # w = torch.pow(1 + (tr * R).sum(-1).sum(-1), 0.5)/2
-    # x = (R[:, 2, 1] - R[:, 1, 2])/4/w
-    # y = (R[:, 0, 2] - R[:, 2, 0])/4/w
-    # z = (R[:, 1, 0] - R[:, 0, 1])/4/w
-    # quat = torch.stack([w, x, y, z], dim=-1)
-    # return quat
+
+
+
+
+
+
+
     from pytorch3d import transforms as tfs
     return tfs.matrix_to_quaternion(R)
 
 def quaternion_to_rotation_matrix(r):
-    # norm = torch.sqrt(r[:,0]*r[:,0] + r[:,1]*r[:,1] + r[:,2]*r[:,2] + r[:,3]*r[:,3])
 
-    # q = r / norm[:, None]
 
-    # R = torch.zeros((q.size(0), 3, 3), device='cuda')
 
-    # r = q[:, 0]
-    # x = q[:, 1]
-    # y = q[:, 2]
-    # z = q[:, 3]
 
-    # R[:, 0, 0] = 1 - 2 * (y*y + z*z)
-    # R[:, 0, 1] = 2 * (x*y - r*z)
-    # R[:, 0, 2] = 2 * (x*z + r*y)
-    # R[:, 1, 0] = 2 * (x*y + r*z)
-    # R[:, 1, 1] = 1 - 2 * (x*x + z*z)
-    # R[:, 1, 2] = 2 * (y*z - r*x)
-    # R[:, 2, 0] = 2 * (x*z - r*y)
-    # R[:, 2, 1] = 2 * (y*z + r*x)
-    # R[:, 2, 2] = 1 - 2 * (x*x + y*y)
-    # return R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     from pytorch3d import transforms as tfs
     return tfs.quaternion_to_matrix(r)
 
 def calc_per_face_Rt(cano_triangles, deform_triangles):
-    # c2w for triangles
+
     cano_Rt = triangle2projection(cano_triangles)[0]
     deform_Rt = triangle2projection(deform_triangles)[0]
 
-    # for X_c in cano
-    # X_d = deform_Rt @ cano_Rt.inv() @ X_c
+
+
     return torch.einsum('bij,bjk->bik', deform_Rt, torch.inverse(cano_Rt))
 
 def calc_per_vert_quaternion(cano_verts, cano_faces, mesh_verts):
@@ -152,7 +152,7 @@ def calc_per_vert_quaternion(cano_verts, cano_faces, mesh_verts):
     per_face_Rt = calc_per_face_Rt(cano_triangles, deform_triangles)
     per_face_quat = rotation_matrix_to_quaternion(per_face_Rt[:, :3, :3])
 
-    # https://github.com/libigl/libigl/blob/3cf08b7f681ed0e170d16d7a2efea61c3084be78/include/igl/per_vertex_normals.cpp#L61C8-L61C8
+
     A = _require_igl().doublearea(cano_verts.numpy(), cano_faces.numpy())
     W = torch.from_numpy(A)[:, None].float()
 
@@ -160,35 +160,35 @@ def calc_per_vert_quaternion(cano_verts, cano_faces, mesh_verts):
     per_vert_w = per_vert_w.scatter_(0, cano_faces.view(-1), W.repeat([1, 3]).view(-1), reduce='add')
 
     per_vert_quat = torch.zeros(cano_verts.shape[0], 4)
-    per_vert_quat = per_vert_quat.scatter_(0, 
-                                           cano_faces[:, :, None].repeat([1, 1, 4]).view(-1, 4), 
+    per_vert_quat = per_vert_quat.scatter_(0,
+                                           cano_faces[:, :, None].repeat([1, 1, 4]).view(-1, 4),
                                            (W * per_face_quat)[:, None, :].repeat([1, 3, 1]).view(-1, 4), reduce='add')
     per_vert_quat = per_vert_quat / per_vert_w[:, None]
 
-    # fix nan
+
     per_vert_quat[per_vert_quat.isnan().any(dim=-1), :] = torch.tensor([1.0, 0, 0, 0], dtype=torch.float32)
 
-    # ### debug face Rt
-    # v0 = torch.concat([cano_triangles[0], torch.ones_like(cano_triangles[0, :, :, :1])], dim=-1).float()
-    # v01 = torch.einsum('nij,nkj->nki', per_face_Rt, v0)[:, :, :3]
-    # mesh01 = libcore.MeshCpu()
-    # mesh01.V = v01.reshape(-1, 3).detach().cpu().numpy()
-    # mesh01.F = torch.linspace(0, mesh01.V.shape[0], mesh01.V.shape[0]).reshape(-1, 3).long().detach().cpu().numpy()
-    # mesh01.save_to_obj('/mnt/e/dummy/01.obj')
 
-    # ### debug R
-    # per_vert_R = quaternion_to_rotation_matrix(per_vert_quat)
-    # from model import libcore
-    # mesh0 = libcore.MeshCpu()
-    # mesh0.V = cano_verts.detach().cpu().numpy()
-    # mesh0.F = cano_faces.detach().cpu().numpy()
-    # mesh0.update_per_vertex_normals()
-    # mesh1 = libcore.MeshCpu()
-    # mesh1.V = mesh_verts.detach().cpu().numpy()
-    # mesh1.F = cano_faces.detach().cpu().numpy()
-    # mesh1.update_per_vertex_normals()
-    # N01 = torch.einsum('nij,nj->ni', per_vert_R, torch.tensor(mesh0.N, dtype=torch.float))
-    # (torch.tensor(mesh1.N, dtype=torch.float) - N01).abs().mean()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     return per_vert_quat
 
@@ -201,11 +201,11 @@ class PerVertQuaternion(nn.Module):
     def prepare_cano_per_vert(self, cano_verts, cano_faces):
         self.register_buffer('cano_verts', cano_verts)
         self.register_buffer('cano_faces', cano_faces)
-        # self.register_buffer('cano_triangles', cano_verts[cano_faces])
+
         self.register_buffer('cano_triangles', cano_verts[cano_faces].unsqueeze(dim=0))
 
         if self.use_numpy:
-            # https://github.com/libigl/libigl/blob/3cf08b7f681ed0e170d16d7a2efea61c3084be78/include/igl/per_vertex_normals.cpp#L61C8-L61C8
+
             A = _require_igl().doublearea(cano_verts.detach().cpu().numpy(), cano_faces.detach().cpu().numpy())
             W = torch.from_numpy(A)[:, None].float()
 
@@ -224,14 +224,14 @@ class PerVertQuaternion(nn.Module):
         per_face_quat = self.calc_per_face_quaternion(mesh_verts)
 
         if self.use_numpy:
-            # face quat weighted to vert
+
             per_vert_quat = torch.zeros(cano_verts.shape[0], 4).to(per_face_quat.device)
-            per_vert_quat = per_vert_quat.scatter_(0, 
-                                                cano_faces[:, :, None].repeat([1, 1, 4]).view(-1, 4), 
+            per_vert_quat = per_vert_quat.scatter_(0,
+                                                cano_faces[:, :, None].repeat([1, 1, 4]).view(-1, 4),
                                                 (self.W * per_face_quat)[:, None, :].repeat([1, 3, 1]).view(-1, 4), reduce='add')
             per_vert_quat = per_vert_quat / self.per_vert_w_sum
 
-            # normalize
+
             per_vert_quat = F.normalize(per_vert_quat, eps=1e-6, dim=-1)
 
         else:
@@ -239,8 +239,8 @@ class PerVertQuaternion(nn.Module):
 
             verts_quats = torch.zeros(cano_verts.shape[0], 4).to(per_face_quat.device)
 
-            # NOTE: this is already applying the area weighting as the magnitude
-            # of the cross product is 2 x area of the triangle.
+
+
             verts_quats = verts_quats.index_add(
                 0, faces_packed[:, 0], self.face_areas * per_face_quat
             )
@@ -254,7 +254,7 @@ class PerVertQuaternion(nn.Module):
             per_vert_quat = F.normalize(verts_quats, eps=1e-6, dim=1)
 
         return per_vert_quat
-    
+
     def calc_per_face_Rt(self, mesh_verts):
         cano_verts = self.cano_verts
         cano_faces = self.cano_faces
@@ -262,18 +262,18 @@ class PerVertQuaternion(nn.Module):
         deform_triangles = mesh_verts[cano_faces].unsqueeze(dim=0)
         per_face_Rt = calc_per_face_Rt(cano_triangles, deform_triangles)
         return per_face_Rt
-    
+
     def calc_per_face_quaternion(self, mesh_verts):
         per_face_Rt = self.calc_per_face_Rt(mesh_verts)
         per_face_quat = rotation_matrix_to_quaternion(per_face_Rt[:, :3, :3])
         return per_face_quat
-    
+
     def forward(self, mesh_verts):
         return self.calc_per_vert_quaternion(mesh_verts)
-    
+
     def calc_face_area_change(self, mesh_verts, damping=1e-4):
         areas = calc_face_areas(mesh_verts, self.cano_faces)
-        # Ensure face_areas is on the same device as areas
+
         face_areas = self.face_areas
         if areas.is_cuda:
             face_areas = face_areas.to(areas.device)
@@ -281,14 +281,14 @@ class PerVertQuaternion(nn.Module):
             face_areas = face_areas.cpu()
         change_ratio = (areas + damping) / (face_areas + damping)
         return change_ratio
-    
+
 def calc_face_areas(mesh_verts, mesh_faces):
-    # Ensure mesh_faces is on the same device as mesh_verts
+
     if mesh_verts.is_cuda:
         mesh_faces = mesh_faces.to(mesh_verts.device)
     else:
         mesh_faces = mesh_faces.cpu()
-    
+
     vertices_faces = mesh_verts[mesh_faces]
 
     faces_normals = torch.cross(

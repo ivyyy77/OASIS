@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
-# @Organization  : Alibaba XR-Lab
-# @Author        : Lingteng Qiu
-# @Email         : 220019047@link.cuhk.edu.cn
-# @Time          : 2025-03-10 18:56:08
-# @Function      : FUNCTION_DESCRIPTION
+
+
+
+
+
+
 
 import glob
 import json
 import math
 import os
-import pdb
 from collections import defaultdict
 
 import pickle
@@ -76,36 +75,36 @@ def _load_pose(pose):
     intrinsic = intrinsic.float()
 
     c2w = torch.eye(4)
-    # c2w[:3, :3] = torch.tensor(pose["R"])
-    # c2w[3, :3] = torch.tensor(pose["t"])
+
+
     c2w = c2w.float()
 
     return c2w, intrinsic
 
 
 def _load_pose_sign(pose, cam_trans=None):
-    # 获取批量维度
+
     batch_size = pose["focal"].shape[0]
 
-    # 创建批量化的内参矩阵 (N, 4, 4)
+
     intrinsic = torch.eye(4, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1, 1)
 
-    # 批量填充参数
-    intrinsic[:, 0, 0] = pose["focal"][:, 0]  # fx
-    intrinsic[:, 1, 1] = pose["focal"][:, 1]  # fy
-    intrinsic[:, 0, 2] = pose["princpt"][:, 0]  # cx
-    intrinsic[:, 1, 2] = pose["princpt"][:, 1]  # cy
 
-    # 创建批量化的外参矩阵 (N, 4, 4)
+    intrinsic[:, 0, 0] = pose["focal"][:, 0]
+    intrinsic[:, 1, 1] = pose["focal"][:, 1]
+    intrinsic[:, 0, 2] = pose["princpt"][:, 0]
+    intrinsic[:, 1, 2] = pose["princpt"][:, 1]
+
+
     c2w = torch.eye(4, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1, 1)
 
     if cam_trans is not None:
-        c2w[:, :3, 3] = cam_trans  # 平移向量
+        c2w[:, :3, 3] = cam_trans
 
-    # # 如果需要填充R和t（假设pose["R"]形状为(N,3,3)，pose["t"]形状为(N,3)
-    # if "R" in pose and "t" in pose:
-    #     c2w[:, :3, :3] = torch.tensor(pose["R"])  # 旋转矩阵
-    #     c2w[:, :3, 3] = torch.tensor(pose["t"])  # 平移向量
+
+
+
+
 
     return c2w, intrinsic
 
@@ -167,7 +166,7 @@ def center_crop_according_to_mask(img, mask, aspect_standard, enlarge_ratio):
     else:
         half_h = round(half_w * aspect_standard)
 
-    # not exceed original image
+
     if half_h > center_y:
         half_w = round(half_h_raw / aspect_standard)
         half_h = half_h_raw
@@ -226,7 +225,7 @@ def preprocess_image(
     if pad_ratio > 0:
         rgb = img_center_padding(rgb, pad_ratio)
 
-    rgb = rgb / 255.0  # normalize to [0, 1]
+    rgb = rgb / 255.0
     if need_mask:
         if rgb.shape[2] < 4:
             if mask_path is not None:
@@ -234,28 +233,28 @@ def preprocess_image(
             else:
                 from rembg import remove
 
-                # rembg cuda version -> error
-                mask = remove(rgb_raw[:, :, (2, 1, 0)])[:, :, -1]  # np require [bgr]
+
+                mask = remove(rgb_raw[:, :, (2, 1, 0)])[:, :, -1]
                 print("rmbg mask: ", mask.min(), mask.max(), mask.shape)
             if pad_ratio > 0:
                 mask = img_center_padding(mask, pad_ratio)
             mask = mask / 255.0
         else:
-            # rgb: [H, W, 4]
+
             assert rgb.shape[2] == 4
-            mask = rgb[:, :, 3]  # [H, W]
+            mask = rgb[:, :, 3]
     else:
-        # just placeholder
+
         mask = np.ones_like(rgb[:, :, 0])
 
     mask = (mask > 0.5).astype(np.float32)
     rgb = rgb[:, :, :3] * mask[:, :, None] + bg_color * (1 - mask[:, :, None])
 
-    # resize to specific size require by preprocessor of smplx-estimator.
+
     rgb = resize_image_keepaspect_np(rgb, max_tgt_size)
     mask = resize_image_keepaspect_np(mask, max_tgt_size)
 
-    # crop image to enlarge human area.
+
     rgb, mask, offset_x, offset_y = center_crop_according_to_mask(
         rgb, mask, aspect_standard, enlarge_ratio
     )
@@ -263,7 +262,7 @@ def preprocess_image(
         intr[0, 2] -= offset_x
         intr[1, 2] -= offset_y
 
-    # resize to render_tgt_size for training
+
 
     tgt_hw_size, ratio_y, ratio_x = calc_new_tgt_size_by_aspect(
         cur_hw=rgb.shape[:2],
@@ -281,7 +280,7 @@ def preprocess_image(
 
     if intr is not None:
 
-        # ******************** Merge *********************** #
+
         intr = scale_intrs(intr, ratio_x=ratio_x, ratio_y=ratio_y)
         assert (
             abs(intr[0, 2] * 2 - rgb.shape[1]) < 2.5
@@ -290,14 +289,14 @@ def preprocess_image(
             abs(intr[1, 2] * 2 - rgb.shape[0]) < 2.5
         ), f"{intr[1, 2] * 2}, {rgb.shape[0]}"
 
-        # ******************** Merge *********************** #
+
         intr[0, 2] = rgb.shape[1] // 2
         intr[1, 2] = rgb.shape[0] // 2
 
-    rgb = torch.from_numpy(rgb).float().permute(2, 0, 1).unsqueeze(0)  # [1, 3, H, W]
+    rgb = torch.from_numpy(rgb).float().permute(2, 0, 1).unsqueeze(0)
     mask = (
         torch.from_numpy(mask[:, :, None]).float().permute(2, 0, 1).unsqueeze(0)
-    )  # [1, 1, H, W]
+    )
     return rgb, mask, intr
 
 
@@ -338,116 +337,6 @@ def predict_motion_seqs_from_images(image_folder: str, save_root, fps=6):
     return save_smplx_root, image_folder
 
 
-def render_smplx_mesh(
-    smplx_params, render_intrs, human_model_path="./pretrained_models/human_model_files"
-):
-    from LHM.models.rendering.smplx import smplx
-    from LHM.models.rendering.smplx.vis_utils import render_mesh, render_mesh_debug
-
-    layer_arg = {
-        "create_global_orient": False,
-        "create_body_pose": False,
-        "create_left_hand_pose": False,
-        "create_right_hand_pose": False,
-        "create_jaw_pose": False,
-        "create_leye_pose": False,
-        "create_reye_pose": False,
-        "create_betas": False,
-        "create_expression": False,
-        "create_transl": False,
-    }
-
-    smplx_layer = smplx.create(
-        human_model_path,
-        "smplx",
-        gender="neutral",
-        num_betas=10,
-        # num_expression_coeffs=10,
-        num_expression_coeffs=100,
-        use_pca=False,
-        use_face_contour=False,
-        # flat_hand_mean=True,
-        flat_hand_mean=False,
-        **layer_arg,
-    )
-
-    body_pose = smplx_params["body_pose"]
-    num_view = body_pose.shape[0]
-    shape_param = smplx_params["betas"]
-    if "expr" not in smplx_params:
-        # supports v2.0 data format
-        smplx_params["expr"] = torch.zeros((num_view, 100))
-
-    output = smplx_layer(
-        global_orient=smplx_params["root_pose"],
-        body_pose=smplx_params["body_pose"].view(num_view, -1),
-        left_hand_pose=smplx_params["lhand_pose"].view(num_view, -1),
-        right_hand_pose=smplx_params["rhand_pose"].view(num_view, -1),
-        jaw_pose=smplx_params["jaw_pose"],
-        leye_pose=smplx_params["leye_pose"],
-        reye_pose=smplx_params["reye_pose"],
-        expression=smplx_params["expr"],
-        # betas=smplx_params["betas"],  # 10 blendshape
-        betas=smplx_params["betas"].unsqueeze(0).repeat(num_view, 1),  # 10 blendshape
-        transl=smplx_params["trans"],
-        face_offset=None,
-        joint_offset=None,
-    )
-
-    smplx_face = smplx_layer.faces.astype(np.int64)
-
-    # output_ = smplx_layer(
-    #     global_orient=torch.zeros_like(smplx_params["root_pose"]),
-    #     body_pose=torch.zeros_like(smplx_params["body_pose"].view(num_view, -1)),
-    #     left_hand_pose=torch.zeros_like(smplx_params["lhand_pose"].view(num_view, -1)),
-    #     right_hand_pose=torch.zeros_like(smplx_params["rhand_pose"].view(num_view, -1)),
-    #     jaw_pose=torch.zeros_like(smplx_params["jaw_pose"]),
-    #     leye_pose=torch.zeros_like(smplx_params["leye_pose"]),
-    #     reye_pose=torch.zeros_like(smplx_params["reye_pose"]),
-    #     expression=smplx_params["expr"],
-    #     # betas=smplx_params["betas"],  # 10 blendshape
-    #     betas=smplx_params["betas"].unsqueeze(0).repeat(num_view, 1),  # 10 blendshape
-    #     transl=torch.zeros_like(smplx_params["trans"]),
-    #     face_offset=None,
-    #     joint_offset=None,
-    # )
-    # mesh = trimesh.Trimesh(output_.vertices.squeeze(), smplx_face)
-    # save_path = './data/man-mesh.obj'
-    # os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    # mesh.export(save_path)
-    # print(f"[INFO] Mesh saved to {save_path}")
-
-
-
-    mesh_render_list = []
-    for v_idx in range(num_view):
-        intr = render_intrs[v_idx]
-        cam_param = {
-            "focal": torch.tensor([intr[0, 0], intr[1, 1]]),
-            "princpt": torch.tensor([intr[0, 2], intr[1, 2]]),
-        }
-        # render_shape = int(cam_param["princpt"][1] * 2), int(
-        #     cam_param["princpt"][0] * 2)  # require h, w
-        render_shape = torch.tensor([720, 1280])
-
-        # # DEBUG
-        mesh_render_debug = render_mesh_debug(
-            output.vertices[v_idx], smplx_face, cam_param, intr
-        )
-
-        mesh_render, is_bkg = render_mesh(
-            output.vertices[v_idx],
-            smplx_face,
-            cam_param,
-            np.ones((render_shape[0], render_shape[1], 3), dtype=np.float32) * 255,
-            return_bg_mask=True,
-        )
-        mesh_render = mesh_render.astype(np.uint8)
-        mesh_render_list.append(mesh_render)
-    mesh_render = np.stack(mesh_render_list)
-    return mesh_render
-
-
 def prepare_motion_seqs(
     motion_seqs_dir,
     image_folder,
@@ -459,8 +348,7 @@ def prepare_motion_seqs(
     render_image_res,
     need_mask,
     multiply=16,
-    vis_motion=False,
-    motion_size=3000,  # only support 100s videos
+    motion_size=3000,
 ):
     """
     Prepare motion sequences for rendering.
@@ -476,7 +364,6 @@ def prepare_motion_seqs(
         render_image_res (int): Resolution of the rendered images.
         need_mask (bool): Flag indicating whether masks are needed.
         multiply (int, optional): Multiply factor for image size. Defaults to 16.
-        vis_motion (bool, optional): Flag indicating whether to visualize motion. Defaults to False.
 
     Returns:
         dict: Dictionary containing the prepared motion sequences.
@@ -493,7 +380,6 @@ def prepare_motion_seqs(
                         'img_size_wh'
                 ]
             'rgbs': imgs w.r.t motions
-            'vis_motion_render': rendering smplx motion
 
     Raises:
         AssertionError: If motion_seqs_dir is None and image_folder is None.
@@ -509,7 +395,7 @@ def prepare_motion_seqs(
     motion_seqs = sorted(glob.glob(os.path.join(motion_seqs_dir, "*.json")))
     motion_seqs = motion_seqs[:motion_size]
 
-    # source images
+
     c2ws, intrs, rgbs, bg_colors, masks = [], [], [], [], []
     smplx_params = []
     shape_param = None
@@ -535,7 +421,7 @@ def prepare_motion_seqs(
         c2w, intrinsic = _load_pose(smplx_param)
         intrinsic_raw = intrinsic.clone()
         if "expr" not in smplx_raw_data:
-            # supports v2.0 data format
+
             max_tgt_size = int(max(smplx_param["img_size_wh"]))
         else:
             max_tgt_size = int(smplx_param["img_size_wh"][0])
@@ -549,44 +435,39 @@ def prepare_motion_seqs(
         c2ws.append(c2w)
         bg_colors.append(bg_color)
         intrs.append(intrinsic)
-        # intrs.append(intrinsic_raw)
+
         smplx_params.append(smplx_param)
 
-    c2ws = torch.stack(c2ws, dim=0)  # [N, 4, 4]
-    intrs = torch.stack(intrs, dim=0)  # [N, 4, 4]
+    c2ws = torch.stack(c2ws, dim=0)
+    intrs = torch.stack(intrs, dim=0)
     bg_colors = (
         torch.tensor(bg_colors, dtype=torch.float32).unsqueeze(-1).repeat(1, 3)
-    )  # [N, 3]
+    )
 
     if len(rgbs) > 0:
-        rgbs = torch.cat(rgbs, dim=0)  # [N, 3, H, W]
-        # masks = torch.cat(masks, dim=0)  # [N, 1, H, W]
+        rgbs = torch.cat(rgbs, dim=0)
+
 
     smplx_params_tmp = defaultdict(list)
     for smplx in smplx_params:
         for k, v in smplx.items():
             smplx_params_tmp[k].append(v)
     for k, v in smplx_params_tmp.items():
-        smplx_params_tmp[k] = torch.stack(v)  # [Nv, xx, xx]
+        smplx_params_tmp[k] = torch.stack(v)
     smplx_params = smplx_params_tmp
-    # TODO check different betas for same person
+
     smplx_params["betas"] = shape_param
 
-    if vis_motion:
-        motion_render = render_smplx_mesh(smplx_params, intrs)
-    else:
-        motion_render = None
 
-    # add batch dim
     for k, v in smplx_params.items():
         smplx_params[k] = v.unsqueeze(0)
-        # print(k, smplx_params[k].shape, "motion_seq")
+
     c2ws = c2ws.unsqueeze(0)
     intrs = intrs.unsqueeze(0)
     bg_colors = bg_colors.unsqueeze(0)
     if len(rgbs) > 0:
         rgbs = rgbs.unsqueeze(0)
-    # print(f"c2ws:{c2ws.shape}, intrs:{intrs.shape}, rgbs:{rgbs.shape if len(rgbs) > 0 else None}")
+
 
     motion_seqs_ret = {}
     motion_seqs_ret["render_c2ws"] = c2ws
@@ -594,7 +475,6 @@ def prepare_motion_seqs(
     motion_seqs_ret["render_bg_colors"] = bg_colors
     motion_seqs_ret["smplx_params"] = smplx_params
     motion_seqs_ret["rgbs"] = rgbs
-    motion_seqs_ret["vis_motion_render"] = motion_render
     motion_seqs_ret["motion_seqs"] = motion_seqs
 
     return motion_seqs_ret
@@ -611,8 +491,7 @@ def prepare_sign_motion_seqs(
     render_image_res,
     need_mask,
     multiply=16,
-    vis_motion=False,
-    motion_size=3000,  # only support 100s videos
+    motion_size=3000,
 ):
     """
     Prepare motion sequences for rendering.
@@ -628,7 +507,6 @@ def prepare_sign_motion_seqs(
         render_image_res (int): Resolution of the rendered images.
         need_mask (bool): Flag indicating whether masks are needed.
         multiply (int, optional): Multiply factor for image size. Defaults to 16.
-        vis_motion (bool, optional): Flag indicating whether to visualize motion. Defaults to False.
 
     Returns:
         dict: Dictionary containing the prepared motion sequences.
@@ -645,69 +523,68 @@ def prepare_sign_motion_seqs(
                         'img_size_wh'
                 ]
             'rgbs': imgs w.r.t motions
-            'vis_motion_render': rendering smplx motion
 
     Raises:
         AssertionError: If motion_seqs_dir is None and image_folder is None.
 
     """
 
-    # # if motion_seqs_dir is None:
-    # #     assert image_folder is not None
-    # #     motion_seqs_dir, image_folder = predict_motion_seqs_from_images(
-    # #         image_folder, save_root, fps
-    # #     )
-    # file_name = './train_data/sign/fz6XzPxdo-0_3-5-rgb_front.pkl'
-    # # file_name = './train_data/sign/1eA1cI1yI7w_0-8-rgb_front.pkl'
-    # # file_name = './train_data/sign/1eA1cI1yI7w_13-8-rgb_front.pkl'
-    # video_name = os.path.basename(file_name).split('.pkl')[0]
-    # # motion_seqs = sorted(glob.glob(os.path.join(motion_seqs_dir, "*.json")))
-    # # motion_seqs = motion_seqs[:motion_size]
-    # smplx_params = {}
 
 
-    # # =====================================================================================================
-    # file_name = './data/--7E2sU6zP4_7-5-rgb_front_debug.pkl'
-    # # file_name = './data/_2FBDaOPYig_1-3-rgb_front_0_3D.pkl'
-    # with open(file_name, 'rb') as f:
-    #     result_dict = pickle.load(f)
-    #
-    # result_dict["expr"] = torch.zeros_like(torch.cat([result_dict['betas'], torch.zeros(289, 90)], dim=1))
-    # result_dict['betas'] = result_dict["betas"][0,:].squeeze()
-    # # result_dict['trans'] = torch.zeros_like(result_dict['jaw_pose'])   # 不能设为 0！！！
-    # # print(result_dict['trans'])
-    # smplx_param = result_dict
-    #
-    # bg_colors = torch.tensor(bg_color, dtype=torch.float32).unsqueeze(-1).repeat(289, 3)
-    # # =====================================================================================================
-    # #
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     results_dict = motion_seqs
     smplx_params = {}
 
     focals = results_dict['focal']
     princpts = results_dict['princpt']
 
-    all_pose = results_dict['smplx']        # (267,182)  267 is frame number
+    all_pose = results_dict['smplx']
     if all_pose.shape[0] != 289:
         print('1')
-    img_size = torch.tensor([720, 1280]) # results_dict['height'], results_dict['width']
-    pred_focals = torch.tensor([1330.2149658203125, 1330.2149658203125])  # from pjm_541
-    pred_princpts = torch.tensor([768, 432])  # from pjm_541
-    # pred_princpts = torch.tensor([640, 360])  # from pjm_541
-    # princpts = torch.tensor([768, 432])
-    # print('----------',results_dict)
+    img_size = torch.tensor([720, 1280])
+    pred_focals = torch.tensor([1330.2149658203125, 1330.2149658203125])
+    pred_princpts = torch.tensor([768, 432])
+
+
+
     all_pose = torch.tensor(all_pose)
     bg_colors = torch.tensor(bg_color, dtype=torch.float32).unsqueeze(-1).repeat(all_pose.size(0),3)
-    # bg_colors = bg_color.repeat(all_pose.size(0),1).unsqueeze(0)
-    # torch.set_printoptions(precision=8, sci_mode=False)
+
+
 
     focals = torch.tensor(focals)
     princpts = torch.tensor(princpts)
     focals = focals[0, :].repeat(all_pose.size(0), 1)
     princpts = princpts[0, :].repeat(all_pose.size(0), 1)
 
-    # focals = pred_focals.repeat(all_pose.size(0), 1)
-    # princpts = pred_princpts.repeat(all_pose.size(0), 1)
+
+
 
     smplx_params['root_pose'] = all_pose[:, :3]
     smplx_params['body_pose'] = all_pose[:, 3:66].reshape(-1, 21, 3)
@@ -715,59 +592,53 @@ def prepare_sign_motion_seqs(
     smplx_params['rhand_pose'] = all_pose[:, 111:156].reshape(-1, 15, 3)
     smplx_params['jaw_pose'] = all_pose[:, 156:159]
     smplx_params['betas'] = all_pose[0, 159:169]
-    # ---------------------------------------------------------------
-    # smplx_params['root_pose'] = smplx_param['root_pose']
-    # smplx_params['body_pose'] = smplx_param['body_pose']
-    # smplx_params['betas'] = smplx_param["betas"]
-    # smplx_params['betas'][1:] = torch.tensor([1.6386, -0.3575, 1.4468, 1.1971, 1.3119, 0.1308, -0.2046, 0.6539, -0.2061])
-    # # GT: tensor([-0.1728, 1.6386, -0.3575, 1.4468, 1.1971, 1.3119, 0.1308, -0.2046,
-    # #                0.6539, -0.2061])
-    # # LHM：tensor([0.4579, 0.2994, 0.2765, 0.3423, 0.2244, -0.0839, 0.0438, -0.0738,
-    # #             -0.2165, -0.2384])
-    # ---------------------------------------------------------------
-    # smplx_params['expr'] = all_pose[:, 169:179]
+
+
+
+
+
+
+
+
+
+
+
     smplx_params['expr'] = torch.cat([all_pose[:, 169:179], torch.zeros(all_pose.size(0), 90)], dim=1)
-    # FOR DEBUG !!!!
-    # smplx_params['trans'] = smplx_param['trans']
+
+
     smplx_params['trans'] = all_pose[0, 179:182].repeat(all_pose.size(0), 1)
-    # smplx_params['trans'] = torch.zeros_like(smplx_params['jaw_pose'])
+
     smplx_params['leye_pose'] = torch.zeros_like(smplx_params['jaw_pose'])
     smplx_params['reye_pose'] = torch.zeros_like(smplx_params['jaw_pose'])
     smplx_params['focal'] = focals
     smplx_params['princpt'] = princpts
-    # smplx_params['princpt'] = princpts_debug.repeat(all_pose.size(0), 1)
+
     smplx_params['img_size_wh'] = img_size.repeat(all_pose.size(0), 1)
-    # # ======================================================================================================
-    # # ------------------------------- Neutral Sign Avatar --------------------------------
-    # smplx_params['root_pose'] = torch.tensor(smplx_param['smplx_root_pose']).squeeze(0).repeat(all_pose.size(0), 1)
-    # smplx_params['jaw_pose'] = torch.tensor(smplx_param['smplx_jaw_pose']).squeeze(0).repeat(all_pose.size(0), 1)
-    # smplx_params['body_pose'] = torch.tensor(smplx_param['smplx_body_pose']).squeeze(0).repeat(all_pose.size(0), 1).reshape(-1, 21, 3)
-    # # smplx_params['betas'] = torch.tensor(smplx_param["smplx_shape"]).squeeze(0).repeat(all_pose.size(0), 1)
-    # smplx_params['trans'] = torch.tensor(smplx_param["cam_trans"]).squeeze(0).repeat(all_pose.size(0), 1)
-    # smplx_params['expr'] = torch.cat([torch.tensor(smplx_param["smplx_expr"]).squeeze(0).repeat(all_pose.size(0), 1), torch.zeros(all_pose.size(0), 90).squeeze(0)], dim=1)
-    # smplx_params['lhand_pose'] = torch.tensor(smplx_param["smplx_lhand_pose"]).squeeze(0).repeat(all_pose.size(0), 1).reshape(-1, 15, 3)
-    # smplx_params['rhand_pose'] = torch.tensor(smplx_param["smplx_rhand_pose"]).squeeze(0).repeat(all_pose.size(0), 1).reshape(-1, 15, 3)
-    # # smplx_params['betas'][1:] = torch.tensor([1.6386, -0.3575, 1.4468, 1.1971, 1.3119, 0.1308, -0.2046, 0.6539, -0.2061])
-    # # # GT: tensor([-0.1728, 1.6386, -0.3575, 1.4468, 1.1971, 1.3119, 0.1308, -0.2046,
-    # # #                0.6539, -0.2061])
-    # # # LHM：tensor([0.4579, 0.2994, 0.2765, 0.3423, 0.2244, -0.0839, 0.0438, -0.0738,
-    # # #             -0.2165, -0.2384])
-    # # ---------------------------------------------------------------
-    # # ======================================================================================================
-    # cam_trans = all_pose[0, 179:182].repeat(all_pose.size(0), 1).unsqueeze(0)   # 289,3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     cam_trans = None
     c2ws, intrs = _load_pose_sign(smplx_params, cam_trans)
-    # c2ws, intrs = _load_pose_sign(smplx_params)
 
-    # g, b, l, r, j, s, exp, cam_trans = \
-    # all_pose[:, :3], all_pose[:, 3:66], all_pose[:, 66:111], all_pose[:, 111:156], all_pose[:, 156:159], \
-    # all_pose[:, 159:169], all_pose[:, 169:179], all_pose[:, 179:182]
 
-    if vis_motion:   # 这个很耗时，是否删除？
-        motion_render = None
-        # motion_render = render_smplx_mesh(smplx_params, intrs)
-    else:
-        motion_render = None
+
+
+
 
     for k, v in smplx_params.items():
         smplx_params[k] = v.unsqueeze(0)
@@ -778,12 +649,11 @@ def prepare_sign_motion_seqs(
     motion_seqs_ret = {}
     motion_seqs_ret["render_c2ws"] = c2ws
     motion_seqs_ret["render_intrs"] = intrs
-    # motion_seqs_ret["render_trans"] = all_pose[:, 179:182].unsqueeze(0)
+
     motion_seqs_ret["render_bg_colors"] = bg_colors.unsqueeze(0)
     motion_seqs_ret["smplx_params"] = smplx_params
     motion_seqs_ret["rgbs"] = rgbs
-    motion_seqs_ret["vis_motion_render"] = motion_render
-    # motion_seqs_ret["motion_seqs"] = motion_seqs  # json files (list)
+
 
     return motion_seqs_ret
 
@@ -800,7 +670,6 @@ def prepare_motion_single(
     render_image_res,
     need_mask,
     multiply=16,
-    vis_motion=False,
 ):
     """
     Prepare motion sequences for rendering.
@@ -816,7 +685,6 @@ def prepare_motion_single(
         render_image_res (int): Resolution of the rendered images.
         need_mask (bool): Flag indicating whether masks are needed.
         multiply (int, optional): Multiply factor for image size. Defaults to 16.
-        vis_motion (bool, optional): Flag indicating whether to visualize motion. Defaults to False.
 
     Returns:
         dict: Dictionary containing the prepared motion sequences.
@@ -833,7 +701,6 @@ def prepare_motion_single(
                         'img_size_wh'
                 ]
             'rgbs': imgs w.r.t motions
-            'vis_motion_render': rendering smplx motion
 
     Raises:
         AssertionError: If motion_seqs_dir is None and image_folder is None.
@@ -849,7 +716,7 @@ def prepare_motion_single(
     ]
     axis_list = [0, 60, 180, 240]
 
-    # source images
+
     c2ws, intrs, rgbs, bg_colors, masks = [], [], [], [], []
     smplx_params = []
     shape_param = None
@@ -870,7 +737,7 @@ def prepare_motion_single(
         c2w, intrinsic = _load_pose(smplx_param)
         intrinsic_raw = intrinsic.clone()
         if "expr" not in smplx_raw_data:
-            # supports v2.0 data format
+
             max_tgt_size = int(max(smplx_param["img_size_wh"]))
         else:
             max_tgt_size = int(smplx_param["img_size_wh"][0])
@@ -882,7 +749,7 @@ def prepare_motion_single(
                 flame_param = json.load(f)
                 smplx_param["expr"] = torch.FloatTensor(flame_param["expcode"])
 
-                # replace with flame's jaw_pose
+
                 smplx_param["jaw_pose"] = torch.FloatTensor(flame_param["posecode"][3:])
                 smplx_param["leye_pose"] = torch.FloatTensor(flame_param["eyecode"][:3])
                 smplx_param["reye_pose"] = torch.FloatTensor(flame_param["eyecode"][3:])
@@ -901,44 +768,39 @@ def prepare_motion_single(
         c2ws.append(c2w)
         bg_colors.append(bg_color)
         intrs.append(intrinsic)
-        # intrs.append(intrinsic_raw)
+
         smplx_params.append(smplx_param)
 
-    c2ws = torch.stack(c2ws, dim=0)  # [N, 4, 4]
-    intrs = torch.stack(intrs, dim=0)  # [N, 4, 4]
+    c2ws = torch.stack(c2ws, dim=0)
+    intrs = torch.stack(intrs, dim=0)
     bg_colors = (
         torch.tensor(bg_colors, dtype=torch.float32).unsqueeze(-1).repeat(1, 3)
-    )  # [N, 3]
+    )
 
     if len(rgbs) > 0:
-        rgbs = torch.cat(rgbs, dim=0)  # [N, 3, H, W]
-        # masks = torch.cat(masks, dim=0)  # [N, 1, H, W]
+        rgbs = torch.cat(rgbs, dim=0)
+
 
     smplx_params_tmp = defaultdict(list)
     for smplx in smplx_params:
         for k, v in smplx.items():
             smplx_params_tmp[k].append(v)
     for k, v in smplx_params_tmp.items():
-        smplx_params_tmp[k] = torch.stack(v)  # [Nv, xx, xx]
+        smplx_params_tmp[k] = torch.stack(v)
     smplx_params = smplx_params_tmp
-    # TODO check different betas for same person
+
     smplx_params["betas"] = shape_param
 
-    if vis_motion:
-        motion_render = render_smplx_mesh(smplx_params, intrs)
-    else:
-        motion_render = None
 
-    # add batch dim
     for k, v in smplx_params.items():
         smplx_params[k] = v.unsqueeze(0)
-        # print(k, smplx_params[k].shape, "motion_seq")
+
     c2ws = c2ws.unsqueeze(0)
     intrs = intrs.unsqueeze(0)
     bg_colors = bg_colors.unsqueeze(0)
     if len(rgbs) > 0:
         rgbs = rgbs.unsqueeze(0)
-    # print(f"c2ws:{c2ws.shape}, intrs:{intrs.shape}, rgbs:{rgbs.shape if len(rgbs) > 0 else None}")
+
 
     motion_seqs = {}
     motion_seqs["render_c2ws"] = c2ws
@@ -946,7 +808,6 @@ def prepare_motion_single(
     motion_seqs["render_bg_colors"] = bg_colors
     motion_seqs["smplx_params"] = smplx_params
     motion_seqs["rgbs"] = rgbs
-    motion_seqs["vis_motion_render"] = motion_render
 
     return motion_seqs
 
@@ -962,7 +823,6 @@ def prepare_motion_lrmbench(
     render_image_res,
     need_mask,
     multiply=16,
-    vis_motion=False,
 ):
     """
     Prepare motion sequences for rendering.
@@ -978,7 +838,6 @@ def prepare_motion_lrmbench(
         render_image_res (int): Resolution of the rendered images.
         need_mask (bool): Flag indicating whether masks are needed.
         multiply (int, optional): Multiply factor for image size. Defaults to 16.
-        vis_motion (bool, optional): Flag indicating whether to visualize motion. Defaults to False.
 
     Returns:
         dict: Dictionary containing the prepared motion sequences.
@@ -995,7 +854,6 @@ def prepare_motion_lrmbench(
                         'img_size_wh'
                 ]
             'rgbs': imgs w.r.t motions
-            'vis_motion_render': rendering smplx motion
 
     Raises:
         AssertionError: If motion_seqs_dir is None and image_folder is None.
@@ -1016,7 +874,7 @@ def prepare_motion_lrmbench(
         for _ in range(len(axis_list))
     ]
 
-    # source images
+
     c2ws, intrs, rgbs, bg_colors, masks = [], [], [], [], []
     smplx_params = []
     shape_param = None
@@ -1037,7 +895,7 @@ def prepare_motion_lrmbench(
         c2w, intrinsic = _load_pose(smplx_param)
         intrinsic_raw = intrinsic.clone()
         if "expr" not in smplx_raw_data:
-            # supports v2.0 data format
+
             max_tgt_size = int(max(smplx_param["img_size_wh"]))
         else:
             max_tgt_size = int(smplx_param["img_size_wh"][0])
@@ -1049,7 +907,7 @@ def prepare_motion_lrmbench(
                 flame_param = json.load(f)
                 smplx_param["expr"] = torch.FloatTensor(flame_param["expcode"])
 
-                # replace with flame's jaw_pose
+
                 smplx_param["jaw_pose"] = torch.FloatTensor(flame_param["posecode"][3:])
                 smplx_param["leye_pose"] = torch.FloatTensor(flame_param["eyecode"][:3])
                 smplx_param["reye_pose"] = torch.FloatTensor(flame_param["eyecode"][3:])
@@ -1070,38 +928,33 @@ def prepare_motion_lrmbench(
         c2ws.append(c2w)
         bg_colors.append(bg_color)
         intrs.append(intrinsic)
-        # intrs.append(intrinsic_raw)
+
         smplx_params.append(smplx_param)
 
-    c2ws = torch.stack(c2ws, dim=0)  # [N, 4, 4]
-    intrs = torch.stack(intrs, dim=0)  # [N, 4, 4]
+    c2ws = torch.stack(c2ws, dim=0)
+    intrs = torch.stack(intrs, dim=0)
     bg_colors = (
         torch.tensor(bg_colors, dtype=torch.float32).unsqueeze(-1).repeat(1, 3)
-    )  # [N, 3]
+    )
 
     if len(rgbs) > 0:
-        rgbs = torch.cat(rgbs, dim=0)  # [N, 3, H, W]
-        # masks = torch.cat(masks, dim=0)  # [N, 1, H, W]
+        rgbs = torch.cat(rgbs, dim=0)
+
 
     smplx_params_tmp = defaultdict(list)
     for smplx in smplx_params:
         for k, v in smplx.items():
             smplx_params_tmp[k].append(v)
     for k, v in smplx_params_tmp.items():
-        smplx_params_tmp[k] = torch.stack(v)  # [Nv, xx, xx]
+        smplx_params_tmp[k] = torch.stack(v)
     smplx_params = smplx_params_tmp
-    # TODO check different betas for same person
+
     smplx_params["betas"] = shape_param
 
-    if vis_motion:
-        motion_render = render_smplx_mesh(smplx_params, intrs)
-    else:
-        motion_render = None
 
-    # add batch dim
     for k, v in smplx_params.items():
         smplx_params[k] = v.unsqueeze(0)
-        # print(k, smplx_params[k].shape, "motion_seq")
+
     c2ws = c2ws.unsqueeze(0)
     intrs = intrs.unsqueeze(0)
     bg_colors = bg_colors.unsqueeze(0)
@@ -1114,6 +967,5 @@ def prepare_motion_lrmbench(
     motion_seqs["render_bg_colors"] = bg_colors
     motion_seqs["smplx_params"] = smplx_params
     motion_seqs["rgbs"] = rgbs
-    motion_seqs["vis_motion_render"] = motion_render
 
     return motion_seqs

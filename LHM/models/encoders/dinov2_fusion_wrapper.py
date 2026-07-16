@@ -1,4 +1,3 @@
-# Copyright (c) 2023-2024, Zexin He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +12,14 @@
 # limitations under the License.
 
 
-import pdb
 
 import kornia
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from accelerate.logging import get_logger
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class DPTHead(nn.Module):
@@ -95,7 +93,7 @@ class Dinov2FusionWrapper(nn.Module):
         modulation_dim: int = None,
         freeze: bool = True,
         encoder_feat_dim: int = 384,
-        resolution=448,  # DINOV2 default resolution
+        resolution=448,
         antialias=True,
     ):
         super().__init__()
@@ -116,9 +114,7 @@ class Dinov2FusionWrapper(nn.Module):
             out_channel=encoder_feat_dim,
         )
 
-        # ====== Upsampling to target resolution (256x256 for hand) ======
-        # 从 fusion_head 输出 (e.g., [B, 1024, 32, 32]) 上采样到 256x256
-        # 参照 GUAVA dino_encoder.py 的处理方式
+
         self.upsample_to_256 = nn.Sequential(
             nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True),
             nn.Conv2d(encoder_feat_dim, encoder_feat_dim, kernel_size=3, stride=1, padding=1, bias=False),
@@ -127,21 +123,21 @@ class Dinov2FusionWrapper(nn.Module):
         self.resolution = resolution
         self.antialias = antialias
 
-        # # M = 4
-        # # self.num_style_tokens = M
-        # # # self.cls_fuse = nn.Linear(in_features=self.model.embed_dim*len(self.intermediate_layer_idx),
-        # # #                           out_features=self.model.embed_dim*self.num_style_tokens).cuda()
-        # self.cls_fuse = nn.Sequential(  
-        #     nn.Linear(self.model.embed_dim * len(self.intermediate_layer_idx), self.model.embed_dim),
-        #     nn.GELU(),
-        #     # nn.Linear(self.model.embed_dim * len(self.intermediate_layer_idx), self.model.embed_dim * len(self.intermediate_layer_idx)),).cuda()
-        #     nn.Linear(self.model.embed_dim, self.model.embed_dim * len(self.intermediate_layer_idx)),).cuda()
-        
-        #     # nn.Linear(self.model.embed_dim * len(self.intermediate_layer_idx), self.model.embed_dim),
-        #     # # nn.GELU(),
-        #     # nn.SiLU(),
-        #     # # nn.Linear(self.model.embed_dim * len(self.intermediate_layer_idx), self.model.embed_dim * len(self.intermediate_layer_idx)),).cuda()
-        #     # nn.Linear(self.model.embed_dim, self.model.embed_dim)).cuda()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         if freeze:
@@ -202,61 +198,25 @@ class Dinov2FusionWrapper(nn.Module):
 
     @torch.compile
     def forward(self, image: torch.Tensor, mod: torch.Tensor = None):
-        # image: [N, C, H, W]
-        # mod: [N, D] or None
-        # RGB image with [0,1] scale and properly sized
 
-        image = self._preprocess_image(image, self.resolution)     # (1,3,256,256) ----> (1,3,448,448)
 
-        patch_h, patch_w =(     # 32, 32
+
+
+        image = self._preprocess_image(image, self.resolution)
+
+        patch_h, patch_w =(
             image.shape[-2] // self.model.patch_size,
             image.shape[-1] // self.model.patch_size,
         )
 
         features = self.model.get_intermediate_layers(
             image, self.intermediate_layer_idx, return_class_token=True
-        )   # 每一个 features，第一个是latent (2,1024,1024)，第二个是cls_token (2,1024)
+        )
 
-        # out_local = self.fusion_head(features, patch_h, patch_w).permute(0, 2, 3, 1).flatten(1, 2)  # 2.1024.1024
-        out_ = self.fusion_head(features, patch_h, patch_w) # 2,1024,32,32
-        out_local = out_.permute(0, 2, 3, 1).flatten(1, 2)  # 2.1024.1024
+        out_ = self.fusion_head(features, patch_h, patch_w)
+        out_local = out_.permute(0, 2, 3, 1).flatten(1, 2)
 
-        # # ====== 新增：从 4 个层的 CLS 聚合 style tokens ======
-
-        # # 1) 收集多层 CLS: 每个 features[i][1] 是 [B, D]
-        # cls_list = [feat[1] for feat in features]         # list of 4 x [B, D]
-        # # 2) 在通道维度 concat: [B, 4D]
-        # cls_cat = torch.cat(cls_list, dim=-1)             # [B, 4D]
-
-        # # 3) MLP 融合成单一 global feature → [B, D]
-        # out_global_four = self.cls_fuse(cls_cat)
-
-        # # ==================================================
-        # # 3) MLP 映射成 M*D，然后 reshape 成 [B, M, D]
-        # style_flat = self.cls_fuse(cls_cat)           # [B, M*D]
-        # # B, _ = style_flat.shape
-        # # D = self.model.embed_dim
-        # # M = self.num_style_tokens
-        # # out_global = style_flat.view(B, M, D)           # [B, M, D]
-        # out_global = style_flat
-        
         out_global = features[-1][1]
         out_global_four = out_global
-        # return out_local, out_global
-        
-        # out_global = None
-        # if out_global is not None:
-        #     ret = torch.cat(
-        #         [out_local.permute(0, 2, 3, 1).flatten(1, 2), out_global.unsqueeze(1)],
-        #         dim=1,
-        #     )
-        # else:
-        #     ret = out_local.permute(0, 2, 3, 1).flatten(1, 2)
 
-        # ====== Upsample fusion output to 256x256 (参照 GUAVA) ======
-        # out_: [B, 1024, 32, 32] → [B, 1024, 256, 256]
-        # out_upsampled = self.upsample_to_256(out_)  # [B, encoder_feat_dim, 256, 256]
-
-    
-        return out_local, out_, out_global #, out_upsampled
-        # return ret
+        return out_local, out_, out_global

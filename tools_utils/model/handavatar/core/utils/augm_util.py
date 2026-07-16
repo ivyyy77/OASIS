@@ -37,18 +37,18 @@ def get_bbox(joint_img, joint_valid):
 
 
 def process_bbox(bbox, img_width, img_height, input_img_shape=(256, 256)):
-    # sanitize bboxes
+
     x, y, w, h = bbox
     x1 = np.max((0, x))
     y1 = np.max((0, y))
     x2 = np.min((img_width - 1, x1 + np.max((0, w - 1))))
-    y2 = np.min((img_height - 1, y1 + np.max((0, h - 1))))        
+    y2 = np.min((img_height - 1, y1 + np.max((0, h - 1))))
     if w * h > 0 and x2 > x1 and y2 > y1:
         bbox = np.array([x1, y1, x2 - x1, y2 - y1])
     else:
         raise ValueError('bbox is invalid, x1={}, y1={}, x2={}, y2={}, w={}, h={}'.format(x1, y1, x2, y2, w, h))
 
-    # aspect ratio preserving bbox
+
     w = bbox[2]
     h = bbox[3]
     c_x = bbox[0] + w / 2.
@@ -67,14 +67,9 @@ def process_bbox(bbox, img_width, img_height, input_img_shape=(256, 256)):
 
 
 def get_aug_config(exclude_flip, base_scale=1.1, scale_factor=0.25, rot_factor=60, color_factor=0.2, gaussian_std=1):
-    # scale_factor = 0.25
-    # rot_factor = 60
-    # color_factor = 0.2
 
-    # scale = np.clip(np.random.randn(), -1.0, 1.0) * scale_factor + 1.0
     scale = get_m1to1_gaussian_rand(gaussian_std) * scale_factor + base_scale
-    # rot = np.clip(np.random.randn(), -2.0, 2.0) * rot_factor if random.random() <= 0.6 else 0
-    rot = get_m1to1_gaussian_rand(gaussian_std) * rot_factor #if random.random() <= 0.6 else 0
+    rot = get_m1to1_gaussian_rand(gaussian_std) * rot_factor
     shift = [get_m1to1_gaussian_rand(gaussian_std), get_m1to1_gaussian_rand(gaussian_std)]
 
     c_up = 1.0 + color_factor
@@ -109,8 +104,7 @@ def augmentation_kps2d(img, joint_img, hand_type, joint_type, trans, do_flip, po
     if do_flip:
         joint_img[:, 0] = original_img_shape[1] - joint_img[:, 0] - 1
         joint_img = joint_img[pose_pair]
-        # joint_img[joint_type['right']], joint_img[joint_type['left']] = joint_img[joint_type['left']].copy(), joint_img[joint_type['right']].copy()
-        # hand_type[0], hand_type[1] = hand_type[1].copy(), hand_type[0].copy()
+
     for i in range(joint_num):
         joint_img[i,:2] = trans_point2d(joint_img[i,:2], trans)
 
@@ -151,7 +145,7 @@ def augmentation_kps(img, joint_img, joint_cam, joint_valid, hand_type, joint_ty
         if do_flip:
             princpt[0] = original_img_shape[1] - princpt[0] - 1
         princpt = trans_point2d(princpt, trans)
-        
+
 
     return joint_img, joint_cam, joint_valid, hand_type, princpt
 
@@ -192,7 +186,7 @@ def rotate_2d(pt_2d, rot_rad):
 
 
 def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_height, scale, rot, shift, shift_wh=None, inv=False, return_shift=False):
-    # augment size with scale
+
     src_w = src_width * scale
     src_h = src_height * scale
     if shift_wh is not None:
@@ -203,7 +197,7 @@ def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_heig
         x_shift = y_shift = 0
     src_center = np.array([c_x + x_shift, c_y + y_shift], dtype=np.float32)
 
-    # augment rotation
+
     rot_rad = np.pi * rot / 180
     src_downdir = rotate_2d(np.array([0, src_h * 0.5], dtype=np.float32), rot_rad)
     src_rightdir = rotate_2d(np.array([src_w * 0.5, 0], dtype=np.float32), rot_rad)

@@ -1,40 +1,32 @@
-# PLY utilities.
-# Contributer(s): Neil Z. Shao
-# All rights reserved. Prometheus 2022-2024.
+
+
 from cv2 import polylines
 from .transform import *
 import os
 import cv2
 
-try:
-    import igl
-except ImportError:
-    print('[Warning] import igl failed.')
-    print('[Warning] Please install igl with conda install -c conda-forge igl')
-    print('[Warning] https://github.com/libigl/libigl-python-bindings')
-
-class PlyWriter:   
+class PlyWriter:
     def __init__(self) -> None:
-        # vertex
+
         self.verts = []
         self.norms = []
         self.colors = []
 
-        # edge index list
+
         self.edge_idxs = []
         self.edge_colors = []
 
-        # triangle index list
+
         self.tri_idxs = []
 
-        # write options
+
         self.with_verts = False
         self.with_norms = False
         self.with_color = False
         self.with_edge = False
         self.with_triangle = False
 
-    # add
+
     def addVertex(self, vt):
         self.verts.append(vt)
         self.with_verts = True
@@ -67,7 +59,7 @@ class PlyWriter:
         edge_x = np.array([box_sz[0], 0, 0])
         edge_y = np.array([0, box_sz[1], 0])
         edge_z = np.array([0, 0, box_sz[2]])
-        
+
         self.addEdge(origin, origin + edge_x, edge_clr)
         self.addEdge(origin, origin + edge_y, edge_clr)
         self.addEdge(origin, origin + edge_z, edge_clr)
@@ -94,7 +86,7 @@ class PlyWriter:
 
         if origin is None:
             origin = center - edge_x / 2.0 - edge_y / 2.0 - edge_z / 2.0
-        
+
         self.addEdge(origin, origin + edge_x, edge_clr)
         self.addEdge(origin, origin + edge_y, edge_clr)
         self.addEdge(origin, origin + edge_z, edge_clr)
@@ -117,7 +109,7 @@ class PlyWriter:
             else:
                 f.write('format binary_little_endian 1.0\n'.encode('ascii'))
 
-            # vertex header
+
             if self.with_verts:
                 f.write(('element vertex %d\n' % len(self.verts)).encode('ascii'))
                 f.write('property float x\n'.encode('ascii'))
@@ -133,8 +125,8 @@ class PlyWriter:
                     f.write('property uchar red\n'.encode('ascii'))
                     f.write('property uchar green\n'.encode('ascii'))
                     f.write('property uchar blue\n'.encode('ascii'))
-            
-            # edge header
+
+
             if self.with_edge:
                 f.write(('element edge %d\n' % len(self.edge_idxs)).encode('ascii'))
                 f.write('property int vertex1\n'.encode('ascii'))
@@ -144,23 +136,20 @@ class PlyWriter:
                 f.write('property uchar green\n'.encode('ascii'))
                 f.write('property uchar blue\n'.encode('ascii'))
 
-            # triangle header
+
             if self.with_triangle:
                 f.write(('element face %d\n' % len(self.tri_idxs)).encode('ascii'))
                 f.write('property list uchar int vertex_indices\n'.encode('ascii'))
 
-                # f.write('property uchar red\n'.encode('ascii'))
-                # f.write('property uchar green\n'.encode('ascii'))
-                # f.write('property uchar blue\n'.encode('ascii'))
 
             f.write('end_header\n'.encode('ascii'))
 
-            # bytes io
+
             if format != 'ascii':
                 from io import BytesIO
                 bytes_io = BytesIO()
 
-            # vertex
+
             if self.with_verts:
                 for i in range(0, len(self.verts)):
                     vt = self.verts[i]
@@ -186,7 +175,7 @@ class PlyWriter:
                     if format == 'ascii':
                         f.write(('\n').encode('ascii'))
 
-            # edge
+
             if self.with_edge:
                 for i in range(len(self.edge_idxs)):
                     idx0 = self.edge_idxs[i][0]
@@ -200,7 +189,7 @@ class PlyWriter:
                         bytes_io.write(np.array([idx0, idx1]).astype(np.int32).tobytes())
                         bytes_io.write(np.array([r, g, b]).astype(np.uint8).tobytes())
 
-            # triangle
+
             if self.with_triangle:
                 for i in range(len(self.tri_idxs)):
                     idx0 = self.tri_idxs[i][0]
@@ -217,7 +206,7 @@ class PlyWriter:
                 bytes_io.close()
 
 
-# save camera depth to obj
+
 def saveCameraDepthToPly(fn, cam, depth, color=None, base_width=None):
     if base_width is not None:
         cam = cam.clone()
@@ -225,7 +214,7 @@ def saveCameraDepthToPly(fn, cam, depth, color=None, base_width=None):
         color = cv2.resize(color, dsize=cam.sz, interpolation=cv2.INTER_CUBIC)
         depth = cv2.resize(depth, dsize=cam.sz, interpolation=cv2.INTER_NEAREST)
 
-    # vertex, normal map
+
     print('[saveCameraDepthToPly] calc vmap, nmap')
     vmap, nmap = calcVNMap(cam, depth)
 
@@ -270,14 +259,13 @@ def saveCamerasToPly(fn, cams, finger_lens=0.1):
             idx0 = i * 4
             idx1 = idx0 + 1 + j
             ply_writer.addEdgeByIdx(idx0, idx1)
-    
-    # print('[saveCamerasToPly] write ply')
+
     ply_writer.writeToPly(fn)
 
 def saveLinePointsToPly(fn, pts, nms=None, clr_mask=None):
     if pts is None or pts.shape[0] == 0:
         return
-    
+
     ply_writer = PlyWriter()
     ply_writer.addVertex(pts[0])
 
@@ -296,13 +284,12 @@ def saveLinePointsToPly(fn, pts, nms=None, clr_mask=None):
             else:
                 ply_writer.addColor(np.array([0, 0, 255]))
 
-    # print('[saveCamerasToPly] write ply')
     ply_writer.writeToPly(fn)
 
 def savePointsToPly(fn, verts, norms=None, clr_mask=None, colors=None):
     if verts is None or verts.shape[0] == 0:
         return
-    
+
     if len(verts.shape) == 3:
         verts = verts[0]
 
@@ -312,7 +299,7 @@ def savePointsToPly(fn, verts, norms=None, clr_mask=None, colors=None):
             verts = verts.detach().cpu()
     except:
         pass
-    
+
     ply_writer = PlyWriter()
     for i in range(verts.shape[0]):
         ply_writer.addVertex(verts[i])
@@ -330,13 +317,12 @@ def savePointsToPly(fn, verts, norms=None, clr_mask=None, colors=None):
         for i in range(colors.shape[0]):
             ply_writer.addColor(colors[i])
 
-    # print('[saveCamerasToPly] write ply')
     ply_writer.writeToPly(fn)
 
 def savePairedPointsToPly(fn, pts0, pts1, nml0=None, nml1=None):
     if pts0 is None or pts1 is None or pts0.shape[0] == 0 or pts0.shape[0] != pts1.shape[0]:
         return
-    
+
     ply_writer = PlyWriter()
 
     for i in range(pts0.shape[0]):
@@ -351,5 +337,4 @@ def savePairedPointsToPly(fn, pts0, pts1, nml0=None, nml1=None):
             ply_writer.addNormal(nml0[i])
             ply_writer.addNormal(nml1[i])
 
-    # print('[saveCamerasToPly] write ply')
     ply_writer.writeToPly(fn)

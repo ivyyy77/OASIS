@@ -60,10 +60,10 @@ class ImageWriter():
     def __init__(self, output_dir, exp_name, clear=True):
         self.image_dir = os.path.join(output_dir, exp_name)
 
-        print("The rendering is saved in " + \
+        print("The rendering is saved in " +\
               colored(self.image_dir, 'cyan'))
 
-        # remove image dir if it exists
+
         if os.path.exists(self.image_dir) and clear:
             shutil.rmtree(self.image_dir)
 

@@ -1,25 +1,18 @@
-# -*- coding: utf-8 -*-
-# @Organization  : Alibaba XR-Lab
-# @Author        : Xiaodong Gu & Lingteng Qiu
-# @Email         : 220019047@link.cuhk.edu.cn
-# @Time          : 2025-03-1 17:49:25
-# @Function      : transformer_block
 
-import pdb
+
+
+
+
+
+
 from functools import partial
 from typing import Any, Dict, Optional, Tuple, Union
 
 import math
 import torch
 import torch.nn as nn
-from accelerate.logging import get_logger
-from diffusers.utils import is_torch_version
-try:
-    from LHM.models.transformer_mmeff import MemEffBasicBlock
-except ImportError:
-    MemEffBasicBlock = None
-
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 
 class TransformerDecoder(nn.Module):
@@ -51,9 +44,9 @@ class TransformerDecoder(nn.Module):
         if (
             block_type == "sd3_cond"
             or block_type == "sd3_mm_cond"
-            or block_type == "sd3_mm_bh_cond"   # this way
+            or block_type == "sd3_mm_bh_cond"
         ):
-            # dual_attention_layers = list(range(num_layers//2))
+
             dual_attention_layers = []
             self.layers = nn.ModuleList(
                 [
@@ -64,7 +57,7 @@ class TransformerDecoder(nn.Module):
                         use_dual_attention=(
                             True if i in dual_attention_layers else False
                         ),
-                        layer_idx=i, 
+                        layer_idx=i,
                     )
                     for i in range(num_layers)
                 ]
@@ -89,31 +82,31 @@ class TransformerDecoder(nn.Module):
             "sd3_mm_bh_cond",
         ]:
             self.linear_cond_proj = nn.Linear(cond_dim, inner_dim)
-            # Learnable positional encoding for image condition tokens
+
             self.cond_pos_embed = nn.Parameter(torch.zeros(1, 1024, inner_dim))
             nn.init.trunc_normal_(self.cond_pos_embed, std=0.02)
 
 
-        # self.local_attn_layers = nn.ModuleList([
-        #     MemEffBasicBlock(
-        #         inner_dim=inner_dim,
-        #         num_heads=num_heads,
-        #         eps=eps,
-        #         rope=self.rope2d
-        #     )
-        #     for _ in range(self.num_layers)
-        # ])
-        
 
-        # self.local_attn_layers = nn.ModuleList([
-        #     ProjCrossAttn(
-        #         gauss_dim=12337,
-        #         img_c=1024,
-        #         # eps=eps,
-        #         # rope=self.rope2d
-        #     )
-        #     for _ in range(num_layers)
-        # ])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -178,7 +171,7 @@ class TransformerDecoder(nn.Module):
             logger.debug(f"Using CogVideoXBlock")
             from LHM.models.transformer_dit import CogVideoXBlock
 
-            # assert inner_dim == cond_dim, f"inner_dim:{inner_dim}, cond_dim:{cond_dim}"
+
             return partial(CogVideoXBlock, dim=inner_dim, attention_bias=True)
         elif self.block_type == "sd3_cond":
             logger.debug(f"Using SD3JointTransformerBlock")
@@ -246,13 +239,13 @@ class TransformerDecoder(nn.Module):
         mod: torch.Tensor = None,
         temb: torch.Tensor = None,
         global_four: torch.Tensor = None,
-        nail_mask: Optional[torch.FloatTensor] = None,  # (B, 1, H, W)  feature-map coords (u,v) float
-        nail_mask_3d: Optional[torch.FloatTensor] = None,  # (B, 1, D, H, W)  feature-map coords (u,v) float
-        proj_xy: Optional[torch.FloatTensor] = None,   # (B, L, 2)  feature-map coords (u,v) float
-        p_vis: Optional[torch.FloatTensor] = None,     # (B, L)    visibility score in [0,1]
-        point_pos: Optional[torch.FloatTensor] = None, 
+        nail_mask: Optional[torch.FloatTensor] = None,
+        nail_mask_3d: Optional[torch.FloatTensor] = None,
+        proj_xy: Optional[torch.FloatTensor] = None,
+        p_vis: Optional[torch.FloatTensor] = None,
+        point_pos: Optional[torch.FloatTensor] = None,
         posed_pos: Optional[torch.FloatTensor] = None,
-        feat_hw: Optional[Tuple[int,int]] = None,      # (Hf, Wf)  feature-map spatial size (if proj_xy provided)
+        feat_hw: Optional[Tuple[int,int]] = None,
     ) -> torch.Tensor:
         """
         Forward pass of the transformer model.
@@ -265,9 +258,9 @@ class TransformerDecoder(nn.Module):
             torch.Tensor: Output tensor of shape [N, L, D].
         """
 
-        # x: [N, L, D]
-        # cond: [N, L_cond, D_cond] or None
-        # mod: [N, D_mod] or None
+
+
+
         self.assert_runtime_integrity(x, cond, mod)
 
         if self.block_type in [
@@ -278,10 +271,10 @@ class TransformerDecoder(nn.Module):
         ]:
             cond = self.linear_cond_proj(cond)
             cond = cond + self.cond_pos_embed[:, :cond.shape[1], :]
-            # for layer, layer_local in zip(self.layers, self.local_attn_layers):
+
             for i, layer in enumerate(self.layers):
                 x, cond = layer(
-                # x, cond, moe_loss = layer(
+
                         hidden_states=x,
                         encoder_hidden_states=cond,
                         temb=temb,
@@ -294,16 +287,15 @@ class TransformerDecoder(nn.Module):
                         posed_pos=posed_pos,
                         feat_hw=feat_hw,
                         layer_idx=i,
-                        # image_rotary_emb=None,
+
                     )
-                # x = layer_local(x, nail_img_feats)
+
             x = self.norm(x)
-            # x = self.norm(cond)
+
 
         else:
             for layer in self.layers:
                 x = self.forward_layer(layer, x, cond, mod)
             x = self.norm(x)
 
-        return x#, moe_loss
-
+        return x

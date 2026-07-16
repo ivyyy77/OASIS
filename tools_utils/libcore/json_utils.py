@@ -1,6 +1,5 @@
-# Json utils.
-# Contributer(s): Neil Z. Shao
-# All rights reserved. Prometheus 2022-2024.
+
+
 import numpy as np
 import base64
 
@@ -30,7 +29,7 @@ def loadMatFromJson(value):
     mat = None
     if H <= 0 or W <= 0:
         return mat
-    
+
     if value['dtype'] == "8U":
         mat = np.frombuffer(base64.b64decode(value['data']), dtype=np.uint8).reshape([H, W])
     elif value['dtype'] == "8UC3":
@@ -43,12 +42,12 @@ def loadMatFromJson(value):
         mat = np.frombuffer(base64.b64decode(value['data']), dtype=np.float32).reshape([H, W])
     else:
         return mat
-    
+
     return mat
 
-#################### json writer ####################
-# newline formatter: https://blog.csdn.net/taste_cyn/article/details/112689553
-# ndarray support: https://blog.csdn.net/weixin_43167168/article/details/121129776
+
+
+
 import json
 from _ctypes import PyObj_FromPtr
 import re
@@ -70,7 +69,7 @@ class FormatEncoder(json.JSONEncoder):
     regex = re.compile(FORMAT_SPEC.format(r'(\d+)'))
 
     def __init__(self, **kwargs):
-        # Save copy of any keyword argument values needed for use here.
+
         self.__sort_keys = kwargs.get('sort_keys', None)
         super(FormatEncoder, self).__init__(**kwargs)
 
@@ -81,21 +80,20 @@ class FormatEncoder(json.JSONEncoder):
     def encode(self, obj):
         json_format_ndarray(obj)
 
-        format_spec = self.FORMAT_SPEC  # Local var to expedite access.
-        json_repr = super(FormatEncoder, self).encode(obj)  # Default JSON.
-        # json_repr = json.JSONEncoder.encode(self, obj)
+        format_spec = self.FORMAT_SPEC
+        json_repr = super(FormatEncoder, self).encode(obj)
 
-        # Replace any marked-up object ids in the JSON repr with the
-        # value returned from the json.dumps() of the corresponding
-        # wrapped Python object.
+
+
+
         for match in self.regex.finditer(json_repr):
-            # see https://stackoverflow.com/a/15012814/355230
+
             uid = int(match.group(1))
             no_indent = PyObj_FromPtr(uid)
             json_obj_repr = json.dumps(no_indent.value, sort_keys=self.__sort_keys)
 
-            # Replace the matched id string with json formatted representation
-            # of the corresponding Python object.
+
+
             json_repr = json_repr.replace(
                             '"{}"'.format(format_spec.format(uid)), json_obj_repr)
 

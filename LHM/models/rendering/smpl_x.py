@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
-# @Organization  : Alibaba XR-Lab
-# @Author        : Xiaodong Gu, Lingteng Qiu
-# @Email         : 220019047@link.cuhk.edu.cn
-# @Time          : 2025-01-08 21:42:24, Version 0.0, SMPLX + FLAME2019
-# @Function      : SMPLX-related functions
+
 
 import copy
 import math
 import os
 import os.path as osp
-import pdb
 import pickle
 import sys
 
@@ -26,14 +20,13 @@ from smplx.lbs import batch_rigid_transform
 from torch.nn import functional as F
 
 from LHM.models.rendering.smplx import smplx
-from LHM.models.rendering.smplx.vis_utils import render_mesh
 
 """
 Subdivide a triangle mesh by adding a new vertex at the center of each edge and dividing each face into four new faces.
-Vectors of vertex attributes can also be subdivided by averaging the values of the attributes at the two vertices which form each edge. 
-This implementation preserves face orientation - if the vertices of a face are all ordered counter-clockwise, 
+Vectors of vertex attributes can also be subdivided by averaging the values of the attributes at the two vertices which form each edge.
+This implementation preserves face orientation - if the vertices of a face are all ordered counter-clockwise,
 then the faces in the subdivided meshes will also have their vertices ordered counter-clockwise.
-If meshes is provided as an input, the initializer performs the relatively expensive computation of determining the new face indices. 
+If meshes is provided as an input, the initializer performs the relatively expensive computation of determining the new face indices.
 This one-time computation can be reused for all meshes with the same face topology but different vertex positions.
 """
 
@@ -88,7 +81,6 @@ class SMPLX(object):
                     use_pca=False,
                     use_face_contour=False,
                     flat_hand_mean=False,
-                    # flat_hand_mean=True,
                     **self.layer_arg,
                 )
                 for gender in ["neutral", "male", "female"]
@@ -116,7 +108,6 @@ class SMPLX(object):
                     use_pca=False,
                     use_face_contour=True,
                     flat_hand_mean=False,
-                    # flat_hand_mean=True,
                     **self.layer_arg,
                 )
                 for gender in ["neutral", "male", "female"]
@@ -143,9 +134,9 @@ class SMPLX(object):
         self.lhand_vertex_idx = hand_vertex_idx["left_hand"]
         self.expr_vertex_idx = self.get_expr_vertex_idx()
 
-        # SMPLX joint set
+
         self.joint_num = (
-            55  # 22 (body joints: 21 + 1) + 3 (face joints) + 30 (hand joints)
+            55
         )
         self.joints_name = (
             "Pelvis",
@@ -169,10 +160,10 @@ class SMPLX(object):
             "L_Elbow",
             "R_Elbow",
             "L_Wrist",
-            "R_Wrist",  # body joints
+            "R_Wrist",
             "Jaw",
             "L_Eye",
-            "R_Eye",  # face joints
+            "R_Eye",
             "L_Index_1",
             "L_Index_2",
             "L_Index_3",
@@ -187,7 +178,7 @@ class SMPLX(object):
             "L_Ring_3",
             "L_Thumb_1",
             "L_Thumb_2",
-            "L_Thumb_3",  # left hand joints
+            "L_Thumb_3",
             "R_Index_1",
             "R_Index_2",
             "R_Index_3",
@@ -202,7 +193,7 @@ class SMPLX(object):
             "R_Ring_3",
             "R_Thumb_1",
             "R_Thumb_2",
-            "R_Thumb_3",  # right hand joints
+            "R_Thumb_3",
         )
         self.root_joint_idx = self.joints_name.index("Pelvis")
         self.joint_part = {
@@ -237,17 +228,17 @@ class SMPLX(object):
 
         self.neutral_body_pose = torch.zeros(
             (len(self.joint_part["body"]) - 1, 3)
-        )  # 大 pose in axis-angle representation (body pose without root joint)
-        if cano_pose_type == 0:  # exavatar-cano-pose
+        )
+        if cano_pose_type == 0:
             self.neutral_body_pose[0] = torch.FloatTensor([0, 0, 1])
             self.neutral_body_pose[1] = torch.FloatTensor([0, 0, -1])
-        else:  #
+        else:
             self.neutral_body_pose[0] = torch.FloatTensor([0, 0, math.pi / 9])
             self.neutral_body_pose[1] = torch.FloatTensor([0, 0, -math.pi / 9])
 
         self.neutral_jaw_pose = torch.FloatTensor([1 / 3, 0, 0])
 
-        # subdivider
+
         self.subdivide_num = subdivide_num
         self.subdivider_list = self.get_subdivider(subdivide_num)
         self.subdivider_cpu_list = self.get_subdivider_cpu(subdivide_num)
@@ -272,10 +263,7 @@ class SMPLX(object):
 
         lower_body_vertice_idx = np.asarray(lower_body_vertice_idx)
 
-        # debug
-        # template_v = self.layer["neutral"].v_template
-        # lower_body_v = template_v[lower_body_vertice_idx]
-        # save_ply("lower_body_v.ply", lower_body_v)
+
         return lower_body_vertice_idx
 
     def get_expr_from_flame(self, smplx_layer):
@@ -376,9 +364,6 @@ class SMPLX(object):
                 return vert, *feat_list
         else:
             if feat_list is None:
-                # for subdivider in self.subdivider_cpu_list:
-                #     mesh = subdivider(mesh)
-                # vert = mesh.verts_list()[0]
                 return vert
             else:
                 return vert, *feat_list
@@ -403,18 +388,8 @@ class SMPLX(object):
                 return vert, *feat_list
         else:
             if feat_list is None:
-                # for subdivider in self.subdivider_list:
-                #     mesh = subdivider(mesh)
-                # vert = mesh.verts_list()[0]
                 return vert
             else:
-                # feat_dims = [x.shape[1] for x in feat_list]
-                # feats = torch.cat(feat_list,1)
-                # for subdivider in self.subdivider_list:
-                #     mesh, feats = subdivider(mesh, feats)
-                # vert = mesh.verts_list()[0]
-                # feats = feats[0]
-                # feat_list = torch.split(feats, feat_dims, dim=1)
                 return vert, *feat_list
 
     def upsample_mesh_batch(self, vert, device="cuda"):
@@ -449,7 +424,7 @@ class SMPLX(object):
         return is_cavity, face_new
 
     def get_expr_vertex_idx(self):
-        # FLAME 2020 has all vertices of expr_vertex_idx. use FLAME 2019
+
         """
         SMPLX + FLAME2019 Version
         according to LBS weights to search related vertices ID
@@ -466,9 +441,9 @@ class SMPLX(object):
             > 0
         )[
             0
-        ]  # FLAME.SHAPE_SPACE_DIM == 300
+        ]
 
-        # exclude neck and eyeball regions
+
         flame_joints_name = ("Neck", "Head", "Jaw", "L_Eye", "R_Eye")
         expr_vertex_idx = []
         flame_vertex_num = flame_2019["v_template"].shape[0]
@@ -525,13 +500,13 @@ class SMPLXModel(nn.Module):
     ) -> None:
         super().__init__()
 
-        # self.smpl_x = SMPLX(
-        #     human_model_path=human_model_path,
-        #     shape_param_dim=shape_param_dim,
-        #     expr_param_dim=expr_param_dim,
-        #     subdivide_num=subdivide_num,
-        #     cano_pose_type=cano_pose_type,
-        # )
+
+
+
+
+
+
+
 
         self.smpl_x = SMPLX(
             human_model_path=human_model_path,
@@ -543,7 +518,7 @@ class SMPLXModel(nn.Module):
         self.smplx_layer = copy.deepcopy(self.smpl_x.layer[gender])
 
         self.apply_pose_blendshape = apply_pose_blendshape
-        # register
+
         self.smplx_init()
 
     def get_body_infos(self):
@@ -569,8 +544,8 @@ class SMPLXModel(nn.Module):
 
         smpl_x = self.smpl_x
 
-        # # upsample mesh and other assets
-        # xyz, _, _, _ = self.get_neutral_pose_human(jaw_zero_pose=False, use_id_info=False, device=device)
+
+
 
         skinning_weight = self.smplx_layer.lbs_weights.float()
 
@@ -599,7 +574,7 @@ class SMPLXModel(nn.Module):
         ) = (1.0, 1.0, 1.0, 1.0, 1.0)
         is_cavity = torch.FloatTensor(smpl_x.is_cavity)[:, None]
 
-        # obtain subvided apperance
+
         (
             _,
             skinning_weight,
@@ -624,13 +599,13 @@ class SMPLXModel(nn.Module):
                 is_lower_body,
                 is_cavity,
             ],
-        )  # upsample with dummy vertex
+        )
 
         pose_dirs = pose_dirs.reshape(
             smpl_x.vertex_num_upsampled * 3, (smpl_x.joint_num - 1) * 9
         ).permute(
             1, 0
-        )  # (J * 9, V * 3)
+        )
         expr_dirs = expr_dirs.view(
             smpl_x.vertex_num_upsampled, 3, smpl_x.expr_param_dim
         )
@@ -643,8 +618,8 @@ class SMPLXModel(nn.Module):
         )
         is_cavity = is_cavity[:, 0] > 0
 
-        # self.register_buffer('pos_enc_mesh', xyz)
-        # is legs
+
+
 
         self.register_buffer("skinning_weight", skinning_weight.contiguous())
         self.register_buffer("pose_dirs", pose_dirs.contiguous())
@@ -666,7 +641,7 @@ class SMPLXModel(nn.Module):
         zero_pose = torch.zeros((batch_size, 3)).float().to(device)
         neutral_body_pose = (
             smpl_x.neutral_body_pose.view(1, -1).repeat(batch_size, 1).to(device)
-        )  # 大 pose
+        )
         zero_hand_pose = (
             torch.zeros((batch_size, len(smpl_x.joint_part["lhand"]) * 3))
             .float()
@@ -679,12 +654,12 @@ class SMPLXModel(nn.Module):
         else:
             jaw_pose = (
                 smpl_x.neutral_jaw_pose.view(1, 3).repeat(batch_size, 1).to(device)
-            )  # open mouth
+            )
 
         if use_id_info:
             shape_param = shape_param
-            # face_offset = smpl_x.face_offset[None,:,:].float().to(device)
-            # joint_offset = smpl_x.get_joint_offset(self.joint_offset[None,:,:])
+
+
             face_offset = face_offset
             joint_offset = (
                 smpl_x.get_joint_offset(joint_offset)
@@ -699,8 +674,8 @@ class SMPLXModel(nn.Module):
             face_offset = None
             joint_offset = None
 
-        # smplx layer is smplx model
-        # ['vertices', 'joints', 'full_pose', 'global_orient', 'transl', 'v_shaped', 'betas', 'body_pose', 'left_hand_pose', 'right_hand_pose', 'expression', 'jaw_pose']
+
+
 
         output = self.smplx_layer(
             global_orient=zero_pose,
@@ -723,9 +698,8 @@ class SMPLXModel(nn.Module):
         mesh_neutral_pose = output.vertices
         joint_neutral_pose = output.joints[
             :, : smpl_x.joint_num, :
-        ]  # 大 pose human  [B, 55, 3]
+        ]
 
-        # compute transformation matrix for making 大 pose to zero pose
         neutral_body_pose = neutral_body_pose.view(
             batch_size, len(smpl_x.joint_part["body"]) - 1, 3
         )
@@ -756,12 +730,12 @@ class SMPLXModel(nn.Module):
             dim=1,
         )
 
-        pose = axis_angle_to_matrix(pose)  # [B, 55, 3, 3]
+        pose = axis_angle_to_matrix(pose)
 
-        # transform_mat_neutral_pose is a function to warp neutral pose to zero pose  (neutral pose is *-pose)
+
         _, transform_mat_neutral_pose = batch_rigid_transform(
             pose[:, :, :, :], joint_neutral_pose[:, :, :], self.smplx_layer.parents
-        )  # [B, 55, 4, 4]
+        )
 
         return (
             mesh_neutral_pose_upsampled,
@@ -805,16 +779,16 @@ class SMPLXModel(nn.Module):
             face_offset=face_offset,
             joint_offset=joint_offset,
         )
-        joint_zero_pose = output.joints[:, : smpl_x.joint_num, :]  # zero pose human
+        joint_zero_pose = output.joints[:, : smpl_x.joint_num, :]
 
         if not return_mesh:
             return joint_zero_pose
         else:
             raise NotImplementedError
-            mesh_zero_pose = output.vertices[0]  # zero pose human
+            mesh_zero_pose = output.vertices[0]
             mesh_zero_pose_upsampled = smpl_x.upsample_mesh(
                 mesh_zero_pose
-            )  # zero pose human
+            )
             return mesh_zero_pose_upsampled, mesh_zero_pose, joint_zero_pose
 
     def get_transform_mat_joint(
@@ -829,10 +803,9 @@ class SMPLXModel(nn.Module):
             _type_: _description_
         """
 
-        # 1. 大 pose -> zero pose
         transform_mat_joint_1 = transform_mat_neutral_pose
 
-        # 2. zero pose -> image pose
+
         root_pose = smplx_param["root_pose"]
         body_pose = smplx_param["body_pose"]
         jaw_pose = smplx_param["jaw_pose"]
@@ -840,9 +813,9 @@ class SMPLXModel(nn.Module):
         reye_pose = smplx_param["reye_pose"]
         lhand_pose = smplx_param["lhand_pose"]
         rhand_pose = smplx_param["rhand_pose"]
-        # trans = smplx_param['trans']
 
-        # forward kinematics
+
+
         pose = torch.cat(
             (
                 root_pose.unsqueeze(1),
@@ -854,17 +827,16 @@ class SMPLXModel(nn.Module):
                 rhand_pose,
             ),
             dim=1,
-        )  # [B, 55, 3]
-        pose = axis_angle_to_matrix(pose)  # [B, 55, 3, 3]
+        )
+        pose = axis_angle_to_matrix(pose)
         posed_joints, transform_mat_joint_2 = batch_rigid_transform(
             pose[:, :, :, :], joint_zero_pose[:, :, :], self.smplx_layer.parents
         )
-        transform_mat_joint_2 = transform_mat_joint_2  # [B, 55, 4, 4]
+        transform_mat_joint_2 = transform_mat_joint_2
 
-        # 3. combine 1. 大 pose -> zero pose and 2. zero pose -> image pose
         transform_mat_joint = torch.matmul(
             transform_mat_joint_2, transform_mat_joint_1
-        )  # [B, 55, 4, 4]
+        )
 
         return transform_mat_joint, posed_joints
 
@@ -883,7 +855,7 @@ class SMPLXModel(nn.Module):
         return transform_mat_vertex
 
     def get_posed_blendshape(self, smplx_param):
-        # posed_blendshape is only applied on hand and face, which parts are closed to smplx model
+
         root_pose = smplx_param["root_pose"]
         body_pose = smplx_param["body_pose"]
         jaw_pose = smplx_param["jaw_pose"]
@@ -903,12 +875,12 @@ class SMPLXModel(nn.Module):
                 rhand_pose,
             ),
             dim=1,
-        )  # [B, 54, 3]
-        # smplx pose-dependent vertex offset
+        )
+
         pose = (
             axis_angle_to_matrix(pose) - torch.eye(3)[None, None, :, :].float().cuda()
         ).view(batch_size, (self.smpl_x.joint_num - 1) * 9)
-        # (B, 54 * 9) x (54*9, V)
+
 
         smplx_pose_offset = torch.matmul(pose.detach(), self.pose_dirs).view(
             batch_size, self.smpl_x.vertex_num_upsampled, 3
@@ -919,18 +891,18 @@ class SMPLXModel(nn.Module):
         batch_size = xyz.shape[0]
         xyz = torch.cat(
             (xyz, torch.ones_like(xyz[:, :, :1])), dim=-1
-        )  # 大 pose. xyz1 [B, N, 4]
+        )
         xyz = torch.matmul(transform_mat_vertex, xyz[:, :, :, None]).view(
             batch_size, self.smpl_x.vertex_num_upsampled, 4
         )[
             :, :, :3
-        ]  # [B, N, 3]
+        ]
         xyz = xyz + trans.unsqueeze(1)
         return xyz
 
     def lr_idx_to_hr_idx(self, idx):
-        # follow 'subdivide_homogeneous' function of https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/ops/subdivide_meshes.html#SubdivideMeshes
-        # the low-res part takes first N_lr vertices out of N_hr vertices
+
+
         return idx
 
     def transform_to_posed_verts_from_neutral_pose(
@@ -955,7 +927,7 @@ class SMPLXModel(nn.Module):
         joint_offset = smplx_data.get("joint_offset", None)
         if shape_param.shape[0] != batch_size:
             num_views = batch_size // shape_param.shape[0]
-            # print(shape_param.shape, batch_size)
+
             shape_param = (
                 shape_param.unsqueeze(1)
                 .repeat(1, num_views, 1)
@@ -974,17 +946,16 @@ class SMPLXModel(nn.Module):
                     .view(-1, *joint_offset.shape[1:])
                 )
 
-        # smplx facial expression offset
+
         try:
             smplx_expr_offset = (
                 smplx_data["expr"].unsqueeze(1).unsqueeze(1) * self.expr_dirs
             ).sum(
                 -1
-            )  # [B, 1, 1, 50] x [N_V, 3, 50] -> [B, N_v, 3]
+            )
         except:
             smplx_expr_offset = 0.0
 
-        mean_3d = mean_3d + smplx_expr_offset  # 大 pose
 
         if self.apply_pose_blendshape:
             smplx_pose_offset = self.get_posed_blendshape(smplx_data)
@@ -995,15 +966,15 @@ class SMPLXModel(nn.Module):
             )
             mean_3d[mask] += smplx_pose_offset[mask]
 
-        # get nearest vertex
 
-        # for hands and face, assign original vertex index to use sknning weight of the original vertex
+
+
         nn_vertex_idxs = knn_points(
             mean_3d[:, :, :], mesh_neutral_pose[:, :, :], K=1, return_nn=True
         ).idx[
             :, :, 0
-        ]  # dimension: smpl_x.vertex_num_upsampled
-        # nn_vertex_idxs = self.lr_idx_to_hr_idx(nn_vertex_idxs)
+        ]
+
         mask = (
             ((self.is_rhand + self.is_lhand + self.is_face) > 0)
             .unsqueeze(0)
@@ -1016,7 +987,7 @@ class SMPLXModel(nn.Module):
             .repeat(batch_size, 1)[mask]
         )
 
-        # get transformation matrix of the nearest vertex and perform lbs
+
         joint_zero_pose = self.get_zero_pose_human(
             shape_param=shape_param,
             device=device,
@@ -1024,19 +995,19 @@ class SMPLXModel(nn.Module):
             joint_offset=joint_offset,
         )
 
-        # NOTE that the question "joint_zero_pose" is different with (transform_mat_neutral_pose)'s joints.
+
         transform_mat_joint, j3d = self.get_transform_mat_joint(
             transform_mat_neutral_pose, joint_zero_pose, smplx_data
         )
 
-        # compute vertices-LBS function
+
         transform_mat_vertex = self.get_transform_mat_vertex(
             transform_mat_joint, nn_vertex_idxs
         )
 
         mean_3d = self.lbs(
             mean_3d, transform_mat_vertex, smplx_data["trans"]
-        )  # posed with smplx_param
+        )
 
         return mean_3d, transform_mat_vertex
 
@@ -1064,12 +1035,12 @@ class SMPLXModel(nn.Module):
             smplx_data (_type_): e.g., body_pose:[B*Nv, 21, 3], betas:[B*Nv, 100]
         """
 
-        # neutral posed verts
+
         mesh_neutral_pose, _, transform_mat_neutral_pose = self.get_query_points(
             smplx_data, device
         )
 
-        # print(mesh_neutral_pose.shape, transform_mat_neutral_pose.shape, mesh_neutral_pose.shape, smplx_data["body_pose"].shape)
+
         mean_3d, transform_matrix = self.transform_to_posed_verts_from_neutral_pose(
             mesh_neutral_pose,
             smplx_data,
@@ -1079,432 +1050,3 @@ class SMPLXModel(nn.Module):
         )
 
         return mean_3d, transform_matrix
-
-
-def read_smplx_param(smplx_data_root, shape_param_file, batch_size=1, device="cuda"):
-    import json
-    from glob import glob
-
-    import cv2
-
-    data_root_path = osp.dirname(osp.dirname(smplx_data_root))
-
-    # load smplx parameters
-    smplx_param_path_list = sorted(glob(osp.join(smplx_data_root, "*.json")))
-    print(smplx_param_path_list[:3])
-
-    smplx_params_all_frames = {}
-    for smplx_param_path in smplx_param_path_list:
-        frame_idx = int(smplx_param_path.split("/")[-1][:-5])
-        with open(smplx_param_path) as f:
-            smplx_params_all_frames[frame_idx] = {
-                k: torch.FloatTensor(v) for k, v in json.load(f).items()
-            }
-
-    with open(shape_param_file) as f:
-        shape_param = torch.FloatTensor(json.load(f))
-
-    smplx_params = {}
-    smplx_params["betas"] = shape_param.unsqueeze(0).repeat(batch_size, 1)
-    # smplx_params["betas"][0] = torch.zeros_like(smplx_params["betas"][0])
-    # smplx_params["betas"] = torch.zeros_like(smplx_params["betas"])
-
-    select_frame_idx = [200, 400, 600]
-    smplx_params_tmp = defaultdict(list)
-    cam_param_list = []
-    ori_image_list = []
-    for b_idx in range(batch_size):
-        frame_idx = select_frame_idx[b_idx]
-
-        for k, v in smplx_params_all_frames[frame_idx].items():
-            smplx_params_tmp[k].append(v)
-
-        with open(
-            osp.join(data_root_path, "cam_params", str(frame_idx) + ".json")
-        ) as f:
-            cam_param = {
-                k: torch.FloatTensor(v).cuda() for k, v in json.load(f).items()
-            }
-            cam_param_list.append(cam_param)
-
-        img = cv2.imread(osp.join(data_root_path, "frames", str(frame_idx) + ".png"))
-        ori_image_list.append(img)
-
-    for k, v in smplx_params_tmp.items():
-        smplx_params[k] = torch.stack(smplx_params_tmp[k])
-
-    root_path = osp.dirname(smplx_data_root)
-    with open(osp.join(root_path, "face_offset.json")) as f:
-        face_offset = torch.FloatTensor(json.load(f))
-    with open(osp.join(root_path, "joint_offset.json")) as f:
-        joint_offset = torch.FloatTensor(json.load(f))
-    with open(osp.join(root_path, "locator_offset.json")) as f:
-        locator_offset = torch.FloatTensor(json.load(f))
-
-    smplx_params["locator_offset"] = locator_offset.unsqueeze(0).repeat(
-        batch_size, 1, 1
-    )
-    smplx_params["joint_offset"] = joint_offset.unsqueeze(0).repeat(batch_size, 1, 1)
-    smplx_params["face_offset"] = face_offset.unsqueeze(0).repeat(batch_size, 1, 1)
-
-    for k, v in smplx_params.items():
-        print(k, v.shape)
-        smplx_params[k] = v.to(device)
-
-    return smplx_params, cam_param_list, ori_image_list
-
-
-def test():
-    import cv2
-
-    human_model_path = "./pretrained_models/human_model_files"
-    gender = "male"
-    # gender = "neutral"
-
-    smplx_model = SMPLXMesh_Model(human_model_path, gender, subdivide_num=2)
-    smplx_model.to("cuda")
-
-    smplx_data_root = "/data1/projects/ExAvatar_RELEASE/avatar/data/Custom/data/gyeongsik/smplx_optimized/smplx_params_smoothed"
-    shape_param_file = "/data1/projects/ExAvatar_RELEASE/avatar/data/Custom/data/gyeongsik/smplx_optimized/shape_param.json"
-    smplx_data, cam_param_list, ori_image_list = read_smplx_param(
-        smplx_data_root=smplx_data_root, shape_param_file=shape_param_file, batch_size=2
-    )
-    posed_verts = smplx_model.transform_to_posed_verts(
-        smplx_data=smplx_data, device="cuda"
-    )
-
-    smplx_face = smplx_model.smpl_x.face_upsampled
-    trimesh.Trimesh(
-        vertices=posed_verts[0].detach().cpu().numpy(), faces=smplx_face
-    ).export("./posed_obj1.obj")
-    trimesh.Trimesh(
-        vertices=posed_verts[1].detach().cpu().numpy(), faces=smplx_face
-    ).export("./posed_obj2.obj")
-
-    neutral_posed_verts, _, _ = smplx_model.get_query_points(
-        smplx_data=smplx_data, device="cuda"
-    )
-    smplx_face = smplx_model.smpl_x.face
-    trimesh.Trimesh(
-        vertices=neutral_posed_verts[0].detach().cpu().numpy(), faces=smplx_face
-    ).export("./neutral_posed_obj1.obj")
-    trimesh.Trimesh(
-        vertices=neutral_posed_verts[1].detach().cpu().numpy(), faces=smplx_face
-    ).export("./neutral_posed_obj2.obj")
-
-    # batch_size = smplx_data['root_pose'].shape[0]
-    # root_pose = smplx_data['root_pose']
-    # body_pose = smplx_data['body_pose']
-    # jaw_pose = smplx_data['jaw_pose']
-    # leye_pose = smplx_data['leye_pose']
-    # reye_pose = smplx_data['reye_pose']
-    # lhand_pose = smplx_data['lhand_pose'].view(batch_size, len(smplx.smpl_x.joint_part['lhand'])*3)
-    # rhand_pose = smplx_data['rhand_pose'].view(batch_size, len(smplx.smpl_x.joint_part['rhand'])*3)
-    # expr = smplx_data['expr'].view(batch_size, smplx.smpl_x.expr_param_dim)
-    # trans = smplx_data['trans'].view(batch_size, 3)
-    # shape = smplx_data["betas"]
-    # face_offset = smplx_data["face_offset"]
-    # joint_offset = smplx_data["joint_offset"]
-
-    # smplx_layer = smplx.smplx_layer
-    # smplx_face = smplx.smpl_x.face
-    # output = smplx_layer(global_orient=root_pose, body_pose=body_pose, jaw_pose=jaw_pose,
-    #                            leye_pose=leye_pose, reye_pose=reye_pose,
-    #                            left_hand_pose=lhand_pose, right_hand_pose=rhand_pose,
-    #                            expression=expr, betas=shape,
-    #                            transl=trans,
-    #                            face_offset=face_offset, joint_offset=joint_offset)
-    # posed_verts = [e for e in output.vertices]
-    # trimesh.Trimesh(vertices=posed_verts[0].detach().cpu().numpy(), faces=smplx_face).export("./posed_obj1_from_zeropose.obj")
-    # trimesh.Trimesh(vertices=posed_verts[1].detach().cpu().numpy(), faces=smplx_face).export("./posed_obj2_from_zeropose.obj")
-
-    for idx, (cam_param, img) in enumerate(zip(cam_param_list, ori_image_list)):
-        render_shape = img.shape[:2]
-        mesh_render, is_bkg = render_mesh(
-            posed_verts[idx],
-            smplx_face,
-            cam_param,
-            np.ones((render_shape[0], render_shape[1], 3), dtype=np.float32) * 255,
-            return_bg_mask=True,
-        )
-        mesh_render = mesh_render.astype(np.uint8)
-        cv2.imwrite(
-            f"./debug_render_{idx}.jpg",
-            np.clip(
-                (0.9 * mesh_render + 0.1 * img) * (1 - is_bkg) + is_bkg * img, 0, 255
-            ).astype(np.uint8),
-        )
-        # cv2.imwrite(f"./debug_render_{idx}_img.jpg", np.clip(img, 0, 255).astype(np.uint8))
-        # cv2.imwrite(f"./debug_render_{idx}_mesh.jpg", np.clip(mesh_render, 0, 255).astype(np.uint8))
-
-
-def read_smplx_param_humman(
-    imgs_root, smplx_params_root, img_size=896, batch_size=1, device="cuda"
-):
-    import json
-    import os
-    from glob import glob
-
-    import cv2
-    from PIL import Image, ImageOps
-
-    # Input images
-    suffixes = (".jpg", ".jpeg", ".png", ".webp")
-    img_path_list = [
-        os.path.join(imgs_root, file)
-        for file in os.listdir(imgs_root)
-        if file.endswith(suffixes) and file[0] != "."
-    ]
-
-    ori_image_list = []
-    smplx_params_tmp = defaultdict(list)
-
-    for img_path in img_path_list:
-        smplx_path = os.path.join(
-            smplx_params_root, os.path.splitext(os.path.basename(img_path))[0] + ".json"
-        )
-
-        # Open and reshape
-        img_pil = Image.open(img_path).convert("RGB")
-        img_pil = ImageOps.contain(
-            img_pil, (img_size, img_size)
-        )  # keep the same aspect ratio
-        # ori_w, ori_h = img_pil.size
-        # img_pil_pad = ImageOps.pad(img_pil, size=(img_size,img_size)) # pad with zero on the smallest side
-        # offset_w, offset_h = (img_size - ori_w) // 2, (img_size - ori_h) // 2
-
-        # img = np.array(img_pil_pad)[:, :, (2, 1, 0)]
-        img = np.array(img_pil)[:, :, (2, 1, 0)]
-        ori_image_list.append(img)
-
-        with open(smplx_path) as f:
-            smplx_param = {k: torch.FloatTensor(v) for k, v in json.load(f).items()}
-
-        for k, v in smplx_param.items():
-            smplx_params_tmp[k].append(v)
-
-    smplx_params = {}
-    for k, v in smplx_params_tmp.items():
-        smplx_params[k] = torch.stack(smplx_params_tmp[k])
-
-    for k, v in smplx_params.items():
-        print(k, v.shape)
-        smplx_params[k] = v.to(device)
-
-    cam_param_list = []
-    for i in range(smplx_params["focal"].shape[0]):
-        princpt = smplx_params["princpt"][i]
-        cam_param = {"focal": smplx_params["focal"][i], "princpt": princpt}
-        cam_param_list.append(cam_param)
-    return smplx_params, cam_param_list, ori_image_list
-
-
-def test_humman():
-    import cv2
-
-    human_model_path = "./pretrained_models/human_model_files"
-    # gender = "male"
-    gender = "neutral"
-
-    smplx_model = SMPLXModel(
-        human_model_path, gender, shape_param_dim=10, expr_param_dim=10, subdivide_num=2
-    )
-    smplx_model.to("cuda")
-
-    # root_dir = "./train_data/humman/humman_compressed"
-    # meta_path = "./train_data/humman/humman_id_list.json"
-    # dataset = HuMManDataset(root_dirs=root_dir, meta_path=meta_path, sample_side_views=3,
-    #                 render_image_res_low=384, render_image_res_high=384,
-    #                 render_region_size=(682, 384), source_image_res=384)
-
-    # root_dir = "./train_data/static_human_data"
-    # meta_path = "./train_data/static_human_data/data_id_list.json"
-    # dataset = StaticHumanDataset(root_dirs=root_dir, meta_path=meta_path, sample_side_views=7,
-    #                 render_image_res_low=384, render_image_res_high=384,
-    #                 render_region_size=(682, 384), source_image_res=384,
-    #                 debug=False)
-
-    #     from openlrm.datasets.singleview_human import SingleViewHumanDataset
-    #     root_dir = "./train_data/single_view"
-    #     meta_path = "./train_data/single_view/data_SHHQ.json"
-    #     dataset = SingleViewHumanDataset(root_dirs=root_dir, meta_path=meta_path, sample_side_views=0,
-    #                     render_image_res_low=384, render_image_res_high=384,
-    #                     render_region_size=(682, 384), source_image_res=384,
-    #                     debug=False)
-
-    from accelerate.utils import set_seed
-
-    set_seed(1234)
-    from LHM.datasets.video_human import VideoHumanDataset
-
-    root_dir = "./train_data/ClothVideo"
-    meta_path = "./train_data/ClothVideo/label/valid_id_with_img_list.json"
-    dataset = VideoHumanDataset(
-        root_dirs=root_dir,
-        meta_path=meta_path,
-        sample_side_views=7,
-        render_image_res_low=384,
-        render_image_res_high=384,
-        render_region_size=(682, 384),
-        source_image_res=384,
-        enlarge_ratio=[0.85, 1.2],
-        debug=False,
-    )
-    data = dataset[0]
-    # for idx, data in enumerate(dataset):
-    #     if idx == 2:
-    #         break
-
-    def get_smplx_params(data):
-        smplx_params = {}
-        smplx_keys = [
-            "root_pose",
-            "body_pose",
-            "jaw_pose",
-            "leye_pose",
-            "reye_pose",
-            "lhand_pose",
-            "rhand_pose",
-            "expr",
-            "trans",
-            "betas",
-        ]
-        for k, v in data.items():
-            if k in smplx_keys:
-                # print(k, v.shape)
-                smplx_params[k] = data[k]
-        return smplx_params
-
-    for k, v in data.items():
-        if hasattr(v, "shape"):
-            print(k, v.shape)
-
-    smplx_data = get_smplx_params(data)
-    smplx_data["betas"] = (
-        smplx_data["betas"].unsqueeze(0).repeat(smplx_data["body_pose"].shape[0], 1)
-    )
-
-    smplx_data_tmp = {}
-    for k, v in smplx_data.items():
-        smplx_data_tmp[k] = v.to("cuda")
-        print(k, v.shape)
-    smplx_data = smplx_data_tmp
-
-    intrs = data["intrs"].to("cuda")
-    cam_param_list = [
-        {
-            "focal": torch.tensor([e[0, 0], e[1, 1]]),
-            "princpt": torch.tensor([e[0, 2], e[1, 2]]),
-        }
-        for e in intrs
-    ]
-    print(cam_param_list[0])
-    ori_image_list = [
-        (e.permute(1, 2, 0)[:, :, (2, 1, 0)].numpy() * 255).astype(np.uint8)
-        for e in data["render_image"]
-    ]
-
-    posed_verts = smplx_model.transform_to_posed_verts(
-        smplx_data=smplx_data, device="cuda"
-    )
-
-    os.makedirs("./debug_vis/smplx", exist_ok=True)
-    smplx_face = smplx_model.smpl_x.face_upsampled
-    trimesh.Trimesh(
-        vertices=posed_verts[0].detach().cpu().numpy(), faces=smplx_face
-    ).export("./debug_vis/smplx/posed_obj1.obj")
-    if len(posed_verts) > 1:
-        trimesh.Trimesh(
-            vertices=posed_verts[1].detach().cpu().numpy(), faces=smplx_face
-        ).export("./debug_vis/smplx/posed_obj2.obj")
-
-    neutral_posed_verts, _, _ = smplx_model.get_query_points(
-        smplx_data=smplx_data, device="cuda"
-    )
-    smplx_face = smplx_model.smpl_x.face
-    trimesh.Trimesh(
-        vertices=neutral_posed_verts[0].detach().cpu().numpy(), faces=smplx_face
-    ).export("./debug_vis/smplx/neutral_posed_obj1.obj")
-    if len(neutral_posed_verts) > 1:
-        trimesh.Trimesh(
-            vertices=neutral_posed_verts[1].detach().cpu().numpy(), faces=smplx_face
-        ).export("./debug_vis/smplx/neutral_posed_obj2.obj")
-
-    for idx, (cam_param, img) in enumerate(zip(cam_param_list, ori_image_list)):
-        render_shape = img.shape[:2]
-        mesh_render, is_bkg = render_mesh(
-            posed_verts[idx],
-            smplx_face,
-            cam_param,
-            np.ones((render_shape[0], render_shape[1], 3), dtype=np.float32) * 255,
-            return_bg_mask=True,
-        )
-        mesh_render = mesh_render.astype(np.uint8)
-        cv2.imwrite(
-            f"./debug_vis/smplx/debug_render_{idx}.jpg",
-            np.clip(
-                (0.9 * mesh_render + 0.1 * img) * (1 - is_bkg) + is_bkg * img, 0, 255
-            ).astype(np.uint8),
-        )
-        # cv2.imwrite(f"./debug_render_{idx}_img.jpg", np.clip(img, 0, 255).astype(np.uint8))
-        # cv2.imwrite(f"./debug_render_{idx}_mesh.jpg", np.clip(mesh_render, 0, 255).astype(np.uint8))
-        # if idx == 1:
-        #     break
-
-
-def generate_smplx_point():
-    human_model_path = "./pretrained_models/human_model_files"
-    gender = "neutral"
-    subdivide_num = 1
-    smplx_model = SMPLXModel(
-        human_model_path,
-        gender,
-        shape_param_dim=10,
-        expr_param_dim=10,
-        subdivide_num=subdivide_num,
-        cano_pose_type=1,
-    )
-    smplx_model.to("cuda")
-
-    # save_file = f"pretrained_models/human_model_files/smplx_points/smplx_subdivide{subdivide_num}.npy"
-    save_file = f"debug/smplx_points/smplx_subdivide{subdivide_num}.npy"
-    os.makedirs(os.path.dirname(save_file), exist_ok=True)
-
-    smplx_data = {}
-    smplx_data["betas"] = torch.zeros((1, 10)).to(device="cuda")
-    mesh_neutral_pose, mesh_neutral_pose_wo_upsample, transform_mat_neutral_pose = (
-        smplx_model.get_query_points(smplx_data=smplx_data, device="cuda")
-    )
-
-    pdb.set_trace()
-
-    smplx_face = smplx_model.smpl_x.face_upsampled
-
-    # trimesh.Trimesh(
-    #     vertices=mesh_neutral_pose[0].detach().cpu().numpy(), faces=smplx_face
-    # ).export(
-    #     f"pretrained_models/human_model_files/smplx_points/smplx_subdivide{subdivide_num}.obj"
-    # )
-
-    trimesh.Trimesh(
-        vertices=mesh_neutral_pose[0].detach().cpu().numpy(), faces=smplx_face
-    ).export(f"debug/smplx_points/smplx_subdivide{subdivide_num}.obj")
-
-    np.save(save_file, mesh_neutral_pose[0].detach().cpu().numpy())
-
-    smplx_face = smplx_model.smpl_x.face
-    # save_file = f"pretrained_models/human_model_files/smplx_points/smplx.npy"
-    save_file = f"debug/smplx_points/smplx.npy"
-
-    trimesh.Trimesh(
-        vertices=mesh_neutral_pose_wo_upsample[0].detach().cpu().numpy(),
-        faces=smplx_face,
-        process=False,
-    ).export(f"debug/smplx_points/smplx.obj")
-    np.save(save_file, mesh_neutral_pose_wo_upsample[0].detach().cpu().numpy())
-
-
-if __name__ == "__main__":
-    # test()
-    # test_humman()
-    generate_smplx_point()

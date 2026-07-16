@@ -1,6 +1,5 @@
-# Image processing utils.
-# Contributer(s): Neil Z. Shao
-# All rights reserved. Prometheus 2022-2024.
+
+
 import numpy as np
 import cv2
 import copy
@@ -37,15 +36,15 @@ def readFloat4FromPng(fn):
 def writeNMapToUchar3(nmap_fn, nmap):
     nmap_clr = (nmap * 127 + 128).astype(np.uint8)
     cv2.imwrite(nmap_fn, nmap_clr)
-    
+
 def detachToNumpy(img):
     if len(img.shape) == 4:
         img = img.squeeze(0)
     return (img.detach().cpu() * 255.0).numpy().astype(np.uint8)
 
-# normalize to
-def colorizeWeightsMap(weights, colormap=cv2.COLORMAP_JET, 
-                       min_val=None, max_val=None, 
+
+def colorizeWeightsMap(weights, colormap=cv2.COLORMAP_JET,
+                       min_val=None, max_val=None,
                        to_rgb=False):
     if min_val is None:
         min_val = weights.min()
@@ -60,9 +59,9 @@ def colorizeWeightsMap(weights, colormap=cv2.COLORMAP_JET,
     else:
         return canvas
 
-# display
+
 def cvshow(img, max_width=1920, title='image'):
-    # tensor or ndarray
+
     if not isinstance(img, np.ndarray):
         img = img.detach().float().cpu().squeeze().numpy()
 
@@ -71,7 +70,7 @@ def cvshow(img, max_width=1920, title='image'):
             img = colorizeWeightsMap(img)
         else:
             img = (img * 255.0).clip(0, 255).astype(np.uint8)
-    
+
 
     if max_width > 0 and img.shape[1] > max_width:
         scale = float(max_width) / img.shape[1]
@@ -80,7 +79,7 @@ def cvshow(img, max_width=1920, title='image'):
     cv2.imshow(title, img)
     cv2.waitKey(100)
 
-# tensor to image
+
 def write_tensor_image(fn, tensor, rgb2bgr=False):
     if len(tensor.shape) == 3:
         if tensor.shape[0] == 3 or tensor.shape[0] == 4:
@@ -91,11 +90,11 @@ def write_tensor_image(fn, tensor, rgb2bgr=False):
             tensor = tensor[:, :, [2, 1, 0]]
         else:
             tensor = tensor[:, :, [2, 1, 0, 3]]
-    
+
     cv2.imwrite(fn, (tensor.clamp(0, 1) * 255).detach().cpu().numpy().astype(np.uint8))
 
-# draw points
-def draw_pixel_points(img, pixels, radius=3, color=None, thickness=0, 
+
+def draw_pixel_points(img, pixels, radius=3, color=None, thickness=0,
                       fontFace=0, fontScale=1.0,
                       text_start_number=None):
     canvas = copy.deepcopy(img)
@@ -106,12 +105,12 @@ def draw_pixel_points(img, pixels, radius=3, color=None, thickness=0,
             clr = (np.random.rand(3) * 256).astype(int).tolist()
         cv2.circle(canvas, pixels[i].astype(int), radius, clr, thickness=thickness)
         if text_start_number is not None:
-            cv2.putText(canvas, str(i + text_start_number), (pixels[i] + 10).astype(int), 
+            cv2.putText(canvas, str(i + text_start_number), (pixels[i] + 10).astype(int),
                         fontFace, fontScale, clr)
     return canvas
-    
-# draw pairs
-def draw_pixel_pairs(img, pxls0, pxls1, pxls0_color=[0, 0, 255], pxls1_color=[255, 0, 0], 
+
+
+def draw_pixel_pairs(img, pxls0, pxls1, pxls0_color=[0, 0, 255], pxls1_color=[255, 0, 0],
                      line_color=[255, 255, 255], thickness=1):
     canvas = copy.deepcopy(img)
     for i in range(pxls0.shape[0]):
@@ -119,4 +118,3 @@ def draw_pixel_pairs(img, pxls0, pxls1, pxls0_color=[0, 0, 255], pxls1_color=[25
         cv2.circle(canvas, pxls1[i].astype(int), 1, pxls1_color, thickness=thickness)
         cv2.line(canvas, pxls0[i].astype(int), pxls1[i].astype(int), line_color, thickness=thickness)
     return canvas
-    

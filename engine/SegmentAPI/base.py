@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-# @Organization  : Alibaba XR-Lab
-# @Author        : Lingteng Qiu
-# @Email         : 220019047@link.cuhk.edu.cn
-# @Time          : 2024-08-30 20:50:27
-# @Function      : The class defines bbox, base-seg module
+
 
 import copy
 
@@ -159,7 +154,7 @@ class Image:
             return input.to_numpy(type_mode, order)
         elif isinstance(input, np.ndarray):
             self.data = input
-            self.order = "RGB"  # default
+            self.order = "RGB"
             self.type_mode = get_dtype_string(input)
 
             return self.to_numpy(type_mode, order)
@@ -171,7 +166,7 @@ class Image:
         data = copy.deepcopy(self.data)
 
         if not order == self.order:
-            return data[..., ::-1]  # only support RGB -> BGR or BGR -> RGB
+            return data[..., ::-1]
 
         if self.type_mode == type_mode:
             return data
@@ -214,20 +209,20 @@ class Image:
 
         img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
 
-        # cvtColor
-        if len(img.shape) == 3:  # ignore if gray scale
+
+        if len(img.shape) == 3:
             if order in ["RGB", "RGBA"]:
                 if img.shape[-1] == 4:
                     img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
                 elif img.shape[-1] == 3:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-            # mix background
+
             if img.shape[-1] == 4 and "A" not in order:
                 img = img.astype(np.float32) / 255
                 img = img[..., :3] * img[..., 3:] + (1 - img[..., 3:])
 
-        # mode
+
         if mode == "uint8":
             if img.dtype != np.uint8:
                 img = (img * 255).astype(np.uint8)

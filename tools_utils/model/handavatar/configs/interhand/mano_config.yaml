@@ -1,0 +1,34 @@
+##############################################
+## Modules Configuration
+smpl_cfg:
+  model_type: 'mano'
+  flat_hand_mean: True
+  gender: 'neutral'
+  use_pca: False
+  is_rhand: True
+  center_id: 4
+  scale: 10.
+  seal: True
+  distal: True
+  num_betas: 10
+  model_path: '.'
+  pairof_name: 'handavatar.core.nets.handavatar.pairof.pairof_render'
+  pairof_pretrain: 'pairof/out/pretrained_pairof/pairof.ckpt'
+  neighbor: 4
+  n_samples: 256
+  extended_dist: 0.01
+  local_en_dim: 64
+  part_en_dim: 64
+  en_part_normal: True
+  fusion_pool: False
+  decoder_layer: [4, 128]
+  inbox_feat: False
+  pre_train: ''
+  level_set: 0.5
+  bbox_padding: 2.0
+  sigma: 0.05
+  soft_beta: 0.05
+  softmax_out: True
+  manohd: 2
+  lbs_weights: 'smplx/out/pretrained_lbs_weights/lbs_weights.pth'
+  global_sample_num: 4096

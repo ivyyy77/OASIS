@@ -1,6 +1,5 @@
-# The standard camera class.
-# Contributer(s): Neil Z. Shao
-# All rights reserved. Prometheus 2022-2024.
+
+
 import json
 import numpy as np
 import copy
@@ -9,34 +8,33 @@ from .transform import convertRtFromCV2GL
 
 class Camera:
     def __init__(self):
-        # camera sn
+
         self.info = ''
-        
-        # width height
+
+
         self.w = 0; self.h = 0
-        
-        # intrinsics
+
+
         self.fx = 0; self.fy = 0; self.cx = 0; self.cy = 0; self.fov = 0
-        
-        # distort (skip for now)
-        
-        # extrinsics
-        # R: rotation matrix
-        # c: camera center in world coordinates
-        # t: t = -R * c; c = -R' * t
+
+
+
+
+
+
         self.R = np.eye(3)
         self.c = np.zeros(3)
 
     def __repr__(self) -> str:
-        return '[Camera] %dx%d' % (self.w, self.h) + \
+        return '[Camera] %dx%d' % (self.w, self.h) +\
             '\n[Camera] fx = %.2f, fy = %.2f, cx = %.2f, cy = %.2f' % (
-                self.fx, self.fy, self.cx, self.cy) + \
+                self.fx, self.fy, self.cx, self.cy) +\
             '\n[Camera] R = %.6f, %.6f, %.6f' % (
-                self.R[0, 0], self.R[0, 1], self.R[0, 2]) + \
+                self.R[0, 0], self.R[0, 1], self.R[0, 2]) +\
             '\n[Camera]     %.6f, %.6f, %.6f' % (
-                self.R[1, 0], self.R[1, 1], self.R[1, 2]) + \
+                self.R[1, 0], self.R[1, 1], self.R[1, 2]) +\
             '\n[Camera]     %.6f, %.6f, %.6f' % (
-                self.R[2, 0], self.R[2, 1], self.R[2, 2]) + \
+                self.R[2, 0], self.R[2, 1], self.R[2, 2]) +\
             '\n[Camera] c = %.6f, %.6f, %.6f' % (
                 self.c[0], self.c[1], self.c[2])
 
@@ -50,15 +48,15 @@ class Camera:
     @property
     def K(self):
         return np.array([
-            [self.fx, 0, self.cx], 
-            [0, self.fy, self.cy], 
+            [self.fx, 0, self.cx],
+            [0, self.fy, self.cy],
             [0, 0, 1]])
-    
+
     @property
     def K_homo(self):
         return np.array([
-            [self.fx, 0, self.cx, 0], 
-            [0, self.fy, self.cy, 0], 
+            [self.fx, 0, self.cx, 0],
+            [0, self.fy, self.cy, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
 
@@ -99,7 +97,7 @@ class Camera:
     def sz(self):
         return [int(self.w), int(self.h)]
 
-    # scale intrinsics
+
     def scaleIntrinsics(self, width, height):
         width = int(width)
         height = int(height)
@@ -131,11 +129,11 @@ class Camera:
         work_h = self.h * scale
         self.scaleIntrinsics(work_w, work_h)
 
-    # clone
+
     def clone(self):
         return copy.deepcopy(self)
 
-    # copy
+
     def copyFrom(self, other):
         self.fx = other.fx
         self.fy = other.fy
@@ -147,14 +145,14 @@ class Camera:
         self.R = copy.deepcopy(other.R)
         self.c = copy.deepcopy(other.c)
 
-    # convert Rt to OpenGL coordinates
+
     def toOpenGL(self):
         cam_gl = copy.deepcopy(self)
         cam_gl.R, t_gl = convertRtFromCV2GL(self.R, self.t)
         cam_gl.setTranslation(t_gl)
         return cam_gl
 
-    # io
+
     def saveToJson(self):
         cam_value = dict()
         cam_value['info'] = self.info
@@ -203,7 +201,6 @@ class Rig:
 
         cams_json = []
         for i in range(len(self.cams)):
-            # cam_value = self.cams[i].saveToJson()
             cam_value = dict()
             cam_value['info'] = self.cams[i].info
             cam_value['fx'] = float(self.cams[i].fx)
@@ -221,7 +218,7 @@ class Rig:
     def loadFromJson(self, value):
         self.info = value['info']
         self.image_format = value['image_format']
-        
+
         self.cams = []
         cams_json = value['cameras']
         for i in range(0, len(cams_json)):
@@ -241,7 +238,7 @@ class Rig:
             value = json.load(f)
             return self.loadFromJson(value)
 
-# crop image boundary and update camera
+
 def crop_camera_image_boundary(cam, img, top, bottom, left, right):
     crop_cam = copy.deepcopy(cam)
     crop_img = copy.deepcopy(img[top:cam.h-bottom, left:cam.w-right])

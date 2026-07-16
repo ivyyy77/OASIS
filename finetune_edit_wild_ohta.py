@@ -12,18 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# OHTA-style edit finetune for in-the-wild images:
-#   Stage 1 (Inversion): Optimize color shift/scale with edit region masked out
-#   Stage 2a (Masked):   Finetune LoRA+mlp_net with edit region masked (learn hand texture)
-#   Stage 2b (Unmasked): Full image + enhanced edit region loss (learn edit details)
-#
-# Usage:
-#   python finetune_edit_wild_ohta.py --checkpoint-file ./checkpoint/interhand-correct/iteration_6000.ckpt \
-#       --input-dir example_data/editing/images/pikachu.jpg --iter 1000
-
-
 import argparse
-import pdb
 import sys
 
 import time
@@ -34,9 +23,9 @@ from tqdm import tqdm
 from LHM.runners import REGISTRY_RUNNERS
 from torch.nn import Tanh, Identity
 
-from data.debug import ReconstructionDataset, HandDataset
+from data.wild_hand_dataset import HandDataset
 from data.interhand.train import Dataset, HandAvatarDataset
-from data.debug import make_dataloader
+from data.wild_hand_dataset import make_dataloader
 import torch.nn as nn
 import torch.distributed as dist
 import torch, os, random, gin
@@ -52,15 +41,15 @@ from torch.utils.tensorboard import SummaryWriter
 
 flags.DEFINE_string('output_dir', 'output', 'Output directory')
 flags.DEFINE_string('eval_subdir', 'eval_final', 'Eval subdirectory')
-flags.DEFINE_string('wandb_dir', './wandb/', 'Wandbs Output directory')
 flags.DEFINE_boolean('only_eval', False, 'eval or train')
-flags.DEFINE_string('checkpoint-path', 'checkpoint/interhand-correct/iteration_6000.ckpt', 'Checkpoint directory to save/load checkpoints')
+flags.DEFINE_string('checkpoint-path', None, 'Checkpoint directory to save/load checkpoints')
 flags.DEFINE_string('output-path', './output/finetune_edit', 'Output/test directory to write results')
 flags.DEFINE_boolean('resume', True, 'Enable auto-resume from latest checkpoint')
-flags.DEFINE_string('checkpoint-file', './checkpoint/interhand-correct/iteration_6000.ckpt',
+flags.DEFINE_string('checkpoint-file', None,
                     'Specific checkpoint file to load (overrides checkpoint-path)')
 flags.DEFINE_string('input-dir', None,
                     'Optional directory containing in-the-wild images to process (process all files)')
+flags.DEFINE_string('handavatar-path', os.environ.get('HANDAVATAR_ROOT'), 'HandAvatar dataset root')
 flags.DEFINE_boolean('compare_with_input', False, 'Compare with input')
 flags.DEFINE_boolean('save_viewer', False, 'Save viewer')
 flags.DEFINE_boolean('use_amp', True, 'Use automatic mixed precision (AMP)')
@@ -103,15 +92,14 @@ def main(argv):
     parser = argparse.ArgumentParser(description="OHTA-style Edit Wild Finetuner")
     parser.add_argument("--runner", default=DEFAULT_RUNNER, type=str, help="Runner to launch")
     parser.add_argument("--checkpoint-path", type=str, default=None)
-    parser.add_argument("--checkpoint-file", type=str,
-                        default='./checkpoint/interhand-correct/iteration_6000.ckpt')
+    parser.add_argument("--checkpoint-file", type=str, default=None)
     parser.add_argument("--output-path", type=str, default='./output/finetune_edit')
-    parser.add_argument("--handavatar-path", type=str, default=None)
+    parser.add_argument("--handavatar-path", type=str, default=os.environ.get("HANDAVATAR_ROOT"))
     parser.add_argument("--input-dir", type=str, default=None)
     parser.add_argument("--test-iter", type=int, default=None)
     args, unknown = parser.parse_known_args()
 
-    # ---------- CLI token parsing (same pattern as finetune_wild_ohta.py) ----------
+
     cli_checkpoint = None
     cli_checkpoint_file = None
     cli_output = None
@@ -195,7 +183,7 @@ def main(argv):
         except Exception:
             pass
 
-    # ---------- Distributed init ----------
+
     if not dist.is_available():
         print("[Warning] torch.distributed not available, skipping init_process_group")
     else:
@@ -219,7 +207,7 @@ def main(argv):
     os.makedirs(FLAGS.output_dir, exist_ok=True)
     set_seed(42)
 
-    # ---------- Collect input images ----------
+
     import glob
     img_glob = []
     if cli_input_dir is not None and os.path.exists(cli_input_dir):
@@ -274,14 +262,14 @@ def main(argv):
     torch.autograd.set_detect_anomaly(False)
     writer = SummaryWriter(log_dir=os.path.join(image_checkpoint_dir, 'logs'))
 
-    # ---------- Dataset ----------
+
     if not multi_image_mode:
         if not img_glob:
             raise ValueError("No input image provided. Please specify --input-dir with a valid image path.")
         test_hand = HandDataset(split='test_wild', img_path=img_glob[0], edit=FLAGS.edit)
         test_dataloader = make_dataloader(test_hand, shuffle=False, batch_size=1)
 
-    # ---------- Load checkpoint ----------
+
     import re
     if args.test_iter is not None:
         try:
@@ -306,7 +294,7 @@ def main(argv):
         else:
             runner.load(iteration=test_iters, is_latest=False, checkpoint_path=cli_checkpoint)
     except TypeError as e:
-        print(f"\033[91m[Load Debug] TypeError: {e}\033[0m")
+        print(f"\033[91mCheckpoint loading failed: {e}\033[0m")
         runner.load(iteration=test_iters, is_latest=False, checkpoint_path=cli_checkpoint)
 
     print(f"\033[91m[========== Loading model for iteration {test_iters} ==========]\033[0m")
@@ -315,11 +303,13 @@ def main(argv):
     if hasattr(runner, 'hand_model') and hasattr(runner.hand_model, 'checkpoint_path'):
         runner.hand_model.checkpoint_path = image_checkpoint_dir
 
-    # Load HandAvatar test dataset
+
     handavatar_dataloader = None
     if FLAGS.animate_to_handavatar:
         try:
-            handavatar_path = '/scratch/groups/su004-neuralnet/zh174/InterHand/5'
+            if cli_handavatar is None:
+                raise ValueError("--handavatar-path is required when animation is enabled")
+            handavatar_path = cli_handavatar
             handavatar_ds = HandAvatarDataset(dataset_path=handavatar_path, data_type='progress', skip=200)
             handavatar_dataloader = make_dataloader(handavatar_ds, shuffle=False, batch_size=1)
             print(f"\033[92m[+] Loaded HandAvatar dataset with {len(handavatar_dataloader)} samples\033[0m")
@@ -327,7 +317,7 @@ def main(argv):
             print(f"\033[91m[Warning] Failed to load HandAvatar dataset: {e}\033[0m")
             handavatar_dataloader = None
 
-    # ====================== Training plan ======================
+
     total_iters = FLAGS.iter
     inv_iters = int(getattr(FLAGS, 'iter_inversion', 200))
     edit_unmask_iter = max(0, int(getattr(FLAGS, 'edit_unmask_iter', 300)))
@@ -349,7 +339,7 @@ def main(argv):
     print(f"  Pseudo-view weight (unmasked): {pseudo_view_weight}")
     print(f"\033[94m{'='*60}\033[0m\n")
 
-    # ====================== Stage 1: Inversion with edit masked ======================
+
     if inv_iters > 0:
         inv_pbar = tqdm(range(1, inv_iters + 1), desc='Edit Inversion', dynamic_ncols=True)
         for step in inv_pbar:
@@ -372,7 +362,7 @@ def main(argv):
         runner.save(iteration=inv_iters, is_latest=False)
         print(f"\033[92m[+] Completed Edit Inversion ({inv_iters} iters)\033[0m")
 
-    # ====================== Generate pseudo-GT for visualization ======================
+
     pseudo_batch = None
     if inv_iters > 0:
         if hasattr(runner, 'load_checkpoint_with_color_shift_scale'):
@@ -380,17 +370,16 @@ def main(argv):
                 iteration=inv_iters, is_latest=False, checkpoint_path=image_checkpoint_dir,
             )
         if hasattr(runner, 'build_pseudo_gt_batch') and batches is not None:
-            save_dir = os.path.join(test_output_dir, 'debug_vis', 'pseudo_views')
             pseudo_batch = runner.build_pseudo_gt_batch(
                 batches,
                 n_views=int(getattr(FLAGS, 'pseudo_views', 8)),
-                save_dir=save_dir,
-                save_prefix=f"{image_name}_edit_inv",
+                save_dir=None,
+                save_prefix=None,
                 use_canonical_root=True,
             )
             print(f"\033[92m[+] Generated pseudo-GT views for reference\033[0m")
 
-    # ====================== Stage 2: Finetune with edit awareness ======================
+
     if finetune_iters > 0:
         finetune_pbar = tqdm(range(1, finetune_iters + 1), desc='Edit Stage2', dynamic_ncols=True)
         for step in finetune_pbar:
@@ -406,7 +395,7 @@ def main(argv):
                 batch=batches,
                 pseudo_batch=pseudo_batch,
                 scaler=scaler,
-                iteration=step - 1,  # 0-indexed for stage2
+                iteration=step - 1,
                 writer=writer,
                 pbar=finetune_pbar,
                 total_iters=finetune_iters,
@@ -415,7 +404,7 @@ def main(argv):
                 pseudo_view_weight=pseudo_view_weight,
             )
 
-            # Save + test at checkpoints
+
             is_last = (total_step == total_iters)
             do_test = is_last or (total_step % 1000 == 0)
 
@@ -491,7 +480,7 @@ def main(argv):
 
                 runner.hand_model.train()
 
-    # Clean up edit masking state AFTER all training and testing is done
+
     runner._finetune_edit_stage = None
     runner.hand_model.renderer.edit_mask_mode = False
     runner.hand_model.renderer.edit_vis_mask = None

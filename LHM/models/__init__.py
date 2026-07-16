@@ -15,17 +15,7 @@
 
 from .modeling_hand_lrm import ModelHandLRM
 
-try:
-    from .modeling_human_lrm import (
-        ModelHumanLRM,
-        ModelHumanLRMSapdinoBodyHeadSD3_5,
-    )
-except ImportError:
-    ModelHumanLRM = None
-    ModelHumanLRMSapdinoBodyHeadSD3_5 = None
-
 model_dict = {
     "hand_lrm": ModelHandLRM,
-    "human_lrm": ModelHumanLRM,
-    "human_lrm_sapdino_bh_sd3_5": ModelHumanLRMSapdinoBodyHeadSD3_5,
+    "human_lrm_sapdino_bh_sd3_5": ModelHandLRM,
 }

@@ -1,4 +1,3 @@
-# Copyright (c) 2023-2024, Zexin He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +20,7 @@ import math
 class CameraEmbedder(nn.Module):
     """
     Embed camera features to a high-dimensional vector.
-    
+
     Reference:
     DiT: https://github.com/facebookresearch/DiT/blob/main/models.py#L27
     """
@@ -48,21 +47,21 @@ class BodyPoseRefiner(nn.Module):
                  mlp_depth=2,
                  **_):
         super(BodyPoseRefiner, self).__init__()
-        
+
         block_mlps = [nn.Linear(embedding_size, mlp_width), nn.ReLU()]
-        
-        # for _ in range(0, mlp_depth-1):
+
+
         for _ in range(0, mlp_depth):
             block_mlps += [nn.Linear(mlp_width, mlp_width), nn.ReLU()]
 
-        # self.total_bones = total_bones - 1
-        # block_mlps += [nn.Linear(mlp_width, 3 * self.total_bones)]
+
+
 
         self.block_mlps = nn.Sequential(*block_mlps)
         initseq(self.block_mlps)
 
-        # init the weights of the last layer as very small value
-        # -- at the beginning, we hope the rotation matrix can be identity 
+
+
         init_val = 1e-5
         last_layer = self.block_mlps[-1]
         last_layer.weight.data.uniform_(-init_val, init_val)
@@ -71,28 +70,28 @@ class BodyPoseRefiner(nn.Module):
         self.rodriguez = RodriguesModule()
 
     def forward(self, pose_input):
-        rvec = self.block_mlps(pose_input)#.view(-1, 3)
+        rvec = self.block_mlps(pose_input)
         return rvec
 
-        # Rs = self.rodriguez(rvec).view(-1, self.total_bones, 3, 3)
-        
-        # return {
-        #     "Rs": Rs
-        # }
 
-###############################################################################
-## Init Functions
-###############################################################################
+
+
+
+
+
+
+
+
 
 def xaviermultiplier(m, gain):
-    """ 
+    """
         Args:
             m (torch.nn.Module)
             gain (float)
 
         Returns:
             std (float): adjusted standard deviation
-    """ 
+    """
     if isinstance(m, nn.Conv1d):
         ksize = m.kernel_size[0]
         n1 = m.in_channels
@@ -112,7 +111,7 @@ def xaviermultiplier(m, gain):
 
         std = gain * math.sqrt(2.0 / ((n1 + n2) * ksize))
     elif isinstance(m, nn.ConvTranspose2d):
-        ksize = m.kernel_size[0] * m.kernel_size[1] \
+        ksize = m.kernel_size[0] * m.kernel_size[1]\
                 // m.stride[0] // m.stride[1]
         n1 = m.in_channels
         n2 = m.out_channels
@@ -125,7 +124,7 @@ def xaviermultiplier(m, gain):
 
         std = gain * math.sqrt(2.0 / ((n1 + n2) * ksize))
     elif isinstance(m, nn.ConvTranspose3d):
-        ksize = m.kernel_size[0] * m.kernel_size[1] * m.kernel_size[2] \
+        ksize = m.kernel_size[0] * m.kernel_size[1] * m.kernel_size[2]\
                 // m.stride[0] // m.stride[1] // m.stride[2]
         n1 = m.in_channels
         n2 = m.out_channels
@@ -147,7 +146,7 @@ def xavier_uniform_(m, gain):
         Args:
             m (torch.nn.Module)
             gain (float)
-    """ 
+    """
     std = xaviermultiplier(m, gain)
     m.weight.data.uniform_(-(std * math.sqrt(3.0)), std * math.sqrt(3.0))
 
@@ -158,36 +157,36 @@ def initmod(m, gain=1.0, weightinitfunc=xavier_uniform_):
             m (torch.nn.Module)
             gain (float)
             weightinitfunc (function)
-    """ 
-    validclasses = [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d, 
+    """
+    validclasses = [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d,
                     nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d]
     if any([isinstance(m, x) for x in validclasses]):
         weightinitfunc(m, gain)
         if hasattr(m, 'bias'):
             m.bias.data.zero_()
 
-    # blockwise initialization for transposed convs
+
     if isinstance(m, nn.ConvTranspose2d):
-        # hardcoded for stride=2 for now
+
         m.weight.data[:, :, 0::2, 1::2] = m.weight.data[:, :, 0::2, 0::2]
         m.weight.data[:, :, 1::2, 0::2] = m.weight.data[:, :, 0::2, 0::2]
         m.weight.data[:, :, 1::2, 1::2] = m.weight.data[:, :, 0::2, 0::2]
 
     if isinstance(m, nn.ConvTranspose3d):
-        # hardcoded for stride=2 for now
-        m.weight.data[:, :, 0::2, 0::2, 1::2] = m.weight.data[:, :, 
+
+        m.weight.data[:, :, 0::2, 0::2, 1::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
-        m.weight.data[:, :, 0::2, 1::2, 0::2] = m.weight.data[:, :, 
+        m.weight.data[:, :, 0::2, 1::2, 0::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
-        m.weight.data[:, :, 0::2, 1::2, 1::2] = m.weight.data[:, :, 
+        m.weight.data[:, :, 0::2, 1::2, 1::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
-        m.weight.data[:, :, 1::2, 0::2, 0::2] = m.weight.data[:, :, 
+        m.weight.data[:, :, 1::2, 0::2, 0::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
-        m.weight.data[:, :, 1::2, 0::2, 1::2] = m.weight.data[:, :, 
+        m.weight.data[:, :, 1::2, 0::2, 1::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
-        m.weight.data[:, :, 1::2, 1::2, 0::2] = m.weight.data[:, :, 
+        m.weight.data[:, :, 1::2, 1::2, 0::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
-        m.weight.data[:, :, 1::2, 1::2, 1::2] = m.weight.data[:, :, 
+        m.weight.data[:, :, 1::2, 1::2, 1::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
 
 def initseq(s):
@@ -195,7 +194,7 @@ def initseq(s):
 
         Args:
             s (torch.nn.Sequential)
-    """ 
+    """
     for a, b in zip(s[:-1], s[1:]):
         if isinstance(b, nn.ReLU):
             initmod(a, nn.init.calculate_gain('relu'))
@@ -216,7 +215,7 @@ class RodriguesModule(nn.Module):
 
             Args:
                 rvec: Tensor (B, 3)
-            
+
             Returns
                 rmtx: Tensor (B, 3, 3)
         '''
@@ -235,6 +234,5 @@ class RodriguesModule(nn.Module):
 
             rvec[:, 0] * rvec[:, 2] * (1. - costh) - rvec[:, 1] * sinth,
             rvec[:, 1] * rvec[:, 2] * (1. - costh) + rvec[:, 0] * sinth,
-            rvec[:, 2] ** 2 + (1. - rvec[:, 2] ** 2) * costh), 
+            rvec[:, 2] ** 2 + (1. - rvec[:, 2] ** 2) * costh),
         dim=1).view(-1, 3, 3)
-    

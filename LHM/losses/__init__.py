@@ -1,4 +1,3 @@
-# Copyright (c) 2023-2024, Zexin He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -74,14 +73,8 @@ def l2_loss(network_output, gt):
 
 
 def _is_better(curr_metrics, best_metrics):
-    """
-    比较当前测试指标与历史最佳指标：
-    - LPIPS 越低越好
-    - PSNR 越高越好
-    若任意一个改善，则返回 True。
-    """
     if best_metrics is None:
-        return True  # 第一次测试直接保存
+        return True
 
     curr_lpips = curr_metrics.get("lpips", float("inf"))
     curr_psnr = curr_metrics.get("psnr", 0.0)

@@ -1,30 +1,28 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+from pathlib import Path
 
 import argparse
 
 import torch
 
-from tools_utils.model.handavatar.third_parties.yacs import CfgNode as CN
+from yacs.config import CfgNode as CN
 
-# pylint: disable=redefined-outer-name
 
-_C = CN()
 
-# "resume" should be train options but we lift it up for cmd line convenience
+_C = CN(new_allowed=True)
+
+
 _C.resume = False
 
-# current iteration -- set a very large value for evaluation
+
 _C.eval_iter = 10000000
 
-# for rendering
 _C.render_folder_name = ""
 _C.ignore_non_rigid_motions = False
 _C.render_skip = 1
 _C.render_frames = 100
 
-# for data loader
 _C.num_workers = 4
 
 
@@ -43,7 +41,7 @@ def determine_primary_secondary_gpus(cfg):
         all_gpus = list(range(cfg.n_gpus))
         cfg.primary_gpus = [0]
         if cfg.n_gpus > 1:
-            cfg.secondary_gpus = [g for g in all_gpus]# if g not in cfg.primary_gpus]
+            cfg.secondary_gpus = [g for g in all_gpus]
         else:
             cfg.secondary_gpus = cfg.primary_gpus
         print(f"Primary GPUs: {cfg.primary_gpus}")
@@ -53,29 +51,32 @@ def determine_primary_secondary_gpus(cfg):
     print("--------------------------------------------------------")
 
 
-# def make_cfg(args): #函数的目的是根据传入的参数创建一个配置对象
-def make_cfg(): #函数的目的是根据传入的参数创建一个配置对象
-    cfg = get_cfg_defaults() #没有输入，是不是创建一个空的？
-    cfg.merge_from_file('./tools_utils/model/handavatar/configs/default.yaml') #将这个default.yaml中的配置合并到刚刚创建的配置对象中
-    cfg.merge_from_file('./tools_utils/model/handavatar/configs/interhand/test_cap0.yaml') #从命令行参数args中获取的 配置文件 合并到配置对象中
-    # cfg.merge_from_file(args.cfg) #从命令行参数args中获取的 配置文件 合并到配置对象中
-    # cfg.merge_from_list(args.opts) #从命令行参数args中获取的 配置选项列表 合并到配置对象中
-    # cfg.file_path = args.cfg
-    parse_cfg(cfg) #解析配置对象中的配置
+def make_cfg():
+    cfg = get_cfg_defaults()
+    config_dir = Path(__file__).resolve().parent
+    cfg.merge_from_file(str(config_dir / 'default.yaml'))
+    cfg.set_new_allowed(True)
+    cfg.merge_from_file(str(config_dir / 'interhand' / 'test_cap0.yaml'))
+    cfg.smpl_cfg.lbs_weights = str(
+        config_dir.parents[3] / 'runtime_assets' / 'manohd_lbs_weights.pth'
+    )
+    parse_cfg(cfg)
 
     determine_primary_secondary_gpus(cfg)
-        
+
     return cfg
 
 
-def make_cfg_left():  # 函数的目的是根据传入的参数创建一个配置对象
-    cfg = get_cfg_defaults()  # 没有输入，是不是创建一个空的？
-    cfg.merge_from_file('./tools_utils/model/handavatar/configs/default_left.yaml')  # 将这个default.yaml中的配置合并到刚刚创建的配置对象中
-    cfg.merge_from_file('./tools_utils/model/handavatar/configs/interhand/test_cap0_left.yaml')  # 从命令行参数args中获取的 配置文件 合并到配置对象中
-    # cfg.merge_from_file(args.cfg) #从命令行参数args中获取的 配置文件 合并到配置对象中
-    # cfg.merge_from_list(args.opts) #从命令行参数args中获取的 配置选项列表 合并到配置对象中
-    # cfg.file_path = args.cfg
-    parse_cfg(cfg)  # 解析配置对象中的配置
+def make_cfg_left():
+    cfg = get_cfg_defaults()
+    config_dir = Path(__file__).resolve().parent
+    cfg.merge_from_file(str(config_dir / 'default_left.yaml'))
+    cfg.set_new_allowed(True)
+    cfg.merge_from_file(str(config_dir / 'interhand' / 'test_cap0_left.yaml'))
+    cfg.smpl_cfg.lbs_weights = str(
+        config_dir.parents[3] / 'runtime_assets' / 'manohd_lbs_weights.pth'
+    )
+    parse_cfg(cfg)
 
     determine_primary_secondary_gpus(cfg)
 
@@ -84,9 +85,7 @@ def make_cfg_left():  # 函数的目的是根据传入的参数创建一个配�
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--cfg", default='./tools_utils/model/handavatar/configs/interhand/test_cap0.yaml', type=str) # 'ROM03_RT_No_Occlusion.yaml'
-#cfg 获得默认的路径
-#parser.add_argument('--dat_dir', type='F:/data/InterHand/5/InterHand2.6M_5fps_batch1', required=True)
+parser.add_argument("--cfg", default='./tools_utils/model/handavatar/configs/interhand/test_cap0.yaml', type=str)
 parser.add_argument("--type", default="freepose", type=str)
 parser.add_argument("opts", default=None, nargs=argparse.REMAINDER)
 parser.add_argument('--conf', default='./code/confs/subject1.conf', type=str)
@@ -94,8 +93,6 @@ parser.add_argument('--is_continue', default=False, action="store_true",
                     help='If set, indicates continuing from a previous run.')
 parser.add_argument('--checkpoint', default='latest', type=str,
                     help='The checkpoint epoch number in case of continuing from a previous run.')
-# args = parser.parse_args() #根据上面信息得到默认的参数
 
-# cfg = make_cfg(args) #调用这个函数进一步操作并获得最终我们需要的配置文件。把 test_cap0.yaml和 default.yaml 合并起来。
-cfg = make_cfg() #调用这个函数进一步操作并获得最终我们需要的配置文件。把 test_cap0.yaml和 default.yaml 合并起来。
+cfg = make_cfg()
 cfg_left = make_cfg_left()

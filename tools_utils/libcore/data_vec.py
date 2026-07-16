@@ -1,6 +1,5 @@
-# DataVec for data vector.
-# Contributer(s): Neil Z. Shao
-# All rights reserved. Prometheus 2022-2024.
+
+
 from .camera import *
 from .ply_utils import saveCamerasToPly
 import json
@@ -11,7 +10,7 @@ from copy import deepcopy
 def _load_image_file(img_fn):
     img = cv2.imread(img_fn, cv2.IMREAD_UNCHANGED)
 
-    # depth
+
     if (img.dtype == np.dtype('uint16')):
         img = img.astype(float) / 10000.0
 
@@ -43,7 +42,7 @@ class DataVec:
                     rig = Rig()
                     rig.loadFromJson(value['rigs'][i])
                     rigs.append(rig)
-            
+
             self.sns = []
             self.cams = []
             self.image_formats = []
@@ -51,7 +50,7 @@ class DataVec:
                 self.sns.append(rigs[i].info)
                 self.cams.append(rigs[i].cams[0])
                 self.image_formats.append(rigs[i].image_format)
-            
+
             return True
         except:
             return False
@@ -113,9 +112,9 @@ class DataVec:
             sub_vec.image_formats = [self.image_formats[i] for i in sub_idxs]
         if len(self.sns) == self.size:
             sub_vec.sns = [self.sns[i] for i in sub_idxs]
-            
+
         return sub_vec
-    
+
     def load_images(self):
         self.frames = []
         print('[loadDataVecFromFolder] loading ', end='')
@@ -136,7 +135,7 @@ class DataVec:
 def loadDataVecFromFolder(dir, with_frames=True, max_workers=4):
     data_vec = DataVec()
 
-    # load cameras
+
     data_vec.loadFromFile(dir + "/cameras.json")
 
     data_vec.frames = []
@@ -146,13 +145,13 @@ def loadDataVecFromFolder(dir, with_frames=True, max_workers=4):
         img_fn = dir + '/%02d.png' % i
         data_vec.images_path.append(img_fn)
 
-    # load images
+
     if with_frames:
         if max_workers <= 0:
             data_vec.load_images()
         else:
             data_vec.load_images_parallel(max_workers)
-        
+
     return data_vec
 
 def saveDataVecToFolder(dir, data_vec, with_frames=True):
@@ -161,17 +160,17 @@ def saveDataVecToFolder(dir, data_vec, with_frames=True):
         print('[saveDataVecToFolder][ERROR] make dir failed: %s' % dir)
         return
 
-    # save cameras
+
     data_vec.saveToFile(dir + "/cameras.json")
 
-    # save images
+
     if with_frames:
         print('[saveDataVecToFolder] saving ', end='')
         for i in range(0, len(data_vec.frames)):
             print('.', end='')
             img = data_vec.frames[i]
 
-            # depth
+
             if (img.dtype == np.float32 or img.dtype == np.float64):
                 img = (img * 10000.0).astype(np.uint16)
 

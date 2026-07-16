@@ -13,8 +13,6 @@ def convert(rot, src, tar):
       xyz = np.sin(rad / 2) * ax
       quat = np.concatenate([w, xyz], -1)
       quat = np.reshape(quat, data_shape + (4,))
-      # quat_neg = quat * -1
-      # quat = np.where(quat[:, 0:1] > 0, quat, quat_neg)
       return quat
     if tar == 'rotmat':
       theta = np.linalg.norm(rot, axis=-1, keepdims=True)
@@ -54,12 +52,12 @@ def convert(rot, src, tar):
       rot6d = np.reshape(np.transpose(rot[:, :, :2], [0, 2, 1]), data_shape + (6,))
       return rot6d
     if tar == 'axangle':
-      # https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToAngle/index.htm
+
       angle = np.arccos((rot[:, 0, 0] + rot[:, 1, 1] + rot[:, 2, 2] - 1) / 2)
       angle = np.expand_dims(angle, -1)
       norm = np.sqrt(
-        np.square(rot[:, 2, 1] - rot[:, 1, 2]) + \
-        np.square(rot[:, 0, 2] - rot[:, 2, 0]) + \
+        np.square(rot[:, 2, 1] - rot[:, 1, 2]) +\
+        np.square(rot[:, 0, 2] - rot[:, 2, 0]) +\
         np.square(rot[:, 1, 0] - rot[:, 0, 1])
       )
       norm = np.maximum(norm, np.finfo(np.float32).eps)
@@ -70,7 +68,7 @@ def convert(rot, src, tar):
       axangle = np.reshape(axangle, data_shape + (3,))
       return axangle
     if tar == 'quat':
-      # https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
+
       quat = []
       for i in range(rot.shape[0]):
         tr = rot[i, 0, 0] + rot[i, 1, 1] + rot[i, 2, 2]
@@ -106,7 +104,7 @@ def convert(rot, src, tar):
     data_shape = rot.shape[:-1]
     rot = np.reshape(rot, [-1, 6])
     if tar == 'rotmat':
-      col0 = rot[:, 0:3] / \
+      col0 = rot[:, 0:3] /\
           np.maximum(np.linalg.norm(rot[:, 0:3], axis=-1, keepdims=True), eps)
       col1 = rot[:, 3:6] - np.sum((col0 * rot[:, 3:6]), axis=-1, keepdims=True) * col0
       col1 = col1 / np.maximum(np.linalg.norm(col1, axis=-1, keepdims=True), eps)
@@ -139,12 +137,11 @@ def random_rotation(n):
 
 
 def slerp_batch(a, b, t):
-  # x = a * (1 - t) + b * t
   dot = np.einsum('NJD, NJD -> NJ', a, b)
   omega = np.expand_dims(np.arccos(np.clip(dot, 0, 1), dtype=np.float32), -1)
   so = np.sin(omega, dtype=np.float32)
   so[so == 0] = np.finfo(np.float32).eps
-  p = np.sin((1 - t) * omega, dtype=np.float32) / so * a + \
+  p = np.sin((1 - t) * omega, dtype=np.float32) / so * a +\
       np.sin(t * omega, dtype=np.float32) / so * b
   mask = np.tile(np.prod(a == b, axis=-1, keepdims=True, dtype=np.bool), (1, 4))
   p = np.where(mask, a, p)
@@ -187,7 +184,7 @@ def rotmat_rel_to_abs(rel_rotmat, parents, batch=False):
     abs_rotmat[c] = rel_rotmat[:, c]
     p = parents[c]
     while p is not None:
-      abs_rotmat[c] = \
+      abs_rotmat[c] =\
         np.einsum('nhw, nwk -> nhk', rel_rotmat[:, p], abs_rotmat[c])
       p = parents[p]
   abs_rotmat = np.stack(abs_rotmat, 1)

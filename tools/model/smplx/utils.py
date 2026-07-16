@@ -10,7 +10,6 @@
 #
 # Copyright©2019 Max-Planck-Gesellschaft zur Förderung
 # der Wissenschaften e.V. (MPG). acting on behalf of its Max Planck Institute
-# for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
 
@@ -122,8 +121,8 @@ def to_np(array, dtype=np.float32):
 
 
 def rot_mat_to_euler(rot_mats):
-    # Calculates rotation matrix to euler angles
-    # Careful for extreme cases of eular angles like [0.0, pi, 0.0]
+
+
 
     sy = torch.sqrt(rot_mats[:, 0, 0] * rot_mats[:, 0, 0] +
                     rot_mats[:, 1, 0] * rot_mats[:, 1, 0])
@@ -179,5 +178,5 @@ def vertex_normals(vertices, faces):
 
     normals = torch.nn.functional.normalize(normals, eps=1e-6, dim=1)
     normals = normals.reshape((bs, nv, 3))
-    # pytorch only supports long and byte tensors for indexing
+
     return normals

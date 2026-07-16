@@ -8,7 +8,6 @@ import numpy as np
 import cv2
 import torch
 import torch.nn as nn
-# from pytorch3d.renderer.cameras import try_get_projection_transform
 from pytorch3d.structures import Pointclouds
 from pytorch3d.renderer.points import rasterize_points, PointsRasterizer
 from pytorch3d.renderer.points.rasterizer import PointFragments
@@ -79,7 +78,7 @@ def get_camrot(campos, lookat=None, inv_camera=False):
     if lookat is None:
         lookat = np.array([0., 0., 0.], dtype=np.float32)
 
-    # define up, forward, and right vectors
+
     up = np.array([0., 1., 0.], dtype=np.float32)
     if inv_camera:
         up[1] *= -1.0
@@ -134,7 +133,7 @@ def apply_global_tfm_to_camera(E, Rh, Th):
         - Array (3, 3)
     """
 
-    global_tfms = np.eye(4)  #(4, 4)
+    global_tfms = np.eye(4)
     global_rot = cv2.Rodrigues(Rh)[0].T
     global_trans = Th
     global_tfms[:3, :3] = global_rot
@@ -154,7 +153,7 @@ def apply_global_tfm_to_camera_mv(E, Rh, Th):
         - Array (3, 3)
     """
 
-    global_tfms = np.eye(4)  #(4, 4)
+    global_tfms = np.eye(4)
     global_rot = cv2.Rodrigues(Rh)[0].T
     global_trans = Th
     global_tfms[:3, :3] = global_rot
@@ -186,16 +185,16 @@ def get_rays_from_KRT(H, W, K, R, T):
         - rays_d: Array (H, W, 3)
     """
 
-    # calculate the camera origin
+
     rays_o = -np.dot(R.T, T).ravel()
-    # calculate the world coodinates of pixels
+
     i, j = np.meshgrid(np.arange(W, dtype=np.float32),
                        np.arange(H, dtype=np.float32),
                        indexing='xy')
     xy1 = np.stack([i, j, np.ones_like(i)], axis=2)
     pixel_camera = np.dot(xy1, np.linalg.inv(K).T)
     pixel_world = np.dot(pixel_camera - T.ravel(), R)
-    # calculate the ray direction
+
     rays_d = pixel_world - rays_o[None, None]
     rays_o = np.broadcast_to(rays_o, rays_d.shape)
     return rays_o, rays_d
@@ -218,27 +217,27 @@ def rays_intersect_3d_bbox(bounds, ray_o, ray_d):
     assert bounds.shape == (2,3)
 
     bounds = bounds + np.array([-0.01, 0.01])[:, None]
-    nominator = bounds[None] - ray_o[:, None] # (N_rays, 2, 3)
-    # calculate the step of intersections at six planes of the 3d bounding box
+    nominator = bounds[None] - ray_o[:, None]
+
     ray_d[np.abs(ray_d) < 1e-5] = 1e-5
-    d_intersect = (nominator / ray_d[:, None]).reshape(-1, 6) # (N_rays, 6)
-    # calculate the six interections
-    p_intersect = d_intersect[..., None] * ray_d[:, None] + ray_o[:, None] # (N_rays, 6, 3)
-    # calculate the intersections located at the 3d bounding box
+    d_intersect = (nominator / ray_d[:, None]).reshape(-1, 6)
+
+    p_intersect = d_intersect[..., None] * ray_d[:, None] + ray_o[:, None]
+
     min_x, min_y, min_z, max_x, max_y, max_z = bounds.ravel()
     eps = 1e-6
-    p_mask_at_box = (p_intersect[..., 0] >= (min_x - eps)) * \
-                    (p_intersect[..., 0] <= (max_x + eps)) * \
-                    (p_intersect[..., 1] >= (min_y - eps)) * \
-                    (p_intersect[..., 1] <= (max_y + eps)) * \
-                    (p_intersect[..., 2] >= (min_z - eps)) * \
-                    (p_intersect[..., 2] <= (max_z + eps))  # (N_rays, 6)
-    # obtain the intersections of rays which intersect exactly twice
-    mask_at_box = p_mask_at_box.sum(-1) == 2  #(N_rays, )
-    p_intervals = p_intersect[mask_at_box][p_mask_at_box[mask_at_box]].reshape(
-        -1, 2, 3) # (N_VALID_rays, 2, 3)
+    p_mask_at_box = (p_intersect[..., 0] >= (min_x - eps)) *\
+                    (p_intersect[..., 0] <= (max_x + eps)) *\
+                    (p_intersect[..., 1] >= (min_y - eps)) *\
+                    (p_intersect[..., 1] <= (max_y + eps)) *\
+                    (p_intersect[..., 2] >= (min_z - eps)) *\
+                    (p_intersect[..., 2] <= (max_z + eps))
 
-    # calculate the step of intersections
+    mask_at_box = p_mask_at_box.sum(-1) == 2
+    p_intervals = p_intersect[mask_at_box][p_mask_at_box[mask_at_box]].reshape(
+        -1, 2, 3)
+
+
     ray_o = ray_o[mask_at_box]
     ray_d = ray_d[mask_at_box]
     norm_ray = np.linalg.norm(ray_d, axis=1)

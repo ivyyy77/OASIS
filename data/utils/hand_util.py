@@ -54,16 +54,16 @@ class MANOHand:
     root = 0
 
     labels = [
-        'W', #0
-        'I0', 'I1', 'I2', #3
-        'M0', 'M1', 'M2', #6
-        'L0', 'L1', 'L2', #9
-        'R0', 'R1', 'R2', #12
-        'T0', 'T1', 'T2', #15
-        'I3', 'M3', 'L3', 'R3', 'T3' #20, tips are manually added (not in MANO)
+        'W',
+        'I0', 'I1', 'I2',
+        'M0', 'M1', 'M2',
+        'L0', 'L1', 'L2',
+        'R0', 'R1', 'R2',
+        'T0', 'T1', 'T2',
+        'I3', 'M3', 'L3', 'R3', 'T3'
     ]
 
-    # finger tips are not keypoints in MANO, we label them on the mesh manually
+
     mesh_mapping = {16: 333, 17: 444, 18: 672, 19: 555, 20: 744}
 
     parents = [
@@ -142,7 +142,7 @@ def _get_rotation_mtx(v1, v2):
 
     Rs = np.zeros(shape=(batch_size, 3, 3), dtype=np.float32)
     for i in range(batch_size):
-        Rs[i] = np.eye(3) + skew_mtxs[i] + \
+        Rs[i] = np.eye(3) + skew_mtxs[i] +\
                     (skew_mtxs[i].dot(skew_mtxs[i])) * (1./(1. + cos_v[i]))
 
     return Rs
@@ -193,7 +193,7 @@ def _deform_gaussian_volume(
     R = rotation_mtx
     S = scale_mtx
 
-    # covariance matrix after scaling and rotation
+
     SIGMA = R.dot(S).dot(S).dot(R.T)
 
     min_x, min_y, min_z = bbox_min_xyz
@@ -248,8 +248,8 @@ def _rvec_to_rmtx(rvec):
 
     skew_mtx = _to_skew_matrix(r)
 
-    return cos(theta)*np.eye(3) + \
-           sin(theta)*skew_mtx + \
+    return cos(theta)*np.eye(3) +\
+           sin(theta)*skew_mtx +\
            (1-cos(theta))*r.dot(r.T)
 
 
@@ -267,7 +267,7 @@ def body_pose_to_body_RTs(jangles, tpose_joints):
 
     jangles = jangles.reshape(-1, 3)
     total_joints = jangles.shape[0]
-    # assert tpose_joints.shape[0] == total_joints
+
 
     Rs = np.zeros(shape=[total_joints, 3, 3], dtype='float32')
     Rs[0] = _rvec_to_rmtx(jangles[0,:])
@@ -331,32 +331,32 @@ def approx_gaussian_bone_volumes(
 
     calibrated_bone = np.array([0.0, 1.0, 0.0], dtype=np.float32)[None, :]
     g_volumes = []
-    # g_volumes.append(np.zeros(shape=grid_shape, dtype='float32'))
+
     for joint_idx in range(0, total_joints):
-        # if joint_idx==0:
-        #     S = _std_to_scale_mtx(BONE_STDS * 2.)
-        #     center = tpose_joints[joint_idx]
-        #     bone_volume = _deform_gaussian_volume(
-        #                         grid_size,
-        #                         bbox_min_xyz,
-        #                         bbox_max_xyz,
-        #                         center,
-        #                         S,
-        #                         np.eye(3, dtype='float32'))
-        # else:
-        #     parent_idx = MANOHand.parents[joint_idx]
-        #     S = _std_to_scale_mtx(BONE_STDS * 2.)
-        #     start_joint = tpose_joints[parent_idx]
-        #     end_joint = tpose_joints[joint_idx]
-        #     target_bone = (end_joint - start_joint)[None, :]
-        #     R = _get_rotation_mtx(calibrated_bone, target_bone)[0].astype(np.float32)
-        #     center = (start_joint + end_joint) / 2.0
-        #     bone_volume = _deform_gaussian_volume(
-        #                     grid_size,
-        #                     bbox_min_xyz,
-        #                     bbox_max_xyz,
-        #                     center, S, R)
-        # g_volumes.append(bone_volume)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         gaussian_volume = np.zeros(shape=grid_shape, dtype='float32')
         is_parent_joint = False
         for bone_idx, parent_idx in enumerate(MANOHand.parents):
@@ -364,9 +364,9 @@ def approx_gaussian_bone_volumes(
                 continue
 
             S = _std_to_scale_mtx(BONE_STDS * 2. * scales)
-            # if joint_idx in [1, 4, 7, 10, 13]:
-            #     S[0][0] *= 1/1.5
-            #     S[2][2] *= 1/1.5
+
+
+
 
             start_joint = tpose_joints[parent_idx]
             end_joint = tpose_joints[bone_idx]
@@ -388,24 +388,24 @@ def approx_gaussian_bone_volumes(
         if is_parent_joint:
             g_volumes.append(gaussian_volume)
 
-        # if not is_parent_joint:
-            # The joint is not other joints' parent, meaning it is an end joint
-            # joint_stds = JOINT_STDS
-            # S = _std_to_scale_mtx(joint_stds * 2.)
 
-            # center = tpose_joints[joint_idx]
-            # gaussian_volume = _deform_gaussian_volume(
-            #                     grid_size,
-            #                     bbox_min_xyz,
-            #                     bbox_max_xyz,
-            #                     center,
-            #                     S,
-            #                     np.eye(3, dtype='float32'))
-        # g_volumes.append(gaussian_volume)
+
+
+
+
+
+
+
+
+
+
+
+
+
     g_volumes = np.stack(g_volumes, axis=0)
-    # np.save('/mnt/user/chenxingyu/jupyter/ski_init7.npy', g_volumes)
 
-    # concatenate background weights
+
+
     bg_volume = 1.0 - np.sum(g_volumes, axis=0, keepdims=True).clip(min=0.0, max=1.0)
     g_volumes = np.concatenate([g_volumes, bg_volume], axis=0)
     g_volumes = g_volumes / np.sum(g_volumes, axis=0, keepdims=True).clip(min=0.001)

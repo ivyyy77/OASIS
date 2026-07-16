@@ -1,10 +1,4 @@
-# -*- coding: utf-8 -*-
-# @Organization  : Alibaba XR-Lab
-# @Author        : Lingteng Qiu
-# @Email         : 220019047@link.cuhk.edu.cn
-# @Time          : 2025-03-10 19:08:35
-# @Function      : ASAP loss
-import pdb
+
 
 import torch
 import torch.nn as nn
@@ -21,20 +15,13 @@ class ASAP_Loss(nn.Module):
         )
 
 
-# class Heuristic_ASAP_Loss(nn.Module):
-#     def __init__(self, group_dict, group_body_mapping):
-#         super(Heuristic_ASAP_Loss, self).__init__()
-#
-#         self.group_dict = group_dict  # register weights fro different body parts
-#         self.group_body_mapping = group_body_mapping  # mapping of body parts to group
+
 
 
 class Heuristic_ASAP_Loss(nn.Module):
     def __init__(self):
         super(Heuristic_ASAP_Loss, self).__init__()
 
-        # self.group_dict = group_dict  # register weights fro different body parts
-        # self.group_body_mapping = group_body_mapping  # mapping of body parts to group
 
     def _heurisitic_loss(self, _ball_loss):
 
@@ -63,5 +50,3 @@ class Heuristic_ASAP_Loss(nn.Module):
         _ball_loss = torch.clamp(scale_ratio, min=r) - r
 
         return _ball_loss.mean()
-
-        # return self._heurisitic_loss(_ball_loss)

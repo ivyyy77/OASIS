@@ -1,0 +1,8 @@
+experiment:
+  parent: oasis
+  child: LHM-1B
+dataset:
+  source_image_res: 1024
+  src_head_size: 112
+  render_image:
+    high: 512

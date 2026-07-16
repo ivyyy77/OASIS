@@ -1,6 +1,5 @@
-# Timer helper.
-# Contributer(s): Neil Z. Shao
-# All rights reserved. Prometheus 2022-2024.
+
+
 import torch
 import time
 
@@ -25,7 +24,7 @@ class CudaTimerStatus:
 
     def stop(self):
         self.end_event.record()
-        torch.cuda.synchronize()  # Wait for the events to be recorded!
+        torch.cuda.synchronize()
         elapsed_ms = self.start_event.elapsed_time(self.end_event)
         self.elapsed_time += elapsed_ms
         self.elapsed_count += 1
@@ -37,19 +36,17 @@ class CudaTimerStatus:
         self.elapsed_count = 0
 
 def startCudaTimer(key):
-    # torch.cuda.synchronize()
     if not key in CUDA_TIMERS:
         CUDA_TIMERS[key] = CudaTimerStatus()
-    
+
     CUDA_TIMERS[key].start()
 
 def stopCudaTimer(key, print_count = 1):
-    # torch.cuda.synchronize()
     if not key in CUDA_TIMERS:
         return
-    
+
     CUDA_TIMERS[key].stop()
-    
+
     if print_count <= 0:
         return
 
@@ -82,23 +79,21 @@ class CpuTimerStatus:
         self.elapsed_count += 1
 
     def reset(self):
-        # self.start_time = None
-        # self.end_time = None
         self.elapsed_time = 0
         self.elapsed_count = 0
 
 def startCpuTimer(key):
     if not key in CPU_TIMERS:
         CPU_TIMERS[key] = CpuTimerStatus()
-    
+
     CPU_TIMERS[key].start()
 
 def stopCpuTimer(key, print_count = 1):
     if not key in CPU_TIMERS:
         return
-    
+
     CPU_TIMERS[key].stop()
-    
+
     if print_count <= 0:
         return
 

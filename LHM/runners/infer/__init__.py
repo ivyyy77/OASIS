@@ -1,4 +1,3 @@
-# Copyright (c) 2023-2024, Zexin He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,5 +12,4 @@
 # limitations under the License.
 
 
-from .human_lrm import HumanLRMInferrer, HandLRMInferrer
-# from .hand_lrm import HandLRMInferrer
+from .human_lrm import HandLRMInferrer

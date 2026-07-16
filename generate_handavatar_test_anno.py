@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Generate per-frame InterHand annotations (anno/img/mask) from combined anno_cam.pkl.
 
@@ -9,7 +9,7 @@ Usage:
       --subject test/Capture0/ROM03_RT_No_Occlusion \
       --phase test
 
-  # process a single frame (debug)
+  # process a single frame
   python scripts/generate_interhand_anno.py \
       --dataset-root /path/to/InterHand \
       --subject test/Capture0/ROM03_RT_No_Occlusion \
@@ -34,8 +34,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--dataset-root',
-        default='/scratch/groups/su004-neuralnet/zh174/InterHand/5/',
+        default=os.environ.get('INTERHAND_ROOT'),
         help='Root path of InterHand dataset'
+    )
+    parser.add_argument(
+        '--output-root',
+        default='./example_data/interhand2.6m',
+        help='Output directory for generated annotations, images, and masks'
     )
     parser.add_argument(
         '--subject',
@@ -54,19 +59,21 @@ def main():
     )
 
     args = parser.parse_args()
+    if not args.dataset_root:
+        parser.error('--dataset-root is required when INTERHAND_ROOT is not set')
 
     dataset_root = args.dataset_root
     subject = args.subject
 
-    # image root (same as Dataset)
+
     image_dir = os.path.join(
         dataset_root,
         f'InterHand2.6M_{cfg.interhand.fps}fps_batch1/images'
     )
 
-    # combined annotation path
-    # For train data, annotations are in preprocess_ohta_our_full/train/prior_learning_data
-    # For test data, annotations are in preprocess/<subject>/
+
+
+
     if args.phase == 'train' or subject.startswith('train/'):
         anno_name = os.path.join(
             image_dir.replace('images', 'preprocess_ohta_our_full'),
@@ -87,15 +94,15 @@ def main():
     print('[INFO] Loading combined annotation:', anno_name)
     with open(anno_name, 'rb') as f:
         cameras, mesh_infos, bbox, framelists = pickle.load(f)
-    
+
     framelist = framelists[::200]
     print(len(framelist))
-    # exit(0)
+
     if len(framelist) == 0:
         print('[ERROR] Empty framelist')
         return
 
-    # decide frames to process
+
     if args.frame is not None:
         rel = args.frame
         if rel not in framelist:
@@ -116,11 +123,11 @@ def main():
 
     print(f'[INFO] Will process {len(frames_to_process)} frames')
 
-    # output dirs
-    base_out = './example_data/interhand2.6m'
+
+    base_out = args.output_root
     out_anno = os.path.join(base_out, 'anno')
-    out_img = os.path.join(base_out, 'img')
-    out_mask = os.path.join(base_out, 'mask')
+    out_img = os.path.join(base_out, 'images')
+    out_mask = os.path.join(base_out, 'masks')
 
     os.makedirs(out_anno, exist_ok=True)
     os.makedirs(out_img, exist_ok=True)
@@ -132,7 +139,7 @@ def main():
         safe = frame.replace('/', '_').replace('.jpg', '')
         out_pkl = os.path.join(out_anno, f'{safe}.pkl')
 
-        # load data
+
         cam_orig = cameras.get(frame)
         mesh_orig = mesh_infos.get(frame)
         bbox_orig = bbox.get(frame)
@@ -148,7 +155,7 @@ def main():
         if img is None:
             continue
 
-        # load mask
+
         mask_path = img_path.replace('/images/', '/masks_removeblack/').replace('.jpg', '.png')
         alpha = None
         if os.path.exists(mask_path):
@@ -177,7 +184,7 @@ def main():
             print('[WARN] augmentation failed:', frame, e)
             continue
 
-        # save image / mask
+
         img_save = os.path.join(out_img, f'{safe}.jpg')
         mask_save = os.path.join(out_mask, f'{safe}.png')
 
@@ -193,7 +200,7 @@ def main():
         else:
             cv2.imwrite(img_save, img_aug.astype(np.uint8))
 
-        # camera
+
         cam_sub = None
         if cam_orig is not None and 'intrinsics' in cam_orig:
             K = cam_orig['intrinsics'][:3, :3].copy()

@@ -1,14 +1,13 @@
 
-#
-# Copyright (C) 2023, Inria
-# GRAPHDECO research group, https://team.inria.fr/graphdeco
-# All rights reserved.
-#
-# This software is free for non-commercial, research and evaluation use 
-# under the terms of the LICENSE.md file.
-#
-# For inquiries contact  george.drettakis@inria.fr
-#
+
+
+
+
+
+
+
+
+
 
 import torch
 import sys
@@ -50,10 +49,10 @@ def get_expon_lr_func(
 
     def helper(step):
         if step < 0 or (lr_init == 0.0 and lr_final == 0.0):
-            # Disable this parameter
+
             return 0.0
         if lr_delay_steps > 0:
-            # A kind of reverse cosine decay.
+
             delay_rate = lr_delay_mult + (1 - lr_delay_mult) * np.sin(
                 0.5 * np.pi * np.clip(step / lr_delay_steps, 0, 1)
             )
@@ -156,115 +155,3 @@ def quaternion_raw_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     oy = aw * by - ax * bz + ay * bw + az * bx
     oz = aw * bz + ax * by - ay * bx + az * bw
     return torch.stack((ow, ox, oy, oz), -1)
-
-
-
-# argparse.ArgumentParser(description="OpenLRM launcher")
-#    parser.add_argument("runner", type=str, help="Runner to launch")
-#    args, unknown = parser.parse_known_args()
-
-#    if args.runner not in REGISTRY_RUNNERS:
- #       raise ValueError("Runner {} not found".format(args.runner))
-
-#    RunnerClass = REGISTRY_RUNNERS[args.runner]
-#    runner = RunnerClass()
-
-    # features_offsets = ['means',  'scales', 'opacities', 'quats', 'features_dc', 'features_rest']
-    # features_activation = {'means': Tanh(), 'features_dc': Identity(), 'features_rest': Identity(), 'scales': Identity(), 'opacities': Identity(), 'quats': Identity()}
- #   features_offsets = ['xyz',  'scaling', 'opacity', 'rotation', 'shs']
-  #  features_activation = {'xyz': Tanh(), 'shs': Identity(), 'scaling': Identity(), 'opacity': Identity(), 'rotation': Identity()}
-    # model = FeaturePredictor()
-    # model = FeaturePredictor(backbone_type='PT', grid_resolution=384,
-    #                          input_embed_to_mlp=False, input_feat_to_mlp=True, input_features=features_offsets, max_scale_normalized=0.01,
-    #                          output_features=features_offsets, output_features_type='res',
-    #                          # output_head_nlayer=4, output_head_type='mlp-relu', output_head_width=128,
-    #                          output_head_nlayer=3, output_head_type='mlp-relu', output_head_width=128,
-    #                          res_feature_activation=features_activation, resume_ckpt=None, sh_degree=1, zeroinit=True)
-
-    # ==============================================================================================
-#    dist.init_process_group(backend='nccl', init_method='env://',
-#                            rank=0,       # Set appropriate rank per process
- #                           world_size=1,
-                            # master_addr="127.0.0.1",
-                            # master_port=29500
- #                           )   # Total number of processes)
-  #  rank = dist.get_rank()
-   # torch.cuda.set_device(rank % torch.cuda.device_count())
-    # print(f"Start running basic DDP example on rank {rank}.")
-    #device_id = rank % torch.cuda.device_count()
-    # gin.bind_parameter('training.output_dir', FLAGS.output_dir)
-    # gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
-#    gin.parse_config_files_and_bindings(FLAGS.gin_file, bindings=None)
- #   os.makedirs(FLAGS.output_dir, exist_ok=True)
- #   set_seed(42)
-
-    # ========================================= DEBUG =========================================
-    # model = runner.model.renderer.gs_net
-  #  model = runner.model.renderer.grid_offset
-    # ========================================= DEBUG =========================================
-
-   # num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    #print(f"Number of trainable parameters: {num_params}")
-    #model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    # print(RunnerClass)
-    # sys.exit()
-    #model = model.to(device_id)
-#    model = DDP(model, device_ids=[device_id])
- #   if FLAGS.only_eval == False:
- #     model.train()
-      # 3. Optimizer
- #     optimizer, scheduler = {}, {}
- #     with gin.config_scope('pretrain'):
-  #      optimizer['pretrain'] = build_optimizer(model.module)
-   #     scheduler['pretrain'] = build_scheduler(optimizer['pretrain'])
-    #  with gin.config_scope('train2D'):
-     #   optimizer['train2D'] = build_optimizer(model.module)
-      #  scheduler['train2D'] = build_scheduler(optimizer['train2D'])
-    # if rank==0:
-    #     wandb_run = wandb.init(project='debug_new_project', dir=FLAGS.wandb_dir)
-    #     if FLAGS.output_dir[-1] == '/':
-    #         FLAGS.output_dir = FLAGS.output_dir[:-1]
-    #     wandb.run.name = '/'.join(FLAGS.output_dir.split('/')[-2:])
-    # ==============================================================================================
-    # if rank == 0:
-    #     wandb_run = wandb.init(project='sign', dir=FLAGS.wandb_dir)  # resume=?
-
-#    train_loader = ReconstructionDataset(split='train')
- #   test_loader = ReconstructionDataset(split='test')
-
-  #  dataloader = make_dataloader(train_loader, shuffle=True, batch_size=2)
-   # data_iterator = iter(dataloader)
-
-    #scaler = torch.cuda.amp.GradScaler()
-    #torch.autograd.set_detect_anomaly(False)
-    # ==============================================================================================
-    #pbar = tqdm(range(1, 200 + 1))
-  #  for iteration in pbar:
-   #     batches = next(data_iterator)   # 随机采样一个 subject ID, 并查找当前 ID 的所有视频
-        # try:
-        #     batches = next(data_iterator)
-        # except:
-        # runner.run()    # infer funtion
-
-
-    # model.eval()
-    # for test_dataset, test_loader in build_testloader().items():
-    #     metrics, metrics_input = evaluation(model, test_loader=test_loader,
-    #                                         output_dir=FLAGS.output_dir + f'/{FLAGS.eval_subdir}/{test_dataset}',
-    #                                         compare_with_input=FLAGS.compare_with_input,
-    #                                         save_as_single=True,
-    #                                         save_viewer=FLAGS.save_viewer,
-    #                                         output_gt=True, compare_with_pseudo=False)
-    #     if dist.get_rank() == 0:
-    #         logger = ProcessSafeLogger(os.path.join(FLAGS.output_dir, FLAGS.eval_subdir, 'eval.log')).get_logger()
-    #         metric_str = ' '.join([f'{k}: {v:.4f}' for k, v in metrics.items()])
-    #         logger.info(f'Test-{test_dataset}: {metric_str}')
-    #         if FLAGS.compare_with_input:
-    #             metric_str = ' '.join([f'{k}: {v:.4f}' for k, v in metrics_input.items()])
-    #             logger.info(f'Input 3DGS: Test-{test_dataset}: {metric_str}')
-    #     dist.barrier()
-    #
-    # dist.destroy_process_group()
-
-
-

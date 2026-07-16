@@ -1,8 +1,6 @@
-# coding: UTF-8
+
 
 """
-    @date:  2022.08.10  week33  星期3
-    @func:  不同于原始的flame的edge_subdivide, 对MANO, 去掉uv相关的部分.
     @ref:   https://github.com/philgras/neural-head-avatars/blob/0048afe9c9034157c63838801e9a2dd3126f806e/nha/util/meshes.py#L17
 """
 import torch
@@ -37,9 +35,9 @@ def edge_subdivide(vertices, faces):
     n_faces = faces.shape[0]
     n_vertices = vertices.shape[0]
 
-    # if self.edges is None:
-    # if True:
-    # compute edges
+
+
+
     edges = []
     edge_map = dict()
     for i in range(0, n_faces):
@@ -49,28 +47,28 @@ def edge_subdivide(vertices, faces):
     n_edges = len(edges)
     edges = np.array(edges).astype(int)
 
-    #    print('edges:', edges.shape)
-    #    print('self.edge_map :', len(edge_map ))
-    #
-    #    print('vertices:', vertices.shape)
-    #    print('faces:', faces.shape)
 
-    ############
-    # vertices
+
+
+
+
+
+
+
     v = np.zeros((n_vertices + n_edges, 3))
-    # copy original vertices
+
     v[:n_vertices, :] = vertices
-    # compute edge midpoints
+
     vertices_edges = vertices[edges]
-    # edge_len = (vertices_edges[:,0]-vertices_edges[:,1]).norm(dim=-1)
-    # valid = edge_len > 0.002
+
+
     v[n_vertices:, :] = (0.5 * (vertices_edges[:, 0] + vertices_edges[:, 1]))
 
-    # new topology
+
     f = np.concatenate((faces, np.zeros((4 * n_faces, 3))), axis=0)
-    # f_uv = np.zeros((4*n_faces*3, 2))
+
     for i in range(0, n_faces):
-        # vertex ids
+
         a = int(faces[i, 0])
         b = int(faces[i, 1])
         c = int(faces[i, 2])
@@ -78,22 +76,22 @@ def edge_subdivide(vertices, faces):
         bc = n_vertices + edge_map[(b, c)]
         ca = n_vertices + edge_map[(c, a)]
 
-        ## triangle 1
+
         f[n_faces + 4 * i, 0] = a
         f[n_faces + 4 * i, 1] = ab
         f[n_faces + 4 * i, 2] = ca
 
-        ## triangle 2
+
         f[n_faces + 4 * i + 1, 0] = ab
         f[n_faces + 4 * i + 1, 1] = b
         f[n_faces + 4 * i + 1, 2] = bc
 
-        ## triangle 3
+
         f[n_faces + 4 * i + 2, 0] = ca
         f[n_faces + 4 * i + 2, 1] = ab
         f[n_faces + 4 * i + 2, 2] = bc
 
-        ## triangle 4
+
         f[n_faces + 4 * i + 3, 0] = ca
         f[n_faces + 4 * i + 3, 1] = bc
         f[n_faces + 4 * i + 3, 2] = c
@@ -103,8 +101,8 @@ def edge_subdivide(vertices, faces):
 
 """
 code heavily inspired from https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/ops/sample_points_from_meshes.html
-just changed functionality such that only sampled face idcs and barycentric coordinates are returned. User 
-has to do the rest 
+just changed functionality such that only sampled face idcs and barycentric coordinates are returned. User
+has to do the rest
 """
 
 
@@ -125,7 +123,7 @@ def face_vertices(vertices, faces):
     device = vertices.device
     faces = faces + (torch.arange(bs, dtype=torch.int32).to(device) * nv)[:, None, None]
     vertices = vertices.reshape((bs * nv, 3))
-    # pytorch only supports long and byte tensors for indexing
+
     return vertices[faces.long()]
 
 
@@ -178,7 +176,7 @@ def vertex_normals(vertices, faces):
 
     normals = F.normalize(normals, eps=1e-6, dim=1)
     normals = normals.reshape((bs, nv, 3))
-    # pytorch only supports long and byte tensors for indexing
+
     return normals
 
 
@@ -221,8 +219,7 @@ def preprocess_spiral(face, seq_length, vertices=None, dilation=1):
     return spirals
 
 
-# 封口.
-# 2022.08.17
+
 def seal(verts, faces, left=False):
     circle_v_id = np.array([108, 79, 78, 121, 214, 215, 279, 239, 234, 92, 38, 122, 118, 117, 119, 120], dtype = np.int32)
     center = (verts[circle_v_id, :]).mean(0)

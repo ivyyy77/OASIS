@@ -1,4 +1,3 @@
-# Copyright (c) 2023-2024, Zexin He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,11 +40,11 @@ class PixelLoss(nn.Module):
     def forward(self, x, y):
         """
         Assume images are channel first.
-        
+
         Args:
             x: [N, M, C, H, W]
             y: [N, M, C, H, W]
-        
+
         Returns:
             Mean-reduced pixel loss across batch.
         """

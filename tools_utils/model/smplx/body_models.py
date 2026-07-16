@@ -48,7 +48,7 @@ class SMPL(nn.Module):
 
     def __init__(
         self, model_path: str,
-	kid_template_path: str = '',
+ kid_template_path: str = '',
         data_struct: Optional[Struct] = None,
         create_betas: bool = True,
         betas: Optional[Tensor] = None,
@@ -141,8 +141,8 @@ class SMPL(nn.Module):
         self.batch_size = batch_size
         shapedirs = data_struct.shapedirs
         if (shapedirs.shape[-1] < self.SHAPE_SPACE_DIM):
-            # print(f'WARNING: You are using a {self.name()} model, with only'
-                #   ' 10 shape coefficients.')
+
+
             num_betas = min(num_betas, 10)
         else:
             num_betas = min(num_betas, self.SHAPE_SPACE_DIM)
@@ -156,14 +156,14 @@ class SMPL(nn.Module):
 
         self._num_betas = num_betas
         shapedirs = shapedirs[:, :, :num_betas]
-        # The shape components
+
         self.register_buffer(
             'shapedirs',
             to_tensor(to_np(shapedirs), dtype=dtype))
 
         if vertex_ids is None:
-            # SMPL and SMPL-H share the same topology, so any extra joints can
-            # be drawn from the same place
+
+
             vertex_ids = VERTEX_IDS['smplh']
 
         self.dtype = dtype
@@ -191,9 +191,9 @@ class SMPL(nn.Module):
             self.register_parameter(
                 'betas', nn.Parameter(default_betas, requires_grad=True))
 
-        # The tensor that contains the global rotation of the model
-        # It is separated from the pose of the joints in case we wish to
-        # optimize only over one of them
+
+
+
         if create_global_orient:
             if global_orient is None:
                 default_global_orient = torch.zeros(
@@ -237,21 +237,21 @@ class SMPL(nn.Module):
             v_template = data_struct.v_template
         if not torch.is_tensor(v_template):
             v_template = to_tensor(to_np(v_template), dtype=dtype)
-        # The vertices of the template model
+
         self.register_buffer('v_template', v_template)
 
         j_regressor = to_tensor(to_np(
             data_struct.J_regressor), dtype=dtype)
         self.register_buffer('J_regressor', j_regressor)
 
-        # Pose blend shape basis: 6890 x 3 x 207, reshaped to 6890*3 x 207
+
         num_pose_basis = data_struct.posedirs.shape[-1]
-        # 207 x 20670
+
         posedirs = np.reshape(data_struct.posedirs, [-1, num_pose_basis]).T
         self.register_buffer('posedirs',
                              to_tensor(to_np(posedirs), dtype=dtype))
 
-        # indices of parents for each joints
+
         parents = to_tensor(to_np(data_struct.kintree_table[0])).long()
         parents[0] = -1
         self.register_buffer('parents', parents)
@@ -346,8 +346,8 @@ class SMPL(nn.Module):
             Returns
             -------
         '''
-        # If no shape and pose parameters are passed along, then use the
-        # ones from the module
+
+
         global_orient = (global_orient if global_orient is not None else
                          self.global_orient)
         body_pose = body_pose if body_pose is not None else self.body_pose
@@ -372,7 +372,7 @@ class SMPL(nn.Module):
                                self.lbs_weights, pose2rot=pose2rot)
 
         joints = self.vertex_joint_selector(vertices, joints)
-        # Map the joints to the current dataset
+
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
 
@@ -396,7 +396,7 @@ class SMPLLayer(SMPL):
         *args,
         **kwargs
     ) -> None:
-        # Just create a SMPL module without any member variables
+
         super(SMPLLayer, self).__init__(
             create_body_pose=False,
             create_betas=False,
@@ -478,7 +478,7 @@ class SMPLLayer(SMPL):
                                pose2rot=False)
 
         joints = self.vertex_joint_selector(vertices, joints)
-        # Map the joints to the current dataset
+
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
 
@@ -498,7 +498,7 @@ class SMPLLayer(SMPL):
 
 class SMPLH(SMPL):
 
-    # The hand joints are replaced by MANO
+
     NUM_BODY_JOINTS = SMPL.NUM_JOINTS - 2
     NUM_HAND_JOINTS = 15
     NUM_JOINTS = NUM_BODY_JOINTS + 2 * NUM_HAND_JOINTS
@@ -563,10 +563,10 @@ class SMPLH(SMPL):
         '''
 
         self.num_pca_comps = num_pca_comps
-        # If no data structure is passed, then load the data from the given
-        # model folder
+
+
         if data_struct is None:
-            # Load the model
+
             if osp.isdir(model_path):
                 model_fn = 'SMPLH_{}.{ext}'.format(gender.upper(), ext=ext)
                 smplh_path = os.path.join(model_path, model_fn)
@@ -626,7 +626,7 @@ class SMPLH(SMPL):
         self.register_buffer('right_hand_mean',
                              to_tensor(right_hand_mean, dtype=self.dtype))
 
-        # Create the buffers for the pose of the left hand
+
         hand_pose_dim = num_pca_comps if use_pca else 3 * self.NUM_HAND_JOINTS
         if create_left_hand_pose:
             if left_hand_pose is None:
@@ -652,7 +652,7 @@ class SMPLH(SMPL):
             self.register_parameter('right_hand_pose',
                                     right_hand_pose_param)
 
-        # Create the buffer for the mean pose.
+
         pose_mean_tensor = self.create_mean_pose(
             data_struct, flat_hand_mean=flat_hand_mean)
         if not torch.is_tensor(pose_mean_tensor):
@@ -660,8 +660,8 @@ class SMPLH(SMPL):
         self.register_buffer('pose_mean', pose_mean_tensor)
 
     def create_mean_pose(self, data_struct, flat_hand_mean=False):
-        # Create the array for the mean pose. If flat_hand is false, then use
-        # the mean that is given by the data, rather than the flat open hand
+
+
         global_orient_mean = torch.zeros([3], dtype=self.dtype)
         body_pose_mean = torch.zeros([self.NUM_BODY_JOINTS * 3],
                                      dtype=self.dtype)
@@ -698,8 +698,8 @@ class SMPLH(SMPL):
         '''
         '''
 
-        # If no shape and pose parameters are passed along, then use the
-        # ones from the module
+
+
         global_orient = (global_orient if global_orient is not None else
                          self.global_orient)
         body_pose = body_pose if body_pose is not None else self.body_pose
@@ -730,7 +730,7 @@ class SMPLH(SMPL):
                                self.J_regressor, self.parents,
                                self.lbs_weights, pose2rot=pose2rot)
 
-        # Add any extra joints that might be needed
+
         joints = self.vertex_joint_selector(vertices, joints)
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
@@ -846,7 +846,7 @@ class SMPLHLayer(SMPLH):
         if transl is None:
             transl = torch.zeros([batch_size, 3], dtype=dtype, device=device)
 
-        # Concatenate all pose vectors
+
         full_pose = torch.cat(
             [global_orient.reshape(-1, 1, 3, 3),
              body_pose.reshape(-1, self.NUM_BODY_JOINTS, 3, 3),
@@ -859,7 +859,7 @@ class SMPLHLayer(SMPLH):
                                self.J_regressor, self.parents,
                                self.lbs_weights, pose2rot=False)
 
-        # Add any extra joints that might be needed
+
         joints = self.vertex_joint_selector(vertices, joints)
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
@@ -898,7 +898,7 @@ class SMPLX(SMPLH):
 
     def __init__(
         self, model_path: str,
-	kid_template_path: str = '',
+ kid_template_path: str = '',
         num_expression_coeffs: int = 10,
         create_expression: bool = True,
         expression: Optional[Tensor] = None,
@@ -960,7 +960,7 @@ class SMPLX(SMPLH):
                 The data type for the created variables
         '''
 
-        # Load the model
+
         if osp.isdir(model_path):
             model_fn = 'SMPLX_{}.{ext}'.format(gender.upper(), ext=ext)
             smplx_path = os.path.join(model_path, model_fn)
@@ -1083,8 +1083,8 @@ class SMPLX(SMPLH):
         return self._num_expression_coeffs
 
     def create_mean_pose(self, data_struct, flat_hand_mean=False):
-        # Create the array for the mean pose. If flat_hand is false, then use
-        # the mean that is given by the data, rather than the flat open hand
+
+
         global_orient_mean = torch.zeros([3], dtype=self.dtype)
         body_pose_mean = torch.zeros([self.NUM_BODY_JOINTS * 3],
                                      dtype=self.dtype)
@@ -1178,8 +1178,8 @@ class SMPLX(SMPLH):
                 A named tuple of type `ModelOutput`
         '''
 
-        # If no shape and pose parameters are passed along, then use the
-        # ones from the module
+
+
         global_orient = (global_orient if global_orient is not None else
                          self.global_orient)
         body_pose = body_pose if body_pose is not None else self.body_pose
@@ -1214,13 +1214,13 @@ class SMPLX(SMPLH):
                                right_hand_pose.reshape(-1, 15, 3)],
                               dim=1).reshape(-1, 165)
 
-        # Add the mean pose of the model. Does not affect the body, only the
-        # hands when flat_hand_mean == False
+
+
         full_pose += self.pose_mean
 
         batch_size = max(betas.shape[0], global_orient.shape[0],
                          body_pose.shape[0])
-        # Concatenate the shape and expression coefficients
+
         scale = int(batch_size / betas.shape[0])
         if scale > 1:
             betas = betas.expand(scale, -1)
@@ -1228,7 +1228,7 @@ class SMPLX(SMPLH):
 
         shapedirs = torch.cat([self.shapedirs, self.expr_dirs], dim=-1)
 
-        # vertices, joints = lbs(shape_components, full_pose, self.v_template,
+
         vertices, joints, _, _ = lbs(shape_components, full_pose, self.v_template,
                                shapedirs, self.posedirs,
                                self.J_regressor, self.parents,
@@ -1258,11 +1258,11 @@ class SMPLX(SMPLH):
                                        lmk_faces_idx,
                                        lmk_bary_coords)
 
-        # Add any extra joints that might be needed
+
         joints = self.vertex_joint_selector(vertices, joints)
-        # Add the landmarks to the joints
+
         joints = torch.cat([joints, landmarks], dim=1)
-        # Map the joints to the current dataset
+
 
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
@@ -1294,7 +1294,7 @@ class SMPLXLayer(SMPLX):
         *args,
         **kwargs
     ) -> None:
-        # Just create a SMPLX module without any member variables
+
         super(SMPLXLayer, self).__init__(
             create_global_orient=False,
             create_body_pose=False,
@@ -1416,7 +1416,7 @@ class SMPLXLayer(SMPLX):
         if transl is None:
             transl = torch.zeros([batch_size, 3], dtype=dtype, device=device)
 
-        # Concatenate all pose vectors
+
         full_pose = torch.cat(
             [global_orient.reshape(-1, 1, 3, 3),
              body_pose.reshape(-1, self.NUM_BODY_JOINTS, 3, 3),
@@ -1460,11 +1460,11 @@ class SMPLXLayer(SMPLX):
                                        lmk_faces_idx,
                                        lmk_bary_coords)
 
-        # Add any extra joints that might be needed
+
         joints = self.vertex_joint_selector(vertices, joints)
-        # Add the landmarks to the joints
+
         joints = torch.cat([joints, landmarks], dim=1)
-        # Map the joints to the current dataset
+
 
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
@@ -1488,29 +1488,29 @@ class SMPLXLayer(SMPLX):
 
 
 class MANO(SMPL):
-    # The hand joints are replaced by MANO
+
     NUM_BODY_JOINTS = 1
     NUM_HAND_JOINTS = 15
     NUM_JOINTS = NUM_BODY_JOINTS + NUM_HAND_JOINTS
 
     def __init__(
         self,
-        model_path: str, #存储模型参数文件的路径
+        model_path: str,
         is_rhand: bool = True,
-        data_struct: Optional[Struct] = None, #可选的结构对象。如果提供，则从中读取参数；否则，它们将从 model_path加载
+        data_struct: Optional[Struct] = None,
         create_hand_pose: bool = True,
         hand_pose: Optional[Tensor] = None,
         use_pca: bool = True,
-        num_pca_comps: int = 6, #每手使用的 PCA 组件数量（默认为 6）
-        flat_hand_mean: bool = False, #指示是否使用平坦平均姿势初始化手部姿势的标志。
-        # if True, (0, 0, 0, ...) pose coefficients match flat hand, else match average hand pose
+        num_pca_comps: int = 6,
+        flat_hand_mean: bool = False,
+
         batch_size: int = 1,
         dtype=torch.float32,
-        vertex_ids=None, #包含要选择的额外顶点索引的字典
+        vertex_ids=None,
         use_compressed: bool = True,
-        center_id = None, #用于居中的可选参数。
+        center_id = None,
         scale = None,
-        seal = False, #是否密封网格的标志（默认为False）
+        seal = False,
         distal=False,
         canonical_shape = None,
         ext: str = 'pkl',
@@ -1553,10 +1553,10 @@ class MANO(SMPL):
         self.scale = scale
         self.seal = seal
         self.distal = distal,
-        # If no data structure is passed, then load the data from the given
-        # model folder
-        if data_struct is None: # 没有提供数据结构，所以自己从 MANO_RIGHT 中读取并加载
-            # Load the model
+
+
+        if data_struct is None:
+
             if osp.isdir(model_path):
                 model_fn = 'MANO_{}.{ext}'.format(
                     'RIGHT' if is_rhand else 'LEFT', ext=ext)
@@ -1575,31 +1575,31 @@ class MANO(SMPL):
                 model_data = np.load(mano_path, allow_pickle=True)
             else:
                 raise ValueError('Unknown extension: {}'.format(ext))
-            data_struct = Struct(**model_data) # 最终加载到 MANO_RIGHT.pkl 中的信息
+            data_struct = Struct(**model_data)
 
-        if vertex_ids is None: #分配要使用的顶点 ID。如果没有提供vertex_ids，则默认为smplh的顶点id
+        if vertex_ids is None:
             vertex_ids = VERTEX_IDS['smplh']
 
-        super(MANO, self).__init__( #调用父类SMPL的构造函数并传递某些参数。这将把MANO对象初始化为带有一些特定参数的SMPL的子类。
+        super(MANO, self).__init__(
             model_path=model_path, data_struct=data_struct,
             batch_size=batch_size, vertex_ids=vertex_ids,
             use_compressed=use_compressed, dtype=dtype, ext=ext, **kwargs)
-        # 经过这一步，self会包含 SMPL中的一些信息。如 176行定义 self.faces=data_struct.f， faces_tensor是self.faces的tensor版本
 
-        # add only MANO tips to the extra joints
+
+
         self.vertex_joint_selector.extra_joints_idxs = to_tensor(
-            list(VERTEX_IDS['mano'].values()), dtype=torch.long) #将某些顶点索引分配给 vertex_joint_selector的 extra_joints_idxs属性。
-            # 744 320 443 554 671 指尖的顶点索引
+            list(VERTEX_IDS['mano'].values()), dtype=torch.long)
+
         self.use_pca = use_pca
         self.num_pca_comps = num_pca_comps
         self.n_exp = 10
-        if canonical_shape!=None: #前面定义为 none
+        if canonical_shape!=None:
             self.canonical_exp = canonical_shape[...,:self.n_exp].float().cuda()
         if self.num_pca_comps == 45:
             self.use_pca = False
         self.flat_hand_mean = flat_hand_mean
-        # 从数据结构 (data_Struct)中提取手部组件
-        hand_components = data_struct.hands_components[:num_pca_comps] #data_stuct 中读到很多信息，有一个名为‘hands_components'的参数，提取其中的前6个
+
+        hand_components = data_struct.hands_components[:num_pca_comps]
 
         self.np_hand_components = hand_components
 
@@ -1608,19 +1608,19 @@ class MANO(SMPL):
                 'hand_components',
                 torch.tensor(hand_components, dtype=dtype))
 
-        if self.flat_hand_mean: #为 false
+        if self.flat_hand_mean:
             hand_mean = np.zeros_like(data_struct.hands_mean)
         else:
-            hand_mean = data_struct.hands_mean # 从 data_Struct 中获取 hands_mean
+            hand_mean = data_struct.hands_mean
 
         self.register_buffer('hand_mean',
                              to_tensor(hand_mean, dtype=self.dtype))
-        #self.register_buffer('v_template',to_tensor(to_np(data_struct.v_template),dtype=self.dtype))
 
-        # Create the buffers for the pose of the left hand
-        hand_pose_dim = num_pca_comps if use_pca else 3 * self.NUM_HAND_JOINTS #根据是否使用 PCA 来计算手部姿势的维数
+
+
+        hand_pose_dim = num_pca_comps if use_pca else 3 * self.NUM_HAND_JOINTS
         if create_hand_pose:
-            if hand_pose is None: #为 none，则生成 6维 的一个东西，并设置为参数，对其优化
+            if hand_pose is None:
                 default_hand_pose = torch.zeros([batch_size, hand_pose_dim],
                                                 dtype=dtype)
             else:
@@ -1631,21 +1631,21 @@ class MANO(SMPL):
             self.register_parameter('hand_pose',
                                     hand_pose_param)
 
-        # Create the buffer for the mean pose.
-        pose_mean = self.create_mean_pose( #用获得的 data_struct 和 data_struct.hands_mean 来构造 pose_mean
+
+        pose_mean = self.create_mean_pose(
             data_struct, flat_hand_mean=flat_hand_mean)
         pose_mean_tensor = pose_mean.clone().to(dtype)
-        # pose_mean_tensor = torch.tensor(pose_mean, dtype=dtype)
+
         self.register_buffer('pose_mean', pose_mean_tensor)
 
-        if self.seal: # true,会对网格执行一些密封操作。它分配某些顶点 ID 并计算密封面
-            #创建一个包含特定顶点索引的张量
+        if self.seal:
+
             self.circle_v_id = torch.tensor([108, 79, 78, 121, 214, 215, 279, 239, 234, 92, 38, 122, 118, 117, 119, 120]).long()
-            #调用 seal_mesh 函数对网格进行封闭操作，其中的参数包括原始的面片数据 faces_tensor，以及一个布尔值 left，指示是否对左手进行封闭操作
+
             self.faces_tensor_seal = self.seal_mesh(faces=self.faces_tensor, left=not self.is_rhand)
             self.faces_seal = self.faces_tensor_seal.numpy()
 
-        #self.face = data_struct.faces_tensors
+
 
     def update_seal(self):
         if not self.seal:
@@ -1662,8 +1662,8 @@ class MANO(SMPL):
         return 'MANO'
 
     def create_mean_pose(self, data_struct, flat_hand_mean=False):
-        # Create the array for the mean pose. If flat_hand is false, then use
-        # the mean that is given by the data, rather than the flat open hand
+
+
         global_orient_mean = torch.zeros([3], dtype=self.dtype)
         pose_mean = torch.cat([global_orient_mean, self.hand_mean], dim=0)
         return pose_mean
@@ -1676,7 +1676,7 @@ class MANO(SMPL):
         return '\n'.join(msg)
 
     def seal_mesh(self, verts=None, faces=None, left=False):
-        assert verts is not None or faces is not None #这行代码断言至少提供了顶点坐标或者面信息，否则会引发错误
+        assert verts is not None or faces is not None
         ret = []
 
         if verts is not None:
@@ -1685,14 +1685,14 @@ class MANO(SMPL):
             ret.append(verts)
 
         if faces is not None:
-            for i in range(self.circle_v_id.shape[0]): # 遍历前面定义的顶点索引
+            for i in range(self.circle_v_id.shape[0]):
                 if left:
                     new_faces = torch.tensor([self.circle_v_id[i-1], self.v_template.shape[0], self.circle_v_id[i]]).long()
                 else:
                     new_faces = torch.tensor([self.circle_v_id[i-1], self.circle_v_id[i], self.v_template.shape[0]]).long()
-                    # 使用了三个顶点的索引来定义一个新的面，v_template 是从 data_struct 中获取的，表示网格的顶点数量（通常是模板的顶点数量）
-# 第三个是不变的。这是因为这个顶点通常是新添加的中心点，而中心点是用来封闭网格的。所以在创建新的面时，将新的中心点与循环中的两个相邻顶点连接起来，以形成一个封闭的三角面片
-                faces = torch.vstack([faces, new_faces]) #创建 new_faces 的目的是为了将网格的边界封闭起来，以确保整个网格是完整的，没有裂缝或孔洞
+
+
+                faces = torch.vstack([faces, new_faces])
             ret.append(faces)
 
         if len(ret)==1:
@@ -1712,17 +1712,17 @@ class MANO(SMPL):
         shaped_verts=None,
         offsets=None,
         faces_tensor: Optional[Tensor] = None,
-        #return_faces: bool = True,
+
         **kwargs
-    ) -> MANOOutput: #接受一系列参数并返回一个 MANOOutput 对象
+    ) -> MANOOutput:
         ''' Forward pass for the MANO model
         '''
-        # If no shape and pose parameters are passed along, then use the
-        # ones from the module
+
+
         faces_tensor = faces_tensor if faces_tensor is not None else self.faces_tensor
         global_orient = (global_orient if global_orient is not None else
                          self.global_orient)
-        betas = betas if betas is not None else self.betas # 如果没有提供，则使用默认值 self.betas
+        betas = betas if betas is not None else self.betas
         hand_pose = (hand_pose if hand_pose is not None else
                      self.hand_pose)
 
@@ -1732,49 +1732,49 @@ class MANO(SMPL):
                 transl = self.transl
 
         if self.use_pca:
-            hand_pose = torch.einsum( # hand_pose是初始化为0的一个六维张量，并注册为参数 是需要优化的(pose参数？)
-                'bi,ij->bj', [hand_pose, self.hand_components]) # hand_components是从 data_struct中获取的一个6维张量
+            hand_pose = torch.einsum(
+                'bi,ij->bj', [hand_pose, self.hand_components])
 
         full_pose = torch.cat([global_orient, hand_pose], dim=1)
-        full_pose += self.pose_mean # pose_mean是0，因为我们假设没有pose参数
-        
+        full_pose += self.pose_mean
+
         vertices, joints, transformations, pose_feature = lbs(betas, full_pose, self.v_template,
-                               self.shapedirs, self.posedirs, #这里的 self指的是 data_struct
+                               self.shapedirs, self.posedirs,
                                self.J_regressor, self.parents,
-                               (self.lbs_weights, custom_lbs_weights)[custom_lbs_weights is not None], 
+                               (self.lbs_weights, custom_lbs_weights)[custom_lbs_weights is not None],
                                pose2rot=True,
                                shaped_verts=shaped_verts,
                                offsets=offsets,
-                               faces=self.faces_tensor, # seal封装那里产生的
+                               faces=self.faces_tensor,
                                )
-        #既然 self指的是 data_struct，那么就说明 前面的所有操作都是在变化 betas，full_pose，face_tensor
-        # 和原代码中的 lbs函数不一样。但是 vertices指的是网格顶点位置，joints指的是关节点的位置
-        # # Add pre-selected extra joints that might be needed
-        # joints = self.vertex_joint_selector(vertices, joints)
 
-        if self.joint_mapper is not None: # 是 none
+
+
+
+
+        if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
-        
-        if self.center_id is not None: #是 none
+
+        if self.center_id is not None:
             center = joints[:, self.center_id:self.center_id+1].clone()
             joints = joints - center
             vertices = vertices - center
-        
-        if self.scale is not None: # 是 none
+
+        if self.scale is not None:
             joints *= self.scale
             vertices *= self.scale
 
         if self.center_id is None:
             center = None
-        # center=None
-        
+
+
         if apply_trans:
-            joints = joints + transl.unsqueeze(dim=1) # 平移
+            joints = joints + transl.unsqueeze(dim=1)
             vertices = vertices + transl.unsqueeze(dim=1)
 
-        # if self.seal:
-        #     vertices = self.seal_mesh(verts=vertices)
-        
+
+
+
         if self.distal:
             distal_joints = vertices[:, [333, 444, 672, 555, 744]]
             joints = torch.cat([joints, distal_joints], 1)
@@ -1789,11 +1789,11 @@ class MANO(SMPL):
                             transformations = transformations,
                             pose_feature = pose_feature,
                             full_pose=full_pose if return_full_pose else None)
-        # output 返回的是 betas center hand_pose transformations pose_feature。相当于就是输入这些东西，然后输出其中一部分需要的
-        # 但是这几个东西是由1733行得来的，去看老师自己定义的 lbs函数
+
+
         return output
 
-    #这个函数是老师自己加的
+
     def forward_pts(self, pnts_c, canonical_centers,new_centers, betas, transformations, pose_feature, shapedirs, posedirs, lbs_weights, dtype=torch.float32, mask=None):
         assert len(pnts_c.shape) == 2
         if mask is not None:
@@ -2057,8 +2057,8 @@ class FLAME(SMPL):
                                             requires_grad=True)
             self.register_parameter('expression', expression_param)
 
-        # The pickle file that contains the barycentric coordinates for
-        # regressing the landmarks
+
+
         landmark_bcoord_filename = osp.join(
             model_path, 'flame_static_embedding.pkl')
 
@@ -2168,8 +2168,8 @@ class FLAME(SMPL):
                 A named tuple of type `ModelOutput`
         '''
 
-        # If no shape and pose parameters are passed along, then use the
-        # ones from the module
+
+
         global_orient = (global_orient if global_orient is not None else
                          self.global_orient)
         jaw_pose = jaw_pose if jaw_pose is not None else self.jaw_pose
@@ -2191,7 +2191,7 @@ class FLAME(SMPL):
 
         batch_size = max(betas.shape[0], global_orient.shape[0],
                          jaw_pose.shape[0])
-        # Concatenate the shape and expression coefficients
+
         scale = int(batch_size / betas.shape[0])
         if scale > 1:
             betas = betas.expand(scale, -1)
@@ -2226,12 +2226,12 @@ class FLAME(SMPL):
                                        lmk_faces_idx,
                                        lmk_bary_coords)
 
-        # Add any extra joints that might be needed
+
         joints = self.vertex_joint_selector(vertices, joints)
-        # Add the landmarks to the joints
+
         joints = torch.cat([joints, landmarks], dim=1)
 
-        # Map the joints to the current dataset
+
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
 
@@ -2376,12 +2376,12 @@ class FLAMELayer(FLAME):
                                        lmk_faces_idx,
                                        lmk_bary_coords)
 
-        # Add any extra joints that might be needed
+
         joints = self.vertex_joint_selector(vertices, joints)
-        # Add the landmarks to the joints
+
         joints = torch.cat([joints, landmarks], dim=1)
 
-        # Map the joints to the current dataset
+
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
 
@@ -2512,7 +2512,7 @@ def create(
             SMPLX, MANO or FLAME
     '''
 
-    # If it's a folder, assume
+
     if osp.isdir(model_path):
         model_path = os.path.join(model_path, model_type)
     else:
