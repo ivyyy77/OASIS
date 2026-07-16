@@ -8,7 +8,6 @@ try:
 except ImportError:
     igl = None
 
-
 def _require_igl():
     if igl is None:
         raise ImportError("igl is required for this geometry utility. Install it with `conda install -c conda-forge igl`.")
@@ -26,7 +25,6 @@ def tbn(triangles):
 
     return torch.stack([X, Y, Z], dim=3)
 
-
 def triangle2projection(triangles):
     R = tbn(triangles)
     T = triangles.unbind(-2)[0]
@@ -37,14 +35,11 @@ def triangle2projection(triangles):
 
     return I
 
-
 def calculate_centroid(tris, dim=2):
     c = tris.sum(dim) / 3
     return c
 
-
 def interpolate(xyzs, tris, neighbours, edge_mask):
-
     return triangle2projection(tris)[0]
     N = xyzs.shape[0]
     factor = 4
@@ -59,7 +54,6 @@ def interpolate(xyzs, tris, neighbours, edge_mask):
 
     return (triangles * weights[..., None, None]).sum(1)
 
-
 def project_position(xyzs, deformed_triangles, canonical_triangles, deformed_neighbours, canonical_neighbours, edge_mask):
     Rt = interpolate(xyzs, deformed_triangles, deformed_neighbours, edge_mask)
     Rt_def = torch.linalg.inv(Rt)
@@ -71,7 +65,6 @@ def project_position(xyzs, deformed_triangles, canonical_triangles, deformed_nei
     def_canon = torch.matmul(Rt_canon, def_local)
 
     return def_canon[:, 0:3, 0].float()
-
 
 def project_direction(dirs, deformed_triangles, canonical_triangles, deformed_neighbours, canonical_neighbours, edge_mask):
     Rt = interpolate(dirs, deformed_triangles, deformed_neighbours, edge_mask)
@@ -102,47 +95,16 @@ def get_triangles(mesh: trimesh.Trimesh):
         return vertices[faces]
 
 def rotation_matrix_to_quaternion(R):
-
-
-
-
-
-
-
     from pytorch3d import transforms as tfs
     return tfs.matrix_to_quaternion(R)
 
 def quaternion_to_rotation_matrix(r):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     from pytorch3d import transforms as tfs
     return tfs.quaternion_to_matrix(r)
 
 def calc_per_face_Rt(cano_triangles, deform_triangles):
-
     cano_Rt = triangle2projection(cano_triangles)[0]
     deform_Rt = triangle2projection(deform_triangles)[0]
-
-
 
     return torch.einsum('bij,bjk->bik', deform_Rt, torch.inverse(cano_Rt))
 
@@ -151,7 +113,6 @@ def calc_per_vert_quaternion(cano_verts, cano_faces, mesh_verts):
     deform_triangles = mesh_verts[cano_faces].unsqueeze(dim=0)
     per_face_Rt = calc_per_face_Rt(cano_triangles, deform_triangles)
     per_face_quat = rotation_matrix_to_quaternion(per_face_Rt[:, :3, :3])
-
 
     A = _require_igl().doublearea(cano_verts.numpy(), cano_faces.numpy())
     W = torch.from_numpy(A)[:, None].float()
@@ -165,30 +126,7 @@ def calc_per_vert_quaternion(cano_verts, cano_faces, mesh_verts):
                                            (W * per_face_quat)[:, None, :].repeat([1, 3, 1]).view(-1, 4), reduce='add')
     per_vert_quat = per_vert_quat / per_vert_w[:, None]
 
-
     per_vert_quat[per_vert_quat.isnan().any(dim=-1), :] = torch.tensor([1.0, 0, 0, 0], dtype=torch.float32)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     return per_vert_quat
 
@@ -205,7 +143,6 @@ class PerVertQuaternion(nn.Module):
         self.register_buffer('cano_triangles', cano_verts[cano_faces].unsqueeze(dim=0))
 
         if self.use_numpy:
-
             A = _require_igl().doublearea(cano_verts.detach().cpu().numpy(), cano_faces.detach().cpu().numpy())
             W = torch.from_numpy(A)[:, None].float()
 
@@ -224,22 +161,17 @@ class PerVertQuaternion(nn.Module):
         per_face_quat = self.calc_per_face_quaternion(mesh_verts)
 
         if self.use_numpy:
-
             per_vert_quat = torch.zeros(cano_verts.shape[0], 4).to(per_face_quat.device)
             per_vert_quat = per_vert_quat.scatter_(0,
                                                 cano_faces[:, :, None].repeat([1, 1, 4]).view(-1, 4),
                                                 (self.W * per_face_quat)[:, None, :].repeat([1, 3, 1]).view(-1, 4), reduce='add')
             per_vert_quat = per_vert_quat / self.per_vert_w_sum
 
-
             per_vert_quat = F.normalize(per_vert_quat, eps=1e-6, dim=-1)
-
         else:
             faces_packed = cano_faces
 
             verts_quats = torch.zeros(cano_verts.shape[0], 4).to(per_face_quat.device)
-
-
 
             verts_quats = verts_quats.index_add(
                 0, faces_packed[:, 0], self.face_areas * per_face_quat
@@ -283,7 +215,6 @@ class PerVertQuaternion(nn.Module):
         return change_ratio
 
 def calc_face_areas(mesh_verts, mesh_faces):
-
     if mesh_verts.is_cuda:
         mesh_faces = mesh_faces.to(mesh_verts.device)
     else:

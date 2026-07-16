@@ -66,11 +66,8 @@ def _ssim(img1, img2, window, window_size, channel, size_average=True):
     else:
         return ssim_map.mean(1).mean(1).mean(1)
 
-
 def l2_loss(network_output, gt):
     return ((network_output - gt) ** 2).mean()
-
-
 
 def _is_better(curr_metrics, best_metrics):
     if best_metrics is None:

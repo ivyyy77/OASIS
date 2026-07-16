@@ -51,25 +51,15 @@ class HandDataset(Dataset):
         self.mano_ori = tools_utils.model.smplx.create(**cfg.smpl_cfg)
         self.mano_778 = tools_utils.model.smplx.create(**cfg.smpl_cfg)
 
-
-
-
-
-
-
-
-
         if cfg.smpl_cfg['manohd'] > 0:
             self.mano, _, _ = sub_mano_ori(self.mano, cfg.smpl_cfg['manohd'])
         lbs_weights = torch.load(cfg.smpl_cfg['lbs_weights'], map_location='cpu')
         self.mano.lbs_weights = lbs_weights
 
-
         if cfg.smpl_cfg['manohd'] > 0:
             self.mano_ori, _, _ = sub_mano_ori(self.mano_ori, cfg.smpl_cfg['manohd'])
         lbs_weights = torch.load(cfg.smpl_cfg['lbs_weights'], map_location='cpu')
         self.mano_ori.lbs_weights = lbs_weights
-
 
         self.handtype = ('left', 'right')[cfg.smpl_cfg.is_rhand]
         if self.handtype == 'left':
@@ -81,7 +71,6 @@ class HandDataset(Dataset):
             torch.zeros(1, 45).float(), return_verts=True)
 
         self.canonical_verts = mano_res.vertices.detach().numpy().squeeze()
-
 
         self.faces = mano_res.faces_tensor
         self.big_pose_xyz = mano_res.vertices.detach().numpy().squeeze()
@@ -103,14 +92,12 @@ class HandDataset(Dataset):
         scales = torch.log(torch.sqrt(dist2))[...,None]
         self.pcd_scales = torch.exp(scales)
 
-
         labels_path = 'pretrained_models/dense_sample_points/manohd_semantic.ply'
         print(f'Loading MANO semantic labels from {labels_path}')
         ply = PlyData.read(labels_path)
         if ply.elements:
             pc = pd.DataFrame(ply.elements[0].data).values
         self.labels = torch.tensor(pc[:, 6].astype(np.uint8))
-
 
         NAIL_PARTS = {
             "index3": 4,
@@ -120,10 +107,7 @@ class HandDataset(Dataset):
             "thumb3": 16
         }
 
-
         nail_indices = np.isin(self.labels, list(NAIL_PARTS.values()))
-
-
 
         self.nail_labels = self.labels[nail_indices]
 
@@ -136,7 +120,6 @@ class HandDataset(Dataset):
         self.nail_faces = faces_np[face_nail_mask]
 
         self._uv_template = self._build_right_hand_uv_template()
-
 
     def _build_right_hand_uv_template(self):
         if self.handtype != 'right':
@@ -169,7 +152,6 @@ class HandDataset(Dataset):
             'face_uv_xy': torch.from_numpy(face_uv_xy.astype(np.float32)),
         }
 
-
     @staticmethod
     def skeleton_to_box(skeleton):
         min_xyz = np.min(skeleton, axis=0) - 0.01
@@ -178,7 +160,6 @@ class HandDataset(Dataset):
             'min_xyz': min_xyz,
             'max_xyz': max_xyz
         }
-
 
     def get_patch_ray_indices(
             self,
@@ -205,9 +186,6 @@ class HandDataset(Dataset):
         total_rays = 0
         patch_div_indices = [total_rays]
         for _ in range(N_patch):
-
-
-
             if np.random.rand(1)[0] < cfg.patch.sample_subject_ratio:
                 candidate_mask = subject_mask
             else:
@@ -237,7 +215,6 @@ class HandDataset(Dataset):
 
         return select_inds, patch_info, patch_div_indices
 
-
     def _get_patch_ray_indices(
             self,
             ray_mask,
@@ -251,12 +228,10 @@ class HandDataset(Dataset):
 
         valid_ys, valid_xs = np.where(candidate_mask)
 
-
         select_idx = np.random.choice(valid_ys.shape[0],
                                       size=[1], replace=False)[0]
         center_x = valid_xs[select_idx]
         center_y = valid_ys[select_idx]
-
 
         half_patch_size = patch_size // 2
         x_min = np.clip(a=center_x-half_patch_size,
@@ -271,10 +246,6 @@ class HandDataset(Dataset):
         sel_ray_mask = np.zeros_like(candidate_mask)
         sel_ray_mask[y_min:y_max, x_min:x_max] = True
 
-
-
-
-
         sel_ray_mask = sel_ray_mask.reshape(-1)
         inter_mask = np.bitwise_and(sel_ray_mask, ray_mask)
         select_masked_inds = np.where(inter_mask)
@@ -288,8 +259,6 @@ class HandDataset(Dataset):
                 inter_mask[y_min:y_max, x_min:x_max],\
                 np.array([x_min, y_min]), np.array([x_max, y_max])
 
-
-
     @staticmethod
     def select_rays(select_inds, rays_o, rays_d, ray_img, ray_alpha, near, far):
         rays_o = rays_o[select_inds]
@@ -299,7 +268,6 @@ class HandDataset(Dataset):
         near = near[select_inds]
         far = far[select_inds]
         return rays_o, rays_d, ray_img, ray_alpha, near, far
-
 
     def sample_patch_rays(self, img, alpha, H, W,
                           subject_mask, bbox_mask, ray_mask,
@@ -331,8 +299,6 @@ class HandDataset(Dataset):
 
         return rays_o, rays_d, ray_img, ray_alpha, near, far,\
                 target_patches, target_alpha_patches, patch_masks, patch_div_indices
-
-
 
     def __len__(self):
         if self.split in ['test_wild']:
@@ -376,7 +342,6 @@ class HandDataset(Dataset):
         if mask_u8.max() < 20:
             return mask
 
-
         _, mask_bin = cv2.threshold(mask_u8[..., 0], 255, 255, cv2.THRESH_BINARY)
         mask_bool = mask_bin > 0
         if not np.any(mask_bool):
@@ -403,10 +368,7 @@ class HandDataset(Dataset):
 
         return mask
 
-
     def get_img(self):
-
-
         frame_name = self.video_ids[0]
         img_path = os.path.join(self.dat_dir, 'images', frame_name)
         mask_path = img_path.replace('images', 'masks')
@@ -418,10 +380,8 @@ class HandDataset(Dataset):
         if mask_edit_path is not None and os.path.exists(mask_edit_path):
             mask_edit = cv2.imread(mask_edit_path, cv2.IMREAD_GRAYSCALE)[..., None].repeat(3, axis=2)
 
-
         anno_path = img_path.replace('images', 'anno')
         anno_path = os.path.splitext(anno_path)[0] + '.pkl'
-
 
         if not os.path.exists(mask_path):
             generate_name = 'test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012'
@@ -447,7 +407,6 @@ class HandDataset(Dataset):
             ann = ann.get('frames', {})
             ann = ann.get(os.path.splitext(frame_name)[0], {})
 
-
         img = cv2.imread(img_path, cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = cv2.resize(img, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
@@ -467,17 +426,11 @@ class HandDataset(Dataset):
         w2c[:3, :3] = R
         w2c[:3, 3:4] = T[..., None]
 
-
         raw_K = get_camera_parameters(
-
 
             max(self.height, self.width),
 
-
-
-
             fov=30,
-
 
             p_x=None,
             p_y=None,
@@ -490,21 +443,14 @@ class HandDataset(Dataset):
         FovY = focal2fov(focal_length_y, self.height)
         FovX = focal2fov(focal_length_x, self.width)
 
-
-
         bkgd_mask = mask.astype('float32') / 255.0
-
-
 
         if os.path.exists(mask_edit_path):
             bound_mask = mask_edit.astype('float32') / 255.0
         else:
             bound_mask = bkgd_mask
 
-
-
         pred_mano_params = ann.get('pred_mano_params', {})
-
 
         global_orient_mat = np.array(pred_mano_params.get('global_orient', []), dtype=np.float32)
         hand_pose_mat = np.array(pred_mano_params.get('hand_pose', []), dtype=np.float32)
@@ -513,7 +459,6 @@ class HandDataset(Dataset):
 
         axis_angle = matrix_to_axis_angle(torch.from_numpy(rot_mats))
         axis_angle = axis_angle.reshape(-1).numpy()
-
 
         posed_res = self.mano(
             torch.from_numpy(np.array(pred_mano_params.get('betas', []), dtype=np.float32))[None].float(),
@@ -529,15 +474,12 @@ class HandDataset(Dataset):
 
         }
 
-
         mano_shape = self.mano(
             torch.from_numpy(np.array(pred_mano_params.get('betas', []), dtype=np.float32))[None].float(),
             torch.zeros(1, 3).float(),
             torch.zeros(1, 45).float(), return_verts=True)
 
         self.canonical_verts = mano_shape.vertices.detach().numpy().squeeze()
-
-
 
         posed_778 = self.mano_wild_778(
             torch.from_numpy(np.array(pred_mano_params.get('betas', []), dtype=np.float32))[None].float(),
@@ -564,21 +506,16 @@ class HandDataset(Dataset):
         min_xyz += 0.05
         world_bound = np.stack([min_xyz, max_xyz], axis=0)
 
-
-
         semantic_mask = self.image_semantic_mask(world_vertex.reshape(-1, 3), K=K, R=R, T=T,
                                                                         faces=torch.from_numpy(self.mano.faces).long())
         nail_mask = (semantic_mask).astype('float32') / 255.
         nail_mask = nail_mask[..., None].repeat(3, axis=2)
-
-
 
         verts_cam = world_vertex.reshape(-1, 3)
         verts_cam = np.dot(R, verts_cam.T).T + T[None, ...]
         verts_img = np.dot(K, verts_cam.T).T
         verts_img[:, :2] /= verts_img[:, 2:3]
         nail_img = (verts_img[:, :2]).astype(np.float32)
-
 
         cam_info = CameraInfo(
                     uid=id, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
@@ -607,22 +544,13 @@ class HandDataset(Dataset):
             cam_info.face_uv = uv_mapping['face_uv']
             cam_info.face_uv_xy = uv_mapping['face_uv_xy']
 
-
-
-
-
         cam_info_list.append(cam_info)
         cam_info_dicts = [vars(c) for c in cam_info_list]
         final_results = merge_batch(cam_info_dicts)
 
-
         return final_results
 
-
-
     def get_img_rainbow(self):
-
-
         frame_name = self.video_ids[0]
         img_path = os.path.join(self.dat_dir, 'images', frame_name)
         mask_path = img_path.replace('images', 'masks')
@@ -634,7 +562,6 @@ class HandDataset(Dataset):
         anno_path = img_path.replace('images', 'anno')
         anno_path = os.path.splitext(anno_path)[0] + '.pkl'
 
-
         if not os.path.exists(mask_path):
             generate_name = 'test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012'
             mask_path = os.path.join(self.dat_dir, 'masks', generate_name)
@@ -644,11 +571,8 @@ class HandDataset(Dataset):
             anno_path = os.path.join(self.dat_dir, 'anno', generate_name)
             anno_path = os.path.splitext(anno_path)[0] + '.pkl'
 
-
-
         with open(anno_path, 'rb') as fi:
             cameras, mesh_infos, bbox, img_type = pickle.load(fi)
-
 
         img = cv2.imread(img_path, cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -660,14 +584,6 @@ class HandDataset(Dataset):
 
         img = self.process_image(img, mask)
         cam_info_list = []
-
-
-
-
-
-
-
-
 
         dst_skel_info = query_dst_skeleton(mesh_infos)
         dst_bbox = dst_skel_info['bbox']
@@ -684,16 +600,12 @@ class HandDataset(Dataset):
         R = E[:3, :3]
         T = E[:3, 3]
 
-
-
         K = cameras['intrinsics'][:3, :3].copy()
 
         focal_length_y = K[1, 1]
         focal_length_x = K[0, 0]
         FovY = focal2fov(focal_length_y, self.height)
         FovX = focal2fov(focal_length_x, self.width)
-
-
 
         bkgd_mask = mask.astype('float32') / 255.0
         if self.edit:
@@ -746,21 +658,16 @@ class HandDataset(Dataset):
         min_xyz += 0.05
         world_bound = np.stack([min_xyz, max_xyz], axis=0)
 
-
-
         semantic_mask = self.image_semantic_mask(world_vertex.reshape(-1, 3), K=K, R=R, T=T,
                                                                         faces=torch.from_numpy(self.mano.faces).long())
         nail_mask = (semantic_mask).astype('float32') / 255.
         nail_mask = nail_mask[..., None].repeat(3, axis=2)
-
-
 
         verts_cam = world_vertex.reshape(-1, 3)
         verts_cam = np.dot(R, verts_cam.T).T + T[None, ...]
         verts_img = np.dot(K, verts_cam.T).T
         verts_img[:, :2] /= verts_img[:, 2:3]
         nail_img = (verts_img[:, :2]).astype(np.float32)
-
 
         cam_info = CameraInfo(
                     uid=id, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
@@ -788,25 +695,13 @@ class HandDataset(Dataset):
             cam_info.face_uv = uv_mapping['face_uv']
             cam_info.face_uv_xy = uv_mapping['face_uv_xy']
 
-
-
-
         cam_info_list.append(cam_info)
         cam_info_dicts = [vars(c) for c in cam_info_list]
         final_results = merge_batch(cam_info_dicts)
 
-
         return final_results
 
-
-
     def __getitem__(self, idx, attempt=0, max_attempts=10):
-
-
-
-
-
-
         if self.split in ['test_wild']:
             frame_name = self.video_ids[0]
 
@@ -820,15 +715,12 @@ class HandDataset(Dataset):
                 else:
                     final_results = self.get_img()
             else:
-
                 final_results = self.get_img_rainbow()
-
 
             return final_results
 
         while attempt < max_attempts:
             video_id = self.video_ids[idx]
-
 
             img_dir = os.path.join(self.dat_dir, 'images', video_id)
             mask_dir = os.path.join(self.dat_dir, 'masks', video_id)
@@ -838,7 +730,6 @@ class HandDataset(Dataset):
             img_paths = sorted([f for f in glob.glob(os.path.join(img_dir, '*.png'))])
             mask_paths = sorted([f for f in glob.glob(os.path.join(mask_dir, '*.png'))])
 
-
             if not os.path.isfile(ann_path):
                 print(f"Missing annotation for video {video_id}")
                 idx = (idx + 1) % len(self.video_ids)
@@ -847,9 +738,6 @@ class HandDataset(Dataset):
             with open(ann_path, 'r') as f:
                 annotation = json.load(f)
 
-
-
-
             frame_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_paths if os.path.splitext(os.path.basename(p))[0].endswith('_1')]
 
             mask_map = {os.path.splitext(os.path.basename(p))[0]: p for p in mask_paths}
@@ -857,9 +745,6 @@ class HandDataset(Dataset):
             ann_map = annotation.get('frames', {})
 
             if len(frame_ids) < self.num_frames:
-
-
-
                 if self.split == 'test':
                     idx = (idx + 1) % len(self.video_ids)
                     attempt += 1
@@ -869,14 +754,12 @@ class HandDataset(Dataset):
                     frame_ids = frame_ids_left
 
                     if len(frame_ids) < self.num_frames:
-
                         idx = (idx + 1) % len(self.video_ids)
                         attempt += 1
                         continue
                     else:
                         chosen = random.sample(frame_ids, self.num_frames)
                 else:
-
                     idx = (idx + 1) % len(self.video_ids)
                     attempt += 1
                     continue
@@ -884,10 +767,6 @@ class HandDataset(Dataset):
                 if self.split == 'test':
                     chosen = frame_ids[:1]
                 chosen = random.sample(frame_ids, self.num_frames)
-
-
-
-
 
             cam_info_list = []
             for fid in chosen:
@@ -902,41 +781,19 @@ class HandDataset(Dataset):
 
                 img = self.process_image(img, mask)
 
-
-
-
-
-
-
-
                 w2c = np.eye(4, dtype=np.float32)
                 T = np.array(ann.get('pred_cam_t', [0,0,0]), dtype=np.float32).reshape(3,1)
 
-
                 T[:2] *= 10
                 T = T.reshape(3)
-
-
 
                 R = np.eye(3, dtype=np.float32)
                 w2c[:3, :3] = R
                 w2c[:3, 3:4] = T[..., None]
 
-
-
-
-
-
-
-
-
-
-
                 raw_K = get_camera_parameters(
 
-
                     max(self.height, self.width),
-
 
                     fov=30,
 
@@ -951,14 +808,11 @@ class HandDataset(Dataset):
                 FovY = focal2fov(focal_length_y, self.height)
                 FovX = focal2fov(focal_length_x, self.width)
 
-
                 image_name = os.path.basename(img_path)
 
                 bkgd_mask = mask.astype('float32') / 255.0
 
-
                 pred_mano_params = ann.get('pred_mano_params', {})
-
 
                 global_orient_mat = np.array(pred_mano_params.get('global_orient', []), dtype=np.float32)
                 hand_pose_mat = np.array(pred_mano_params.get('hand_pose', []), dtype=np.float32)
@@ -967,10 +821,6 @@ class HandDataset(Dataset):
 
                 axis_angle = matrix_to_axis_angle(torch.from_numpy(rot_mats))
                 axis_angle = axis_angle.reshape(-1).numpy()
-
-
-
-
 
                 posed_res = self.mano(
                     torch.from_numpy(np.array(pred_mano_params.get('betas', []), dtype=np.float32))[None].float(),
@@ -986,22 +836,6 @@ class HandDataset(Dataset):
 
                 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                 min_xyz = np.min(world_vertex.squeeze(), axis=0)
                 max_xyz = np.max(world_vertex.squeeze(), axis=0)
                 max_xyz -= 0.05
@@ -1015,19 +849,11 @@ class HandDataset(Dataset):
                 nail_mask = (semantic_mask).astype('float32') / 255.
                 nail_mask = nail_mask[..., None].repeat(3, axis=2)
 
-
-
                 verts_cam = world_vertex.reshape(-1, 3)
                 verts_cam = np.dot(R, verts_cam.T).T + T[None, ...]
                 verts_img = np.dot(K, verts_cam.T).T
                 verts_img[:, :2] /= verts_img[:, 2:3]
                 nail_img = (verts_img[:, :2]).astype(np.float32)
-
-
-
-
-
-
 
                 cam_info = CameraInfo(
                     uid=fid, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
@@ -1053,13 +879,10 @@ class HandDataset(Dataset):
                 cam_info = loadCam_aug_bs(fid, cam_info)
                 cam_info_list.append(cam_info)
 
-
             cam_info_dicts = [vars(c) for c in cam_info_list]
             final_results = merge_batch(cam_info_dicts)
 
-
             return final_results
-
 
     def image_semantic_mask(self, verts_cam, K, R, T, faces, height=None, width=None):
         """
@@ -1075,30 +898,14 @@ class HandDataset(Dataset):
             masks: (num_classes, H, W) np.uint8
         """
 
-
         h = self.height if height is None else height
         w = self.width if width is None else width
         masks = np.zeros((h, w), dtype=np.uint8)
-
 
         verts_cam = np.dot(R, verts_cam.T).T + T[None, :]
         verts_img = np.dot(K, verts_cam.T).T
         verts_img[:, :2] /= verts_img[:, 2:3]
         verts_img = np.round(verts_img[:, :2]).astype(np.int32)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         for tri in self.nail_faces:
             tri_pts = verts_img[tri, :]
@@ -1107,7 +914,6 @@ class HandDataset(Dataset):
             cv2.fillConvexPoly(masks, tri_pts, 255)
 
         return masks
-
 
 def get_bound_corners(bounds):
     min_x, min_y, min_z = bounds[0]
@@ -1131,9 +937,6 @@ def project(xyz, K, RT):
     RT: [3, 4]
     """
 
-
-
-
     xyz = np.dot(xyz, RT[:3, :3]) + RT[:3, 3:].T
     xyz = np.dot(xyz, K.T)
     xy = xyz[:, :2] / xyz[:, 2:]
@@ -1153,7 +956,6 @@ def get_bound_2d_mask(bounds, K, pose, H, W):
     cv2.fillPoly(mask, [corners_2d[[1, 3, 7, 5, 1]]], 1)
     return mask
 
-
 def make_dataloader(frameset, shuffle=True, batch_size=1,
                     num_workers=0, prefetch_factor=None,
                     persistent_workers=False, pin_memory=False):
@@ -1165,7 +967,6 @@ def make_dataloader(frameset, shuffle=True, batch_size=1,
                                              collate_fn=frameset_collate_fn)
     return dataloader
 
-
 from collections import defaultdict
 
 def get_camera_parameters(img_size, fov=60, p_x=None, p_y=None, device=torch.device("cuda")):
@@ -1175,13 +976,10 @@ def get_camera_parameters(img_size, fov=60, p_x=None, p_y=None, device=torch.dev
     focal = get_focalLength_from_fieldOfView(fov=fov, img_size=img_size)
     K[0, 0], K[1, 1] = focal, focal
 
-
     if p_x is not None and p_y is not None:
         K[0, -1], K[1, -1] = p_x * img_size, p_y * img_size
     else:
         K[0, -1], K[1, -1] = img_size // 2, img_size // 2
-
-
 
     return K
 
@@ -1197,15 +995,11 @@ def get_focalLength_from_fieldOfView(fov=60, img_size=512):
     focal = img_size / (2 * np.tan(np.radians(fov) / 2))
     return focal
 
-
-
 def frameset_collate_fn(batches):
     return batches
 
-
 def focal2fov(focal, pixels):
     return 2*math.atan(pixels/(2*focal))
-
 
 def query_dst_skeleton(mesh_infos):
     return {
@@ -1220,7 +1014,6 @@ def query_dst_skeleton(mesh_infos):
         'joint_cam': mesh_infos['joint_cam'].astype('float32'),
         'joint_valid': mesh_infos['joint_valid'].astype('float32')
     }
-
 
 def _read_mano_uv_obj(filename: str):
     vt, ft, faces = [], [], []
@@ -1255,10 +1048,8 @@ def _read_mano_uv_obj(filename: str):
         vt[:, 1] = 1.0 - vt[:, 1]
     return vt, ft, faces
 
-
 def _resolve_mano_uv_root():
     base_path = Path(__file__).resolve()
-
 
     base_str = str(base_path)
     if '/gpfs/' in base_str:

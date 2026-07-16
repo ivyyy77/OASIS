@@ -21,7 +21,6 @@ def make_2tuple(x):
     assert isinstance(x, int)
     return (x, x)
 
-
 class PatchEmbed(nn.Module):
     """
     2D image to patch embedding: (B,C,H,W) -> (B,N,D)

@@ -45,7 +45,6 @@ except ImportError:
 
     warnings.warn("xFormers is not available (Block)")
 
-
 class Block(nn.Module):
     def __init__(
         self,
@@ -100,7 +99,6 @@ class Block(nn.Module):
             return self.ls2(self.mlp(self.norm2(x)))
 
         if self.training and self.sample_drop_ratio > 0.1:
-
             x = drop_add_residual_stochastic_depth(
                 x,
                 residual_func=attn_residual_func,
@@ -118,9 +116,6 @@ class Block(nn.Module):
             x = x + attn_residual_func(x)
             x = x + ffn_residual_func(x)
         return x
-
-
-
 
 class BlockWithModulation(Block):
     def __init__(self, *args, **kwargs) -> None:
@@ -143,19 +138,15 @@ class BlockWithModulation(Block):
             x = x + ffn_residual_func(x, mod)
         return x
 
-
-
 def drop_add_residual_stochastic_depth(
     x: Tensor,
     residual_func: Callable[[Tensor], Tensor],
     sample_drop_ratio: float = 0.0,
 ) -> Tensor:
-
     b, n, d = x.shape
     sample_subset_size = max(int(b * (1 - sample_drop_ratio)), 1)
     brange = (torch.randperm(b, device=x.device))[:sample_subset_size]
     x_subset = x[brange]
-
 
     residual = residual_func(x_subset)
 
@@ -164,10 +155,8 @@ def drop_add_residual_stochastic_depth(
 
     residual_scale_factor = b / sample_subset_size
 
-
     x_plus_residual = torch.index_add(x_flat, 0, brange, residual.to(dtype=x.dtype), alpha=residual_scale_factor)
     return x_plus_residual.view_as(x)
-
 
 def get_branges_scales(x, sample_drop_ratio=0.0):
     b, n, d = x.shape
@@ -175,7 +164,6 @@ def get_branges_scales(x, sample_drop_ratio=0.0):
     brange = (torch.randperm(b, device=x.device))[:sample_subset_size]
     residual_scale_factor = b / sample_subset_size
     return brange, residual_scale_factor
-
 
 def add_residual(x, brange, residual, residual_scale_factor, scaling_vector=None):
     if scaling_vector is None:
@@ -187,7 +175,6 @@ def add_residual(x, brange, residual, residual_scale_factor, scaling_vector=None
             x, brange, residual.to(dtype=x.dtype), scaling=scaling_vector, alpha=residual_scale_factor
         )
     return x_plus_residual
-
 
 attn_bias_cache: Dict[Tuple, Any] = {}
 
@@ -215,21 +202,17 @@ def get_attn_bias_and_cat(x_list, branges=None):
 
     return attn_bias_cache[all_shapes], cat_tensors
 
-
 def drop_add_residual_stochastic_depth_list(
     x_list: List[Tensor],
     residual_func: Callable[[Tensor, Any], Tensor],
     sample_drop_ratio: float = 0.0,
     scaling_vector=None,
 ) -> Tensor:
-
     branges_scales = [get_branges_scales(x, sample_drop_ratio=sample_drop_ratio) for x in x_list]
     branges = [s[0] for s in branges_scales]
     residual_scale_factors = [s[1] for s in branges_scales]
 
-
     attn_bias, x_cat = get_attn_bias_and_cat(x_list, branges)
-
 
     residual_list = attn_bias.split(residual_func(x_cat, attn_bias=attn_bias))
 
@@ -238,12 +221,8 @@ def drop_add_residual_stochastic_depth_list(
         outputs.append(add_residual(x, brange, residual, residual_scale_factor, scaling_vector).view_as(x))
     return outputs
 
-
 class NestedTensorBlock(Block):
-
-
     warnings.warn("NestedTensorBlock is deprecated for now!", DeprecationWarning)
-
 
     def forward_nested(self, x_list: List[Tensor]) -> List[Tensor]:
         """
@@ -252,7 +231,6 @@ class NestedTensorBlock(Block):
         assert isinstance(self.attn, MemEffAttention)
 
         if self.training and self.sample_drop_ratio > 0.0:
-
             def attn_residual_func(x: Tensor, attn_bias=None) -> Tensor:
                 return self.attn(self.norm1(x), attn_bias=attn_bias)
 
@@ -273,7 +251,6 @@ class NestedTensorBlock(Block):
             )
             return x_list
         else:
-
             def attn_residual_func(x: Tensor, attn_bias=None) -> Tensor:
                 return self.ls1(self.attn(self.norm1(x), attn_bias=attn_bias))
 

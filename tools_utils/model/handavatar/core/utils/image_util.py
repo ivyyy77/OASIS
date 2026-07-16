@@ -12,15 +12,12 @@ def load_image(path, to_rgb=True):
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     return img
 
-
 def save_image(image_numpy, image_path):
     image_pil = Image.fromarray(image_numpy)
     image_pil.save(image_path)
 
-
 def to_8b_image(image):
     return (255.* np.clip(image, 0., 1.)).astype(np.uint8)
-
 
 def to_3ch_image(image):
     if len(image.shape) == 2:
@@ -32,10 +29,8 @@ def to_3ch_image(image):
         print(f"to_3ch_image: Unsupported Shapes: {len(image.shape)}")
         return image
 
-
 def to_8b3ch_image(image):
     return to_3ch_image(to_8b_image(image))
-
 
 def tile_images(images, imgs_per_row=4):
     rows = []
@@ -51,14 +46,12 @@ def tile_images(images, imgs_per_row=4):
     imgout = np.concatenate(rows, axis=0)
     return imgout
 
-
 class ImageWriter():
     def __init__(self, output_dir, exp_name, clear=True):
         self.image_dir = os.path.join(output_dir, exp_name)
 
         print("The rendering is saved in " +\
               colored(self.image_dir, 'cyan'))
-
 
         if os.path.exists(self.image_dir) and clear:
             shutil.rmtree(self.image_dir)

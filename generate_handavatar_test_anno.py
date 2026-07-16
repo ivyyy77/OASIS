@@ -1,4 +1,3 @@
-
 """
 Generate per-frame InterHand annotations (anno/img/mask) from combined anno_cam.pkl.
 
@@ -65,14 +64,10 @@ def main():
     dataset_root = args.dataset_root
     subject = args.subject
 
-
     image_dir = os.path.join(
         dataset_root,
         f'InterHand2.6M_{cfg.interhand.fps}fps_batch1/images'
     )
-
-
-
 
     if args.phase == 'train' or subject.startswith('train/'):
         anno_name = os.path.join(
@@ -102,7 +97,6 @@ def main():
         print('[ERROR] Empty framelist')
         return
 
-
     if args.frame is not None:
         rel = args.frame
         if rel not in framelist:
@@ -123,7 +117,6 @@ def main():
 
     print(f'[INFO] Will process {len(frames_to_process)} frames')
 
-
     base_out = args.output_root
     out_anno = os.path.join(base_out, 'anno')
     out_img = os.path.join(base_out, 'images')
@@ -139,7 +132,6 @@ def main():
         safe = frame.replace('/', '_').replace('.jpg', '')
         out_pkl = os.path.join(out_anno, f'{safe}.pkl')
 
-
         cam_orig = cameras.get(frame)
         mesh_orig = mesh_infos.get(frame)
         bbox_orig = bbox.get(frame)
@@ -154,7 +146,6 @@ def main():
         img = cv2.imread(img_path)
         if img is None:
             continue
-
 
         mask_path = img_path.replace('/images/', '/masks_removeblack/').replace('.jpg', '.png')
         alpha = None
@@ -184,7 +175,6 @@ def main():
             print('[WARN] augmentation failed:', frame, e)
             continue
 
-
         img_save = os.path.join(out_img, f'{safe}.jpg')
         mask_save = os.path.join(out_mask, f'{safe}.png')
 
@@ -199,7 +189,6 @@ def main():
             cv2.imwrite(mask_save, (a * 255).astype(np.uint8))
         else:
             cv2.imwrite(img_save, img_aug.astype(np.uint8))
-
 
         cam_sub = None
         if cam_orig is not None and 'intrinsics' in cam_orig:
@@ -230,7 +219,6 @@ def main():
         written += 1
 
     print(f'[DONE] Generated {written} samples')
-
 
 if __name__ == '__main__':
     main()

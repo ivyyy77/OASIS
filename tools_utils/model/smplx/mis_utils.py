@@ -1,5 +1,3 @@
-
-
 """
     @ref:   https://github.com/philgras/neural-head-avatars/blob/0048afe9c9034157c63838801e9a2dd3126f806e/nha/util/meshes.py#L17
 """
@@ -18,7 +16,6 @@ def append_edge(edge_map_, edges_, idx_a, idx_b):
         edge_map_[(idx_a, idx_b)] = e_id
         edge_map_[(idx_b, idx_a)] = e_id
 
-
 def edge_subdivide(vertices, faces):
     """
     subdivides mesh based on edge midpoints. every triangle is subdivided into 4 child triangles.
@@ -35,9 +32,6 @@ def edge_subdivide(vertices, faces):
     n_faces = faces.shape[0]
     n_vertices = vertices.shape[0]
 
-
-
-
     edges = []
     edge_map = dict()
     for i in range(0, n_faces):
@@ -47,28 +41,17 @@ def edge_subdivide(vertices, faces):
     n_edges = len(edges)
     edges = np.array(edges).astype(int)
 
-
-
-
-
-
-
-
-
     v = np.zeros((n_vertices + n_edges, 3))
 
     v[:n_vertices, :] = vertices
 
     vertices_edges = vertices[edges]
 
-
     v[n_vertices:, :] = (0.5 * (vertices_edges[:, 0] + vertices_edges[:, 1]))
-
 
     f = np.concatenate((faces, np.zeros((4 * n_faces, 3))), axis=0)
 
     for i in range(0, n_faces):
-
         a = int(faces[i, 0])
         b = int(faces[i, 1])
         c = int(faces[i, 2])
@@ -76,28 +59,23 @@ def edge_subdivide(vertices, faces):
         bc = n_vertices + edge_map[(b, c)]
         ca = n_vertices + edge_map[(c, a)]
 
-
         f[n_faces + 4 * i, 0] = a
         f[n_faces + 4 * i, 1] = ab
         f[n_faces + 4 * i, 2] = ca
-
 
         f[n_faces + 4 * i + 1, 0] = ab
         f[n_faces + 4 * i + 1, 1] = b
         f[n_faces + 4 * i + 1, 2] = bc
 
-
         f[n_faces + 4 * i + 2, 0] = ca
         f[n_faces + 4 * i + 2, 1] = ab
         f[n_faces + 4 * i + 2, 2] = bc
-
 
         f[n_faces + 4 * i + 3, 0] = ca
         f[n_faces + 4 * i + 3, 1] = bc
         f[n_faces + 4 * i + 3, 2] = c
 
     return v, f[n_faces:], edges
-
 
 """
 code heavily inspired from https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/ops/sample_points_from_meshes.html
@@ -125,7 +103,6 @@ def face_vertices(vertices, faces):
     vertices = vertices.reshape((bs * nv, 3))
 
     return vertices[faces.long()]
-
 
 def vertex_normals(vertices, faces):
     """
@@ -179,7 +156,6 @@ def vertex_normals(vertices, faces):
 
     return normals
 
-
 import torch
 import os
 import numpy as np
@@ -190,21 +166,17 @@ def makedirs(folder):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-
 def to_edge_index(mat):
     return torch.LongTensor(np.vstack(mat.nonzero()))
-
 
 def to_sparse(spmat):
     return torch.sparse.FloatTensor(
         torch.LongTensor([spmat.tocoo().row,
                           spmat.tocoo().col]),
         torch.FloatTensor(spmat.tocoo().data), torch.Size(spmat.tocoo().shape))
-
 
 def preprocess_spiral(face, seq_length, vertices=None, dilation=1):
     from generate_spiral_seq import extract_spirals
@@ -217,8 +189,6 @@ def preprocess_spiral(face, seq_length, vertices=None, dilation=1):
     spirals = torch.tensor(
         extract_spirals(mesh, seq_length=seq_length, dilation=dilation))
     return spirals
-
-
 
 def seal(verts, faces, left=False):
     circle_v_id = np.array([108, 79, 78, 121, 214, 215, 279, 239, 234, 92, 38, 122, 118, 117, 119, 120], dtype = np.int32)

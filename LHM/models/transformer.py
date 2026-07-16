@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 from functools import partial
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -46,7 +39,6 @@ class TransformerDecoder(nn.Module):
             or block_type == "sd3_mm_cond"
             or block_type == "sd3_mm_bh_cond"
         ):
-
             dual_attention_layers = []
             self.layers = nn.ModuleList(
                 [
@@ -85,30 +77,6 @@ class TransformerDecoder(nn.Module):
 
             self.cond_pos_embed = nn.Parameter(torch.zeros(1, 1024, inner_dim))
             nn.init.trunc_normal_(self.cond_pos_embed, std=0.02)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     @property
     def block_type(self):
@@ -170,7 +138,6 @@ class TransformerDecoder(nn.Module):
         elif self.block_type == "cogvideo_cond":
             logger.debug(f"Using CogVideoXBlock")
             from LHM.models.transformer_dit import CogVideoXBlock
-
 
             return partial(CogVideoXBlock, dim=inner_dim, attention_bias=True)
         elif self.block_type == "sd3_cond":
@@ -258,9 +225,6 @@ class TransformerDecoder(nn.Module):
             torch.Tensor: Output tensor of shape [N, L, D].
         """
 
-
-
-
         self.assert_runtime_integrity(x, cond, mod)
 
         if self.block_type in [
@@ -291,8 +255,6 @@ class TransformerDecoder(nn.Module):
                     )
 
             x = self.norm(x)
-
-
         else:
             for layer in self.layers:
                 x = self.forward_layer(layer, x, cond, mod)

@@ -10,9 +10,6 @@ from pathlib import Path
 if 'PYOPENGL_PLATFORM' not in os.environ:
     os.environ['PYOPENGL_PLATFORM'] = 'egl'
 
-
-
-
 import torch
 try:
     _torch_lib_dir = os.path.join(os.path.dirname(torch.__file__), 'lib')
@@ -22,7 +19,6 @@ try:
             (_orig_ld + ':' if _orig_ld else '') + _torch_lib_dir
         )
 except Exception:
-
     pass
 
 import pyrender
@@ -136,7 +132,6 @@ def _read_mano_uv_obj(filename: str):
         vt[:, 1] = 1.0 - vt[:, 1]
     return vt, ft, faces
 
-
 def _resolve_mano_uv_root():
     base_path = Path(__file__).resolve()
     candidates = [
@@ -151,7 +146,6 @@ def _resolve_mano_uv_root():
         if change_file.exists() and obj_file.exists():
             return candidate
     raise FileNotFoundError('Unable to locate runtime_assets/mano_uv.')
-
 
 class Dataset(torch.utils.data.Dataset):
     @torch.no_grad()
@@ -170,25 +164,20 @@ class Dataset(torch.utils.data.Dataset):
 
         print('[Dataset Path]', dataset_path)
 
-
         self.mano = smplx.create(**cfg.smpl_cfg)
 
         self.mano_ori = smplx_.create(**cfg.smpl_cfg)
-
 
         if cfg.smpl_cfg['manohd'] > 0:
             self.mano, _, _ = sub_mano(self.mano, cfg.smpl_cfg['manohd'])
         lbs_weights = torch.load(cfg.smpl_cfg['lbs_weights'], map_location='cpu')
         self.mano.lbs_weights = lbs_weights
 
-
-
         self.renderer = Renderer_mesh()
 
         self.handtype = ('left', 'right')[cfg.smpl_cfg.is_rhand]
         if self.handtype=='left':
             self.mano.shapedirs[:,0,:] *= -1
-
 
         self.phase = data_type
         print(f'[INFO] Phase: {self.phase}')
@@ -197,7 +186,6 @@ class Dataset(torch.utils.data.Dataset):
             if self.phase == 'train':
                 subject = cfg.subject
             else:
-
                 subject = 'train/prior_learning_data'
 
         print(f'[INFO] Subject: {subject}')
@@ -214,7 +202,6 @@ class Dataset(torch.utils.data.Dataset):
             self.num_frames = 1
 
         self.epoch_size = 20000
-
 
         if 'prior_learning' in subject:
             action_root = os.path.join(
@@ -257,9 +244,6 @@ class Dataset(torch.utils.data.Dataset):
             all_dir_name = ['/'.join(subject.split('/')[1:])]
             test_split = [subject.split('/')[-1]]
 
-
-
-
         self.image_dir = os.path.join(dataset_path, f'InterHand2.6M_{cfg.interhand.fps}fps_batch1/images')
 
         anno_name = os.path.join(self.image_dir.replace('images', 'preprocess_ohta_our_full'), subject, 'anno_cam.pkl')
@@ -294,12 +278,8 @@ class Dataset(torch.utils.data.Dataset):
         big_pose_smpl_param['shape'] = np.zeros((1, 10)).astype(np.float32)
         big_pose_smpl_param['poses'] = np.zeros((1, 48)).astype(np.float32)
 
-
         self.big_pose_smpl_param = big_pose_smpl_param
         self.cano_face_area = calc_face_areas(torch.tensor(self.canonical_verts), mano_res.faces_tensor)
-
-
-
 
         labels_path = 'pretrained_models/dense_sample_points/manohd_semantic.ply'
         print(f'Loading MANO semantic labels from {labels_path}')
@@ -307,24 +287,6 @@ class Dataset(torch.utils.data.Dataset):
         if ply.elements:
             pc = pd.DataFrame(ply.elements[0].data).values
         self.labels = torch.tensor(pc[:, 6].astype(np.uint8))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         NAIL_PARTS = {
             "index3": 4,
@@ -334,10 +296,7 @@ class Dataset(torch.utils.data.Dataset):
             "thumb3": 16
         }
 
-
         nail_indices = np.isin(self.labels, list(NAIL_PARTS.values()))
-
-
 
         self.nail_labels = self.labels[nail_indices]
 
@@ -360,7 +319,6 @@ class Dataset(torch.utils.data.Dataset):
                     new_framelist.append(self.framelist[i])
         self.framelist = new_framelist[:]
 
-
         self.framelist = self.framelist[::skip]
 
         try:
@@ -375,7 +333,6 @@ class Dataset(torch.utils.data.Dataset):
         if maxframes > 0:
             self.framelist = self.framelist[:maxframes]
 
-
         self.frames_by_subject = defaultdict(list)
         for f in self.framelist:
             parts = f.split('/')
@@ -388,7 +345,6 @@ class Dataset(torch.utils.data.Dataset):
 
         print(f'[INFO] Found {len(self.subject_ids)} subjects. Frames per subject for \033[91m{self.phase}\033[0m: min={min(len(self.frames_by_subject[s]) for s in self.subject_ids)}, max={max(len(self.frames_by_subject[s]) for s in self.subject_ids)}')
 
-
         self.bgcolor = bgcolor
 
         if A is not None:
@@ -400,7 +356,6 @@ class Dataset(torch.utils.data.Dataset):
         else:
             self.transform_c = None
         self._uv_template = self._build_right_hand_uv_template()
-
 
     def _build_right_hand_uv_template(self):
         if self.handtype != 'right':
@@ -433,7 +388,6 @@ class Dataset(torch.utils.data.Dataset):
             'face_uv_xy': torch.from_numpy(face_uv_xy.astype(np.float32)),
         }
 
-
     @torch.no_grad()
     def image_semantic_mask(self, verts_cam, K, R, T, faces):
         """
@@ -451,25 +405,10 @@ class Dataset(torch.utils.data.Dataset):
 
         masks = np.zeros((self.height, self.width), dtype=np.uint8)
 
-
         verts_cam = np.dot(R, verts_cam.T).T + T[None, :]
         verts_img = np.dot(K, verts_cam.T).T
         verts_img[:, :2] /= verts_img[:, 2:3]
         verts_img = np.round(verts_img[:, :2]).astype(np.int32)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         for tri in self.nail_faces:
             tri_pts = verts_img[tri, :]
@@ -479,33 +418,8 @@ class Dataset(torch.utils.data.Dataset):
 
         return masks
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     @torch.no_grad()
     def preprocess(self, dataset_path, subject, anno_name, data_type, all_dir_name, with_mask=True):
-
         th_hands_mean_right = np.array([0.1117, -0.0429, 0.4164, 0.1088, 0.0660, 0.7562, -0.0964, 0.0909,
                                         0.1885, -0.1181, -0.0509, 0.5296, -0.1437, -0.0552, 0.7049, -0.0192,
                                         0.0923, 0.3379, -0.4570, 0.1963, 0.6255, -0.2147, 0.0660, 0.5069,
@@ -517,7 +431,6 @@ class Dataset(torch.utils.data.Dataset):
         th_hands_mean_left = th_hands_mean_left.reshape(-1)
 
         phase = subject.split('/')[0]
-
 
         self.annot_path = os.path.join(dataset_path, 'annotations')
         print("Load annotation from  " + os.path.join(self.annot_path, phase))
@@ -533,7 +446,6 @@ class Dataset(torch.utils.data.Dataset):
         self.mesh_infos = {}
         self.bbox = {}
         self.framelist = []
-
 
         for i, aid in enumerate(db.anns.keys()):
             ann = db.anns[aid]
@@ -558,34 +470,26 @@ class Dataset(torch.utils.data.Dataset):
                 print(f'{i}, Discard {image_name}, {hand_type} is not agree with {self.handtype}')
                 continue
 
-
             frame_name = img['file_name']
             img_width, img_height = img['width'], img['height']
             bbox = np.array(ann['bbox'], dtype=np.float32)
             if data_type != 'infer':
                 if bbox[0]<10 or bbox[1]<10 or max(bbox[2], bbox[3])<80 or bbox[0]+bbox[2]>img_width-10 or bbox[1]+bbox[3]>img_height-10:
-
                     continue
-
 
                 img_path = os.path.join(self.image_dir, f'{phase}/{image_name}')
                 img = cv2.imread(img_path)
                 if img.max() < 20:
-
                     continue
                 if np.allclose(img[..., 0], img[..., 1], atol=1) or np.allclose(img[..., 2], img[..., 1], atol=1) or np.allclose(img[..., 0], img[..., 2], atol=1):
-
                     continue
-
 
                 mask_path = img_path.replace('images', 'masks_removeblack').replace('.jpg', '.png')
                 if not os.path.exists(mask_path):
-
                     continue
                 mask = cv2.imread(img_path.replace('images', 'masks_removeblack').replace('.jpg', '.png'))
                 mask_sum = mask[..., 0].astype('bool').sum()
                 if mask.max() < 255 or mask_sum < 3000:
-
                     continue
 
                 mask_bool = mask[..., 0]==255
@@ -596,11 +500,9 @@ class Dataset(torch.utils.data.Dataset):
 
             print(f'[INFO] Preprocessing {frame_name}')
 
-
             bbox = process_bbox(bbox, img_width, img_height)
             self.bbox[f'{phase}/{image_name}'] = bbox
             self.framelist.append(f'{phase}/{image_name}')
-
 
             campos, camrot = np.array(cameras[str(capture_id)]['campos'][str(cam)], dtype=np.float32),\
                             np.array(cameras[str(capture_id)]['camrot'][str(cam)], dtype=np.float32)
@@ -615,7 +517,6 @@ class Dataset(torch.utils.data.Dataset):
                 'extrinsics': [cam_R, cam_T],
                 'distortions': np.zeros(5)
             }
-
 
             poses = np.array(mano_param['pose'])
             betas = np.array(mano_param['shape'])
@@ -673,7 +574,6 @@ class Dataset(torch.utils.data.Dataset):
             'max_xyz': max_xyz
         }
 
-
     def query_dst_skeleton(self, frame_name):
         return {
             'poses': self.mesh_infos[frame_name]['poses'].astype('float32'),
@@ -723,9 +623,6 @@ class Dataset(torch.utils.data.Dataset):
         total_rays = 0
         patch_div_indices = [total_rays]
         for _ in range(N_patch):
-
-
-
             if np.random.rand(1)[0] < cfg.patch.sample_subject_ratio:
                 candidate_mask = subject_mask
             else:
@@ -755,7 +652,6 @@ class Dataset(torch.utils.data.Dataset):
 
         return select_inds, patch_info, patch_div_indices
 
-
     def _get_patch_ray_indices(
             self,
             ray_mask,
@@ -769,12 +665,10 @@ class Dataset(torch.utils.data.Dataset):
 
         valid_ys, valid_xs = np.where(candidate_mask)
 
-
         select_idx = np.random.choice(valid_ys.shape[0],
                                       size=[1], replace=False)[0]
         center_x = valid_xs[select_idx]
         center_y = valid_ys[select_idx]
-
 
         half_patch_size = patch_size // 2
         x_min = np.clip(a=center_x-half_patch_size,
@@ -788,10 +682,6 @@ class Dataset(torch.utils.data.Dataset):
 
         sel_ray_mask = np.zeros_like(candidate_mask)
         sel_ray_mask[y_min:y_max, x_min:x_max] = True
-
-
-
-
 
         sel_ray_mask = sel_ray_mask.reshape(-1)
         inter_mask = np.bitwise_and(sel_ray_mask, ray_mask)
@@ -819,13 +709,10 @@ class Dataset(torch.utils.data.Dataset):
                 try:
                     alpha_mask = np.array(load_image(maskpath))
                 except:
-
                     maskpath = imagepath.replace('images', 'masks_removeblack').replace('.jpg', '.png')
                     alpha_mask = np.array(load_image(maskpath))
-
         else:
             alpha_mask = np.ones_like(orig_img) * 255
-
 
         if frame_name in self.cameras and 'distortions' in self.cameras[frame_name]:
             K = self.cameras[frame_name]['intrinsics']
@@ -845,7 +732,6 @@ class Dataset(torch.utils.data.Dataset):
                                     interpolation=cv2.INTER_LINEAR)
 
         return img, alpha_mask
-
 
     def get_total_frames(self):
         return len(self.framelist)
@@ -881,16 +767,10 @@ class Dataset(torch.utils.data.Dataset):
         return rays_o, rays_d, ray_img, ray_alpha, near, far,\
                 target_patches, target_alpha_patches, patch_masks, patch_div_indices
 
-
     def __len__(self):
         return self.get_total_frames()
 
-
-
-
     def __getitem__(self, idx):
-
-
         n_sub = len(self.subject_ids)
 
         subject_idx = idx % n_sub
@@ -900,31 +780,15 @@ class Dataset(torch.utils.data.Dataset):
         chosen = random.sample(subject_frames, self.num_frames)
         id = subject_prefix
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         cam_info_list = []
 
         for frame_name in chosen:
-
             img_path = os.path.join(self.image_dir, frame_name)
             mask_path = img_path.replace('images', 'masks_removeblack').replace('.jpg', '.png')
 
             bgcolor = np.array(self.bgcolor, dtype='float32')
 
             img, alpha = self.load_image(frame_name, bgcolor, use_mask=(True, False)[self.phase=='infer'])
-
 
             bbox = self.bbox[frame_name]
             img, img2bb_trans, bb2img_trans, aug_param, do_flip, scale, alpha = augmentation(img, self.bbox[frame_name], 'eval',
@@ -945,22 +809,10 @@ class Dataset(torch.utils.data.Dataset):
             dst_poses = dst_skel_info['poses']
             dst_shape = dst_skel_info['shape']
 
-
-
-
-
-
-
-
-
-
-
-
             assert frame_name in self.cameras
             K = self.cameras[frame_name]['intrinsics'][:3, :3].copy()
             K[:2, 2] = trans_point2d(K[:2, 2], img2bb_trans)
             K[[0, 1], [0, 1]] = K[[0, 1], [0, 1]] * 256 / (bbox[2]*aug_param[1])
-
 
             focal_length_x = K[0, 0]
             focal_length_y = K[1, 1]
@@ -969,7 +821,6 @@ class Dataset(torch.utils.data.Dataset):
 
             E = self.cameras[frame_name]['extrinsics']
 
-
             E = apply_global_tfm_to_camera(
                     E=np.eye(4),
                     Rh=dst_skel_info['Rh'],
@@ -977,28 +828,12 @@ class Dataset(torch.utils.data.Dataset):
             R = E[:3, :3]
             T = E[:3, 3]
 
-
-
-
-
-
-
-
-
-
             posed_res = self.mano(
                 torch.from_numpy(dst_shape)[None].float(),
                 torch.from_numpy(dst_poses[:3])[None].float(),
                 torch.from_numpy(dst_poses[3:])[None].float(),
 
             return_verts=True)
-
-
-
-
-
-
-
 
             cano_res = self.mano(
                 torch.from_numpy(dst_shape)[None].float(),
@@ -1034,92 +869,15 @@ class Dataset(torch.utils.data.Dataset):
             min_xyz += 0.05
             world_bound = np.stack([min_xyz, max_xyz], axis=0)
 
-
-
-
-
-
-
-
-
-
-
-
             semantic_mask = self.image_semantic_mask(world_vertex.reshape(-1, 3), K=K, R=R, T=T,
                                                                          faces=torch.from_numpy(self.mano.faces).long())
             nail_mask = (semantic_mask).astype('float32') / 255.
             nail_mask = nail_mask[..., None]
 
-
-
             verts_cam = np.dot(R, posed_vertices.T).T + T[None, :]
             verts_img = np.dot(K, verts_cam.T).T
             verts_img[:, :2] /= verts_img[:, 2:3]
             nail_img = (verts_img[:, :2]).astype(np.float32)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
             cam_info = CameraInfo(
                         uid=id, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
@@ -1138,7 +896,6 @@ class Dataset(torch.utils.data.Dataset):
 
                         world_vertex=world_vertex,
 
-
                         world_bound=world_bound,
                         big_pose_smpl_param=self.big_pose_smpl_param,
                         big_pose_world_vertex=self.canonical_verts,
@@ -1151,12 +908,7 @@ class Dataset(torch.utils.data.Dataset):
                 cam_info.face_uv = uv_mapping['face_uv']
                 cam_info.face_uv_xy = uv_mapping['face_uv_xy']
 
-
-
-
-
             cam_info_list.append(cam_info)
-
 
         cam_info_dicts = [vars(c) for c in cam_info_list]
         final_results = merge_batch(cam_info_dicts)
@@ -1166,10 +918,7 @@ class Dataset(torch.utils.data.Dataset):
 
         return final_results
 
-
-
 class HandAvatarDataset(torch.utils.data.Dataset):
-
     @torch.no_grad()
     def __init__(
             self,
@@ -1186,13 +935,10 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         print('[Dataset Path]', dataset_path)
 
-
         self.mano = smplx.create(**cfg.smpl_cfg)
         self.handtype = ('left', 'right')[cfg.smpl_cfg.is_rhand]
         if self.handtype=='left':
             self.mano.shapedirs[:,0,:] *= -1
-
-
 
         if cfg.smpl_cfg['manohd'] > 0:
             self.mano, _, _ = sub_mano(self.mano, cfg.smpl_cfg['manohd'])
@@ -1200,8 +946,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         self.mano.lbs_weights = lbs_weights
 
         self.renderer = Renderer_mesh()
-
-
 
         labels_path = 'pretrained_models/dense_sample_points/manohd_semantic.ply'
         print(f'Loading MANO semantic labels from {labels_path}')
@@ -1218,10 +962,7 @@ class HandAvatarDataset(torch.utils.data.Dataset):
             "thumb3": 16
         }
 
-
         nail_indices = np.isin(self.labels, list(NAIL_PARTS.values()))
-
-
 
         self.nail_labels = self.labels[nail_indices]
 
@@ -1233,10 +974,7 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         self.nail_faces = faces_np[face_nail_mask]
 
-
-
         self.phase = kwargs.get('data_type', 'train')
-
 
         if subject is None:
             if self.phase == 'train':
@@ -1282,7 +1020,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         self.height, self.width = 256, 256
 
-
         mano_res = self.mano(
             torch.zeros(1, 10).float(),
             torch.zeros(1, 3).float(),
@@ -1291,7 +1028,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         self.canonical_bbox = mano_res.joints[0].numpy()
         self.canonical_verts = mano_res.vertices[0].numpy()
         self.canonical_bbox = self.skeleton_to_bbox(self.canonical_verts)
-
 
         big_pose_min_xyz = np.min(self.canonical_verts, axis=0)
         big_pose_max_xyz = np.max(self.canonical_verts, axis=0)
@@ -1305,16 +1041,10 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         big_pose_smpl_param['shape'] = np.zeros((1, 10)).astype(np.float32)
         big_pose_smpl_param['poses'] = np.zeros((1, 48)).astype(np.float32)
 
-
         self.big_pose_smpl_param = big_pose_smpl_param
         self.cano_face_area = calc_face_areas(torch.tensor(self.canonical_verts), mano_res.faces_tensor)
 
-
-
         self.framelist = self.framelist[::skip]
-
-
-
 
         if maxframes > 0:
             self.framelist = self.framelist[:maxframes]
@@ -1323,14 +1053,12 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         self.bgcolor = bgcolor
         self.num_frames = 5
 
-
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(self.canonical_verts)).float().cuda()), 0.0000001)
         scales = torch.log(torch.sqrt(dist2))[...,None]
         self.pcd_scales = torch.exp(scales)
 
         self._uv_template = self._build_right_hand_uv_template()
         self.finetune = finetune
-
 
     def _build_right_hand_uv_template(self):
         if self.handtype != 'right':
@@ -1363,7 +1091,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
             'face_uv_xy': torch.from_numpy(face_uv_xy.astype(np.float32)),
         }
 
-
     @staticmethod
     def skeleton_to_bbox(skeleton):
         min_xyz = np.min(skeleton, axis=0) - cfg.bbox_offset
@@ -1374,7 +1101,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
             'max_xyz': max_xyz
         }
 
-
     def load_image(self, frame_name, bg_color, use_mask=True):
         imagepath = os.path.join(self.image_dir, frame_name)
         orig_img = np.array(load_image(imagepath))
@@ -1382,13 +1108,11 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         maskpath = imagepath.replace('images', 'masks_removeblack').replace('.jpg', '.png')
         alpha_mask = np.array(load_image(maskpath))
 
-
         if frame_name in self.cameras and 'distortions' in self.cameras[frame_name]:
             K = self.cameras[frame_name]['intrinsics']
             D = self.cameras[frame_name]['distortions']
             orig_img = cv2.undistort(orig_img, K, D)
             alpha_mask = cv2.undistort(alpha_mask, K, D)
-
 
         img = alpha_mask / 255. * orig_img + (1.0 - alpha_mask / 255.) * bg_color[None, None, :]
         if cfg.resize_img_scale != 1.:
@@ -1403,15 +1127,12 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         return img, alpha_mask
 
-
-
     def load_image_09(self, frame_name, bg_color, use_mask=True):
         imagepath = os.path.join(self.img_prior_dir, frame_name)
         orig_img = np.array(load_image(imagepath))
 
         maskpath = imagepath.replace('images', 'masks_removeblack').replace('.jpg', '.png')
         alpha_mask = np.array(load_image(maskpath))
-
 
         if frame_name in self.cameras_04 and 'distortions' in self.cameras_04[frame_name]:
             K = self.cameras_04[frame_name]['intrinsics']
@@ -1432,11 +1153,8 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         return img, alpha_mask
 
-
-
     def get_total_frames(self):
         return len(self.framelist)
-
 
     def query_dst_skeleton(self, frame_name):
         return {
@@ -1452,7 +1170,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
             'joint_valid': self.mesh_infos[frame_name]['joint_valid'].astype('float32')
         }
 
-
     def query_dst_skeleton_04(self, frame_name):
         return {
             'poses': self.mesh_infos_04[frame_name]['poses'].astype('float32'),
@@ -1467,23 +1184,14 @@ class HandAvatarDataset(torch.utils.data.Dataset):
             'joint_valid': self.mesh_infos_04[frame_name]['joint_valid'].astype('float32')
         }
 
-
     def __len__(self):
         return self.get_total_frames()
-
 
     def get_img(self, img_path='./data/image15012.jpg', mask_path='./data/image15012.png'):
         frame_name = 'test/Capture0/ROM03_RT_No_Occlusion/cam400272/image15012.jpg'
 
-
-
-
-
-
-
         bgcolor = np.array(self.bgcolor, dtype='float32')
         img, alpha = self.load_image(frame_name, bgcolor, use_mask=(True, False)[self.phase=='infer'])
-
 
         bbox = self.bbox[frame_name]
         img, img2bb_trans, bb2img_trans, aug_param, do_flip, scale, alpha = augmentation(img, self.bbox[frame_name], 'eval',
@@ -1498,38 +1206,16 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         img = (img / 255.).astype('float32')
         alpha = alpha.astype('float32') / 255.0
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         dst_skel_info = self.query_dst_skeleton(frame_name)
 
         dst_poses = dst_skel_info['poses']
         dst_shape = dst_skel_info['shape']
-
-
-
 
         cam_info_list = []
         assert frame_name in self.cameras
         K = self.cameras[frame_name]['intrinsics'][:3, :3].copy()
         K[:2, 2] = trans_point2d(K[:2, 2], img2bb_trans)
         K[[0, 1], [0, 1]] = K[[0, 1], [0, 1]] * 256 / (bbox[2]*aug_param[1])
-
 
         focal_length_x = K[1, 1]
         focal_length_y = K[0, 0]
@@ -1573,7 +1259,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
                 'face_uv_xy': self._uv_template['face_uv_xy'].clone(),
             }
 
-
         smpl_param ={
             'poses': dst_poses,
             'shape': dst_shape,
@@ -1586,7 +1271,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         min_xyz += 0.05
         world_bound = np.stack([min_xyz, max_xyz], axis=0)
 
-
         verts_cam = world_vertex.reshape(-1, 3)
         verts_cam = np.dot(R, verts_cam.T).T + T[None, :]
         verts_img = np.dot(K, verts_cam.T).T
@@ -1598,13 +1282,10 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         nail_mask = (semantic_mask).astype('float32') / 255.
         nail_mask = nail_mask[..., None]
 
-
-
         depth_map = self.renderer(torch.from_numpy(world_vertex).cuda(), torch.from_numpy(K), torch.from_numpy(E), self.mano.faces)
         x = verts_img[:, 0]
         y = verts_img[:, 1]
         z = verts_cam[:, 2].reshape(-1)
-
 
         depth_map = np.asarray(depth_map.cpu())
         if depth_map.ndim == 3:
@@ -1612,29 +1293,22 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         H, W = depth_map.shape
         depth_map[np.isnan(depth_map)] = np.inf
 
-
         mask_inside = (
             (x >= 0) & (x < W) &
             (y >= 0) & (y < H) &
             (z > 0)
         )
 
-
         x_valid = np.clip(x[mask_inside].astype(np.int32), 0, W - 1)
         y_valid = np.clip(y[mask_inside].astype(np.int32), 0, H - 1)
-
 
         z_buf = depth_map[y_valid, x_valid].reshape(-1)
         z_in = z[mask_inside].reshape(-1)
 
-
         visible_local = z_in <= (z_buf + 5e-2)
-
 
         visible_mask = np.zeros(world_vertex.shape[1], dtype=bool)
         visible_mask[mask_inside] = visible_local
-
-
 
         cam_info = CameraInfo(
                     uid=id, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
@@ -1665,23 +1339,13 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         cam_info_dicts = [vars(c) for c in cam_info_list]
         final_results = merge_batch(cam_info_dicts)
 
-
         return final_results
 
-
-
     def get_img_04(self, img_path='./data/image15012.jpg', mask_path='./data/image15012.png'):
-
-
-
         frame_name = 'train/Capture8/0007_thumbup_normal/cam400002/image2402.jpg'
-
-
-
 
         bgcolor = np.array(self.bgcolor, dtype='float32')
         img, alpha = self.load_image_09(frame_name, bgcolor, use_mask=(True, False)[self.phase=='infer'])
-
 
         bbox = self.bbox_04[frame_name]
         img, img2bb_trans, bb2img_trans, aug_param, do_flip, scale, alpha = augmentation(img, self.bbox_04[frame_name], 'eval',
@@ -1696,25 +1360,16 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         img = (img / 255.).astype('float32')
         alpha = alpha.astype('float32') / 255.0
 
-
-
-
-
-
         dst_skel_info = self.query_dst_skeleton_04(frame_name)
 
         dst_poses = dst_skel_info['poses']
         dst_shape = dst_skel_info['shape']
-
-
-
 
         cam_info_list = []
         assert frame_name in self.cameras_04
         K = self.cameras_04[frame_name]['intrinsics'][:3, :3].copy()
         K[:2, 2] = trans_point2d(K[:2, 2], img2bb_trans)
         K[[0, 1], [0, 1]] = K[[0, 1], [0, 1]] * 256 / (bbox[2]*aug_param[1])
-
 
         focal_length_x = K[1, 1]
         focal_length_y = K[0, 0]
@@ -1757,7 +1412,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         min_xyz += 0.05
         world_bound = np.stack([min_xyz, max_xyz], axis=0)
 
-
         verts_cam = world_vertex.reshape(-1, 3)
         verts_cam = np.dot(R, verts_cam.T).T + T[None, :]
         verts_img = np.dot(K, verts_cam.T).T
@@ -1769,13 +1423,10 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         nail_mask = (semantic_mask).astype('float32') / 255.
         nail_mask = nail_mask[..., None]
 
-
-
         depth_map = self.renderer(torch.from_numpy(world_vertex).cuda(), torch.from_numpy(K), torch.from_numpy(E), self.mano.faces)
         x = verts_img[:, 0]
         y = verts_img[:, 1]
         z = verts_cam[:, 2].reshape(-1)
-
 
         depth_map = np.asarray(depth_map.cpu())
         if depth_map.ndim == 3:
@@ -1783,29 +1434,22 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         H, W = depth_map.shape
         depth_map[np.isnan(depth_map)] = np.inf
 
-
         mask_inside = (
             (x >= 0) & (x < W) &
             (y >= 0) & (y < H) &
             (z > 0)
         )
 
-
         x_valid = np.clip(x[mask_inside].astype(np.int32), 0, W - 1)
         y_valid = np.clip(y[mask_inside].astype(np.int32), 0, H - 1)
-
 
         z_buf = depth_map[y_valid, x_valid].reshape(-1)
         z_in = z[mask_inside].reshape(-1)
 
-
         visible_local = z_in <= (z_buf + 5e-2)
-
 
         visible_mask = np.zeros(world_vertex.shape[1], dtype=bool)
         visible_mask[mask_inside] = visible_local
-
-
 
         cam_info = CameraInfo(
                     uid=id, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
@@ -1832,11 +1476,7 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         cam_info_dicts = [vars(c) for c in cam_info_list]
         final_results = merge_batch(cam_info_dicts)
 
-
         return final_results
-
-
-
 
     @torch.no_grad()
     def image_semantic_mask(self, verts_cam, K, R, T, faces):
@@ -1855,25 +1495,10 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         masks = np.zeros((self.height, self.width), dtype=np.uint8)
 
-
         verts_cam = np.dot(R, verts_cam.T).T + T[None, :]
         verts_img = np.dot(K, verts_cam.T).T
         verts_img[:, :2] /= verts_img[:, 2:3]
         verts_img = np.round(verts_img[:, :2]).astype(np.int32)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         for tri in self.nail_faces:
             tri_pts = verts_img[tri, :]
@@ -1883,15 +1508,11 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         return masks
 
-
     def __getitem__(self, idx):
-
         if self.finetune:
-
             return self.get_img()
 
         frame_name = self.framelist[idx]
-
 
         img_path = os.path.join(self.image_dir, frame_name)
         mask_path = img_path.replace('images', 'masks_removeblack').replace('.jpg', '.png')
@@ -1899,7 +1520,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         bgcolor = np.array(self.bgcolor, dtype='float32')
 
         img, alpha = self.load_image(frame_name, bgcolor, use_mask=(True, False)[self.phase=='infer'])
-
 
         bbox = self.bbox[frame_name]
         img, img2bb_trans, bb2img_trans, aug_param, do_flip, scale, alpha = augmentation(img, self.bbox[frame_name], 'eval',
@@ -1912,7 +1532,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
                                                                                     gaussian_std=3,
                                                                                     bordervalue=bgcolor.tolist())
 
-
         img = (img / 255.).astype('float32')
         alpha = alpha.astype('float32') / 255.0
 
@@ -1921,22 +1540,10 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         dst_poses = dst_skel_info['poses']
         dst_shape = dst_skel_info['shape']
 
-
-
-
-
-
-
-
-
-
-
-
         assert frame_name in self.cameras
         K = self.cameras[frame_name]['intrinsics'][:3, :3].copy()
         K[:2, 2] = trans_point2d(K[:2, 2], img2bb_trans)
         K[[0, 1], [0, 1]] = K[[0, 1], [0, 1]] * 256 / (bbox[2]*aug_param[1])
-
 
         focal_length_x = K[1, 1]
         focal_length_y = K[0, 0]
@@ -1979,7 +1586,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
                 'face_uv_xy': self._uv_template['face_uv_xy'].clone(),
             }
 
-
         smpl_param ={
             'poses': dst_poses,
             'shape': dst_shape,
@@ -1992,7 +1598,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
         min_xyz += 0.05
         world_bound = np.stack([min_xyz, max_xyz], axis=0)
 
-
         verts_cam = world_vertex.reshape(-1, 3)
         verts_cam = np.dot(R, verts_cam.T).T + T[None, :]
         verts_img = np.dot(K, verts_cam.T).T
@@ -2003,7 +1608,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
                                                                         faces=torch.from_numpy(self.mano.faces).long())
         nail_mask = (semantic_mask).astype('float32') / 255.
         nail_mask = nail_mask[..., None]
-
 
         cam_info = CameraInfo(
                     uid=id, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
@@ -2036,8 +1640,6 @@ class HandAvatarDataset(torch.utils.data.Dataset):
 
         return final_results
 
-
-
 def compute_visibility_with_radius_discrete(verts_cam, proj_xy, H, W, radius_px_per_point, z_eps=1e-3, chunk=100000):
     """
     verts_cam: (N,3) torch
@@ -2049,16 +1651,13 @@ def compute_visibility_with_radius_discrete(verts_cam, proj_xy, H, W, radius_px_
     dtype = verts_cam.dtype
     N = verts_cam.shape[0]
 
-
     if isinstance(radius_px_per_point, (int, float)) or (torch.is_tensor(radius_px_per_point) and radius_px_per_point.ndim==0):
         radius_px = torch.full((N,), float(radius_px_per_point), device=device, dtype=dtype)
     else:
         radius_px = radius_px_per_point.to(device=device, dtype=dtype)
 
-
     HxW = H * W
     depth_flat = torch.full((HxW,), float('inf'), device=device, dtype=dtype)
-
 
     for start in range(0, N, chunk):
         end = min(N, start + chunk)
@@ -2068,27 +1667,22 @@ def compute_visibility_with_radius_discrete(verts_cam, proj_xy, H, W, radius_px_
 
         C = px.shape[0]
 
-
         max_r = int(math.ceil(r.max().item()))
         if max_r == 0:
-
             us = torch.round(px[:,0]).long().clamp(0, W-1)
             vs = torch.round(px[:,1]).long().clamp(0, H-1)
             inds = vs * W + us
             depth_flat.scatter_reduce_(0, inds, z, reduce='amin')
             continue
 
-
         offsets = torch.stack(torch.meshgrid(torch.arange(-max_r, max_r+1, device=device),
                                             torch.arange(-max_r, max_r+1, device=device)), dim=-1).reshape(-1,2)
         K = offsets.shape[0]
-
 
         px_exp = px.unsqueeze(1).expand(-1, K, 2).reshape(-1,2)
         offs_exp = offsets.unsqueeze(0).expand(C, K, 2).reshape(-1,2)
 
         pxy = px_exp + offs_exp
-
 
         r_rep = r.unsqueeze(1).expand(-1, K).reshape(-1)
         dx = pxy[:,0] - px_exp[:,0]
@@ -2109,7 +1703,6 @@ def compute_visibility_with_radius_discrete(verts_cam, proj_xy, H, W, radius_px_
         depth_flat.scatter_reduce_(0, inds, z_rep, reduce='amin')
 
     depth_buffer = depth_flat.view(H, W)
-
 
     depth_at_point = torch.full((N,), float('inf'), device=device, dtype=dtype)
     for start in range(0, N, chunk):
@@ -2142,7 +1735,6 @@ def compute_visibility_with_radius_discrete(verts_cam, proj_xy, H, W, radius_px_
 
         vals = depth_flat[inds]
 
-
         point_idx_rep = torch.arange(start, end, device=device).unsqueeze(1).expand(-1, K).reshape(-1)[mask]
 
         for i in range(start, end):
@@ -2150,7 +1742,6 @@ def compute_visibility_with_radius_discrete(verts_cam, proj_xy, H, W, radius_px_
             if sel.sum()>0:
                 depth_at_point[i] = torch.min(vals[sel])
             else:
-
                 u0 = int(round(px[i-start,0].item()))
                 v0 = int(round(px[i-start,1].item()))
                 u0 = max(0, min(W-1,u0)); v0 = max(0, min(H-1,v0))
@@ -2159,8 +1750,6 @@ def compute_visibility_with_radius_discrete(verts_cam, proj_xy, H, W, radius_px_
     z_all = verts_cam[:,2]
     visible_mask = (z_all <= depth_at_point + z_eps)
     return depth_buffer, visible_mask
-
-
 
 def compute_visibility_from_depth(verts_cam, proj_xy, H, W, eps=1e-3):
     """
@@ -2179,31 +1768,23 @@ def compute_visibility_from_depth(verts_cam, proj_xy, H, W, eps=1e-3):
     z = verts_cam[:,2]
     u = proj_xy[:,0]; v = proj_xy[:,1]
 
-
     u_int = torch.round(u).long().clamp(0, W-1)
     v_int = torch.round(v).long().clamp(0, H-1)
     inds = v_int * W + u_int
 
-
     depth_flat = torch.full((H*W,), float('inf'), device=device, dtype=dtype)
-
 
     depth_flat.scatter_reduce_(0, inds, z, reduce='amin', include_self=True)
     depth_buffer = depth_flat.view(H, W)
 
-
     depth_at_point = depth_buffer[v_int, u_int]
-
 
     visible_mask = (z <= depth_at_point + eps)
 
     return depth_buffer, visible_mask
 
-
-
 def clamp01(x: torch.Tensor):
     return x.clamp(0.0, 1.0)
-
 
 def skin_tone_perturb_shared(
     imgs: torch.Tensor,
@@ -2221,9 +1802,6 @@ def skin_tone_perturb_shared(
     imgs: [B, 3, H, W], 归一化到 [0,1]
     """
 
-
-
-
     if random.random() > p:
         return imgs
 
@@ -2236,9 +1814,6 @@ def skin_tone_perturb_shared(
     r_noise = random.uniform(-wb_strength, wb_strength) + wb_strength * 0.2
     g_noise = random.uniform(-wb_strength, wb_strength) + wb_strength * 0.1
     b_noise = random.uniform(-wb_strength, wb_strength) - wb_strength * 0.1
-
-
-
 
     imgs_aug = TF.adjust_brightness(imgs, b)
     imgs_aug = TF.adjust_contrast(imgs_aug, c)
@@ -2254,9 +1829,7 @@ def skin_tone_perturb_shared(
 
     return imgs_aug
 
-
 def cam_crop_to_full(cam_bbox, box_center, box_size, img_size, focal_length=5000.):
-
     img_w, img_h = img_size[:, 0], img_size[:, 1]
     cx, cy, b = box_center[:, 0], box_center[:, 1], box_size
     w_2, h_2 = img_w / 2., img_h / 2.
@@ -2268,7 +1841,6 @@ def cam_crop_to_full(cam_bbox, box_center, box_size, img_size, focal_length=5000
     return full_cam
 
 def get_light_poses(n_lights=5, elevation=np.pi / 3, dist=12):
-
     thetas = elevation * np.ones(n_lights)
     phis = 2 * np.pi * np.arange(n_lights) / n_lights
     poses = []
@@ -2314,7 +1886,6 @@ def make_4x4_pose(R, t):
     )
     return torch.cat([pose_3x4, bottom], dim=-2)
 
-
 def rotx(theta):
     return torch.tensor(
         [
@@ -2324,7 +1895,6 @@ def rotx(theta):
         ],
         dtype=torch.float32,
     )
-
 
 def roty(theta):
     return torch.tensor(
@@ -2336,7 +1906,6 @@ def roty(theta):
         dtype=torch.float32,
     )
 
-
 def rotz(theta):
     return torch.tensor(
         [
@@ -2346,7 +1915,6 @@ def rotz(theta):
         ],
         dtype=torch.float32,
     )
-
 
 def create_raymond_lights() -> List[pyrender.Node]:
     """
@@ -2379,14 +1947,11 @@ def create_raymond_lights() -> List[pyrender.Node]:
 
     return nodes
 
-
 def ndc_T_world(xyzs_world, K, E, H, W):
     E = E.cuda()
     K = K.cuda()
     xyzs_cam = cam_T_world(xyzs_world, E)
     xys_2d = img_T_cam(xyzs_cam, K)
-
-
 
     if H < W:
         xs = -((xys_2d[:, 0, :] / H) * 2. - (W / H))
@@ -2395,11 +1960,9 @@ def ndc_T_world(xyzs_world, K, E, H, W):
         xs = -((xys_2d[:, 0, :] / W) * 2. - 1.)
         ys = -((xys_2d[:, 1, :] / W) * 2. - (H / W))
 
-
     zs = xyzs_cam[:, 2]
     xyzs_ndc = torch.stack([xs, ys, zs], dim=-1)
     return xyzs_ndc
-
 
 def cam_T_world(xyzs_world, E):
     E=E.unsqueeze(0).float()
@@ -2408,14 +1971,11 @@ def cam_T_world(xyzs_world, E):
     xyzs_cam = xyzs_cam_[:, :3] / xyzs_cam_[:, 3:]
     return xyzs_cam
 
-
 def img_T_cam(xyzs_cam, K):
     K = K.unsqueeze(0).float()
     xys_ = torch.bmm(K, xyzs_cam)
     xys = xys_[:, :2] / xys_[:, 2:]
     return xys
-
-
 
 def compute_visibility_fast_np(verts_cam, proj_xy, pcd_scales_world, K, H=256, W=256, z_eps=1e-3):
     """
@@ -2432,14 +1992,12 @@ def compute_visibility_fast_np(verts_cam, proj_xy, pcd_scales_world, K, H=256, W
     K = np.asarray(K)
     N = proj_xy.shape[0]
 
-
     z = np.maximum(verts_cam[:,2].astype(np.float64), 1e-6)
     fx = float(K[0,0])
     r_px = (pcd_scales_world * fx) / z
 
     r_px = np.clip(r_px, 0.5, max(1.0, np.percentile(r_px, 98)))
     r_int = np.ceil(r_px).astype(int)
-
 
     depth_flat = np.full((H*W,), np.inf, dtype=np.float64)
     ux = proj_xy[:,0].astype(np.float64)
@@ -2453,7 +2011,6 @@ def compute_visibility_fast_np(verts_cam, proj_xy, pcd_scales_world, K, H=256, W
         idxs = np.where(r_int == r)[0]
         if idxs.size == 0: continue
         if r <= 0:
-
             u0 = np.clip(u_floor[idxs], 0, W-1); v0 = np.clip(v_floor[idxs], 0, H-1)
             flat_idxs = v0 * W + u0
             np.minimum.at(depth_flat, flat_idxs, z[idxs])
@@ -2483,7 +2040,6 @@ def compute_visibility_fast_np(verts_cam, proj_xy, pcd_scales_world, K, H=256, W
 
     depth_buf = depth_flat.reshape(H, W)
 
-
     depth_at_point = np.full((N,), np.inf, dtype=np.float64)
     for r in unique_r:
         idxs = np.where(r_int == r)[0]
@@ -2509,7 +2065,6 @@ def compute_visibility_fast_np(verts_cam, proj_xy, pcd_scales_world, K, H=256, W
         mins = np.min(vals, axis=1)
         depth_at_point[idxs] = mins
 
-
     inf_mask = ~np.isfinite(depth_at_point)
     if inf_mask.any():
         uc = np.clip(np.round(ux[inf_mask]).astype(int), 0, W-1)
@@ -2520,9 +2075,6 @@ def compute_visibility_fast_np(verts_cam, proj_xy, pcd_scales_world, K, H=256, W
     vis_mask = residual <= z_eps
 
     return dict(r_px=r_px, z=z, depth_buf=depth_buf, depth_at_point=depth_at_point, residual=residual, vis_mask=vis_mask)
-
-
-
 
 def generate_uv_mask(uv_mapping, uv_resolution=256):
     """
@@ -2540,29 +2092,21 @@ def generate_uv_mask(uv_mapping, uv_resolution=256):
 
     import cv2
 
-
     uv_mask = np.zeros((uv_resolution, uv_resolution, 1), dtype=np.uint8)
-
 
     face_uv_xy = uv_mapping['face_uv_xy']
     if isinstance(face_uv_xy, torch.Tensor):
         face_uv_xy = face_uv_xy.detach().cpu().numpy()
 
-
     face_uv_xy_pixels = face_uv_xy * (uv_resolution - 1)
 
-
     for triangle in face_uv_xy_pixels:
-
         pts = np.array(triangle, dtype=np.int32).reshape(-1, 1, 2)
         cv2.fillPoly(uv_mask, [pts], 255)
 
-
     return uv_mask.astype(np.float32) / 255.0
 
-
 class Renderer:
-
     def __init__(self, faces: np.array):
         """
         Wrapper around the pyrender renderer to render MANO meshes.
@@ -2574,7 +2118,6 @@ class Renderer:
         self.focal_length = 5000
 
         self.img_res = 256
-
 
         faces_new = np.array([[92, 38, 234],
                               [234, 38, 239],
@@ -2604,8 +2147,6 @@ class Renderer:
         self.camera = pyrender.IntrinsicsCamera(fx=self.focal_length, fy=self.focal_length,
                                            cx=camera_center[0], cy=camera_center[1], zfar=1e12)
 
-
-
     def __call__(self,
                 vertices: np.array,
                 camera_translation: np.array,
@@ -2627,13 +2168,6 @@ class Renderer:
             imgname (Optional[str]): Contains the original image filenamee. Used only if full_frame == True.
         """
 
-
-
-
-
-
-
-
         renderer = pyrender.OffscreenRenderer(viewport_width=image.shape[1],
                                               viewport_height=image.shape[0],
                                               point_size=1.0)
@@ -2643,7 +2177,6 @@ class Renderer:
             baseColorFactor=(*mesh_base_color, 1.0))
 
         camera_translation[0] *= -1.
-
 
         mesh = trimesh.Trimesh(vertices.copy(), self.faces.copy())
         if side_view:
@@ -2665,7 +2198,6 @@ class Renderer:
         camera = pyrender.IntrinsicsCamera(fx=self.focal_length, fy=self.focal_length,
                                            cx=camera_center[0], cy=camera_center[1], zfar=1e12)
         scene.add(camera, pose=camera_pose)
-
 
         light_nodes = create_raymond_lights()
         for node in light_nodes:
@@ -2690,16 +2222,12 @@ class Renderer:
     def vertices_to_trimesh(self, vertices, camera_translation, mesh_base_color=(1.0, 1.0, 0.9),
                             rot_axis=[1,0,0], rot_angle=0, is_right=1):
 
-
-
-
         vertex_colors = np.array([(*mesh_base_color, 1.0)] * vertices.shape[0])
         if is_right:
             mesh = trimesh.Trimesh(vertices.copy() + camera_translation, self.faces.copy(), vertex_colors=vertex_colors)
             mesh.export('./hand/mesh.ply')
         else:
             mesh = trimesh.Trimesh(vertices.copy() + camera_translation, self.faces_left.copy(), vertex_colors=vertex_colors)
-
 
         rot = trimesh.transformations.rotation_matrix(
                 np.radians(rot_angle), rot_axis)
@@ -2709,7 +2237,6 @@ class Renderer:
             np.radians(180), [1, 0, 0])
         mesh.apply_transform(rot)
         return mesh
-
 
     def render_rgba(
             self,
@@ -2727,15 +2254,6 @@ class Renderer:
             is_right=True,
         ):
 
-
-
-
-
-
-
-
-
-
         focal_length = self.focal_length
 
         if cam_t is not None:
@@ -2747,17 +2265,11 @@ class Renderer:
         mesh = self.vertices_to_trimesh(vertices, np.array([0,0,0]), mesh_base_color, rot_axis, rot_angle, is_right=is_right)
         mesh = pyrender.Mesh.from_trimesh(mesh)
 
-
         scene = pyrender.Scene(bg_color=[*scene_bg_color, 0.0],
                                ambient_light=(0.3, 0.3, 0.3))
         scene.add(mesh, 'mesh')
 
         camera_pose = np.eye(4)
-
-
-
-
-
 
         camera_node = pyrender.Node(camera=self.camera, matrix=camera_pose)
         scene.add_node(camera_node)
@@ -2773,7 +2285,6 @@ class Renderer:
         self.renderer.delete()
 
         return color
-
 
     def render_rgba_multiple(
             self,
@@ -2792,10 +2303,6 @@ class Renderer:
                                               viewport_height=render_res[1],
                                               point_size=1.0)
 
-
-
-
-
         if is_right is None:
             is_right = [1 for _ in range(len(vertices))]
 
@@ -2807,13 +2314,6 @@ class Renderer:
             scene.add(mesh, f'mesh_{i}')
 
         camera_pose = np.eye(4)
-
-
-
-
-
-
-
 
         camera_node = pyrender.Node(camera=self.camera, matrix=camera_pose)
         scene.add_node(camera_node)
@@ -2830,9 +2330,7 @@ class Renderer:
 
         return color
 
-
     def add_lighting(self, scene, cam_node, color=np.ones(3), intensity=1.0):
-
         light_poses = get_light_poses()
         light_poses.append(np.eye(4))
         cam_pose = scene.get_pose(cam_node)
@@ -2848,16 +2346,11 @@ class Renderer:
             scene.add_node(node)
 
     def add_point_lighting(self, scene, cam_node, color=np.ones(3), intensity=1.0):
-
         light_poses = get_light_poses(dist=0.5)
         light_poses.append(np.eye(4))
         cam_pose = scene.get_pose(cam_node)
         for i, pose in enumerate(light_poses):
             matrix = cam_pose @ pose
-
-
-
-
 
             node = pyrender.Node(
                 name=f"plight-{i:02d}",
@@ -2867,8 +2360,6 @@ class Renderer:
             if scene.has_node(node):
                 continue
             scene.add_node(node)
-
-
 
 class Renderer_mesh(nn.Module):
     def __init__(self, **kwargs):
@@ -2885,11 +2376,9 @@ class Renderer_mesh(nn.Module):
             image_size=(256, 256),
             blur_radius=0.0,
 
-
             bin_size=0,
         )
         self.rasterizer = MeshRasterizer(cameras=cameras, raster_settings=raster_settings)
-
 
         self.soft_mask = True
 
@@ -2915,9 +2404,7 @@ class Renderer_mesh(nn.Module):
 
         fragments = self.rasterizer(mesh)
 
-
         depth_map = fragments.zbuf[0, :, :, 0]
-
 
         depth_map[torch.isnan(depth_map)] = 0.0
 

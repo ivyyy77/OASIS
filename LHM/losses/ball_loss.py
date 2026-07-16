@@ -1,5 +1,3 @@
-
-
 import torch
 import torch.nn as nn
 
@@ -7,24 +5,17 @@ __all__ = ["ASAP_Loss", "Heuristic_ASAP_Loss"]
 
 
 class ASAP_Loss(nn.Module):
-
     def forward(self, scaling, r=1, **params):
         """where r is the radius of the ball between max-axis and min-axis."""
         raise NotImplementedError(
             "ASAP_Loss is not implemented yet in Inference version"
         )
 
-
-
-
-
 class Heuristic_ASAP_Loss(nn.Module):
     def __init__(self):
         super(Heuristic_ASAP_Loss, self).__init__()
 
-
     def _heurisitic_loss(self, _ball_loss):
-
         _loss = 0.0
         for key in self.group_dict.keys():
             key_weights = self.group_dict[key]

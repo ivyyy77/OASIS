@@ -60,7 +60,6 @@ TensorOutput = namedtuple(
 
 
 class SMPL(nn.Module):
-
     NUM_JOINTS = 23
     NUM_BODY_JOINTS = 23
     SHAPE_SPACE_DIM = 300
@@ -186,8 +185,6 @@ class SMPL(nn.Module):
         self.register_buffer("shapedirs", to_tensor(to_np(shapedirs), dtype=dtype))
 
         if vertex_ids is None:
-
-
             vertex_ids = VERTEX_IDS["smplh"]
 
         self.dtype = dtype
@@ -216,9 +213,6 @@ class SMPL(nn.Module):
             self.register_parameter(
                 "betas", nn.Parameter(default_betas, requires_grad=True)
             )
-
-
-
 
         if create_global_orient:
             if global_orient is None:
@@ -267,12 +261,10 @@ class SMPL(nn.Module):
         j_regressor = to_tensor(to_np(data_struct.J_regressor), dtype=dtype)
         self.register_buffer("J_regressor", j_regressor)
 
-
         num_pose_basis = data_struct.posedirs.shape[-1]
 
         posedirs = np.reshape(data_struct.posedirs, [-1, num_pose_basis]).T
         self.register_buffer("posedirs", to_tensor(to_np(posedirs), dtype=dtype))
-
 
         parents = to_tensor(to_np(data_struct.kintree_table[0])).long()
         parents[0] = -1
@@ -369,7 +361,6 @@ class SMPL(nn.Module):
         -------
         """
 
-
         global_orient = (
             global_orient if global_orient is not None else self.global_orient
         )
@@ -420,10 +411,8 @@ class SMPL(nn.Module):
 
         return output
 
-
 class SMPLLayer(SMPL):
     def __init__(self, *args, **kwargs) -> None:
-
         super(SMPLLayer, self).__init__(
             create_body_pose=False,
             create_betas=False,
@@ -541,10 +530,7 @@ class SMPLLayer(SMPL):
 
         return output
 
-
 class SMPLH(SMPL):
-
-
     NUM_BODY_JOINTS = SMPL.NUM_JOINTS - 2
     NUM_HAND_JOINTS = 15
     NUM_JOINTS = NUM_BODY_JOINTS + 2 * NUM_HAND_JOINTS
@@ -612,9 +598,7 @@ class SMPLH(SMPL):
 
         self.num_pca_comps = num_pca_comps
 
-
         if data_struct is None:
-
             if osp.isdir(model_path):
                 model_fn = "SMPLH_{}.{ext}".format(gender.upper(), ext=ext)
                 smplh_path = os.path.join(model_path, model_fn)
@@ -684,7 +668,6 @@ class SMPLH(SMPL):
             "right_hand_mean", to_tensor(right_hand_mean, dtype=self.dtype)
         )
 
-
         hand_pose_dim = num_pca_comps if use_pca else 3 * self.NUM_HAND_JOINTS
         if create_left_hand_pose:
             if left_hand_pose is None:
@@ -708,7 +691,6 @@ class SMPLH(SMPL):
             right_hand_pose_param = nn.Parameter(default_rhand_pose, requires_grad=True)
             self.register_parameter("right_hand_pose", right_hand_pose_param)
 
-
         pose_mean_tensor = self.create_mean_pose(
             data_struct, flat_hand_mean=flat_hand_mean
         )
@@ -717,8 +699,6 @@ class SMPLH(SMPL):
         self.register_buffer("pose_mean", pose_mean_tensor)
 
     def create_mean_pose(self, data_struct, flat_hand_mean=False):
-
-
         global_orient_mean = torch.zeros([3], dtype=self.dtype)
         body_pose_mean = torch.zeros([self.NUM_BODY_JOINTS * 3], dtype=self.dtype)
 
@@ -758,8 +738,6 @@ class SMPLH(SMPL):
         **kwargs,
     ) -> SMPLHOutput:
         """ """
-
-
 
         global_orient = (
             global_orient if global_orient is not None else self.global_orient
@@ -803,7 +781,6 @@ class SMPLH(SMPL):
             pose2rot=pose2rot,
         )
 
-
         joints = self.vertex_joint_selector(vertices, joints)
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
@@ -825,9 +802,7 @@ class SMPLH(SMPL):
 
         return output
 
-
 class SMPLHLayer(SMPLH):
-
     def __init__(self, *args, **kwargs) -> None:
         """SMPL+H as a layer model constructor"""
         super(SMPLHLayer, self).__init__(
@@ -942,7 +917,6 @@ class SMPLHLayer(SMPLH):
         if transl is None:
             transl = torch.zeros([batch_size, 3], dtype=dtype, device=device)
 
-
         full_pose = torch.cat(
             [
                 global_orient.reshape(-1, 1, 3, 3),
@@ -965,7 +939,6 @@ class SMPLHLayer(SMPLH):
             pose2rot=False,
         )
 
-
         joints = self.vertex_joint_selector(vertices, joints)
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
@@ -986,7 +959,6 @@ class SMPLHLayer(SMPLH):
         )
 
         return output
-
 
 class SMPLX(SMPLH):
     """
@@ -1068,7 +1040,6 @@ class SMPLX(SMPLH):
         dtype: torch.dtype
             The data type for the created variables
         """
-
 
         if osp.isdir(model_path):
             model_fn = "SMPLX_{}.{ext}".format(gender.upper(), ext=ext)
@@ -1182,9 +1153,6 @@ class SMPLX(SMPLH):
             expression_param = nn.Parameter(default_expression, requires_grad=True)
             self.register_parameter("expression", expression_param)
 
-
-
-
     def name(self) -> str:
         return "SMPL-X"
 
@@ -1193,8 +1161,6 @@ class SMPLX(SMPLH):
         return self._num_expression_coeffs
 
     def create_mean_pose(self, data_struct, flat_hand_mean=False):
-
-
         global_orient_mean = torch.zeros([3], dtype=self.dtype)
         body_pose_mean = torch.zeros([self.NUM_BODY_JOINTS * 3], dtype=self.dtype)
         jaw_pose_mean = torch.zeros([3], dtype=self.dtype)
@@ -1294,7 +1260,6 @@ class SMPLX(SMPLH):
                 A named tuple of type `ModelOutput`
         """
 
-
         global_orient = (
             global_orient if global_orient is not None else self.global_orient
         )
@@ -1338,10 +1303,7 @@ class SMPLX(SMPLH):
             dim=1,
         ).reshape(-1, 165)
 
-
-
         full_pose += (self.pose_mean)
-
 
         batch_size = max(betas.shape[0], global_orient.shape[0], body_pose.shape[0])
 
@@ -1352,7 +1314,6 @@ class SMPLX(SMPLH):
         shape_components = torch.cat([betas, expression], dim=-1)
 
         shapedirs = torch.cat([self.shapedirs, self.expr_dirs], dim=-1)
-
 
         if face_offset is None:
             vertices = self.v_template
@@ -1399,11 +1360,9 @@ class SMPLX(SMPLH):
             vertices, self.faces_tensor, lmk_faces_idx, lmk_bary_coords
         )
 
-
         joints = self.vertex_joint_selector(vertices, joints)
 
         joints = torch.cat([joints, landmarks], dim=1)
-
 
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
@@ -1434,10 +1393,8 @@ class SMPLX(SMPLH):
         )
         return output
 
-
 class SMPLXLayer(SMPLX):
     def __init__(self, *args, **kwargs) -> None:
-
         super(SMPLXLayer, self).__init__(
             create_global_orient=False,
             create_body_pose=False,
@@ -1597,7 +1554,6 @@ class SMPLXLayer(SMPLX):
         if transl is None:
             transl = torch.zeros([batch_size, 3], dtype=dtype, device=device)
 
-
         full_pose = torch.cat(
             [
                 global_orient.reshape(-1, 1, 3, 3),
@@ -1650,11 +1606,9 @@ class SMPLXLayer(SMPLX):
             vertices, self.faces_tensor, lmk_faces_idx, lmk_bary_coords
         )
 
-
         joints = self.vertex_joint_selector(vertices, joints)
 
         joints = torch.cat([joints, landmarks], dim=1)
-
 
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
@@ -1679,9 +1633,7 @@ class SMPLXLayer(SMPLX):
 
         return output
 
-
 class MANO(SMPL):
-
     NUM_BODY_JOINTS = 1
     NUM_HAND_JOINTS = 15
     NUM_JOINTS = NUM_BODY_JOINTS + NUM_HAND_JOINTS
@@ -1737,9 +1689,7 @@ class MANO(SMPL):
         self.num_pca_comps = num_pca_comps
         self.is_rhand = is_rhand
 
-
         if data_struct is None:
-
             if osp.isdir(model_path):
                 model_fn = "MANO_{}.{ext}".format(
                     "RIGHT" if is_rhand else "LEFT", ext=ext
@@ -1775,7 +1725,6 @@ class MANO(SMPL):
             **kwargs,
         )
 
-
         self.vertex_joint_selector.extra_joints_idxs = to_tensor(
             list(VERTEX_IDS["mano"].values()), dtype=torch.long
         )
@@ -1802,7 +1751,6 @@ class MANO(SMPL):
 
         self.register_buffer("hand_mean", to_tensor(hand_mean, dtype=self.dtype))
 
-
         hand_pose_dim = num_pca_comps if use_pca else 3 * self.NUM_HAND_JOINTS
         if create_hand_pose:
             if hand_pose is None:
@@ -1815,7 +1763,6 @@ class MANO(SMPL):
             hand_pose_param = nn.Parameter(default_hand_pose, requires_grad=True)
             self.register_parameter("hand_pose", hand_pose_param)
 
-
         pose_mean = self.create_mean_pose(data_struct, flat_hand_mean=flat_hand_mean)
         pose_mean_tensor = pose_mean.clone().to(dtype)
 
@@ -1825,8 +1772,6 @@ class MANO(SMPL):
         return "MANO"
 
     def create_mean_pose(self, data_struct, flat_hand_mean=False):
-
-
         global_orient_mean = torch.zeros([3], dtype=self.dtype)
         pose_mean = torch.cat([global_orient_mean, self.hand_mean], dim=0)
         return pose_mean
@@ -1849,7 +1794,6 @@ class MANO(SMPL):
         **kwargs,
     ) -> MANOOutput:
         """Forward pass for the MANO model"""
-
 
         global_orient = (
             global_orient if global_orient is not None else self.global_orient
@@ -1880,9 +1824,6 @@ class MANO(SMPL):
             pose2rot=True,
         )
 
-
-
-
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints)
 
@@ -1900,7 +1841,6 @@ class MANO(SMPL):
         )
 
         return output
-
 
 class MANOLayer(MANO):
     def __init__(self, *args, **kwargs) -> None:
@@ -1983,7 +1923,6 @@ class MANOLayer(MANO):
         )
 
         return output
-
 
 class FLAME(SMPL):
     NUM_JOINTS = 5
@@ -2153,8 +2092,6 @@ class FLAME(SMPL):
             expression_param = nn.Parameter(default_expression, requires_grad=True)
             self.register_parameter("expression", expression_param)
 
-
-
         landmark_bcoord_filename = osp.join(model_path, "flame_static_embedding.pkl")
 
         with open(landmark_bcoord_filename, "rb") as fp:
@@ -2264,8 +2201,6 @@ class FLAME(SMPL):
                 A named tuple of type `ModelOutput`
         """
 
-
-
         global_orient = (
             global_orient if global_orient is not None else self.global_orient
         )
@@ -2331,11 +2266,9 @@ class FLAME(SMPL):
             vertices, self.faces_tensor, lmk_faces_idx, lmk_bary_coords
         )
 
-
         joints = self.vertex_joint_selector(vertices, joints)
 
         joints = torch.cat([joints, landmarks], dim=1)
-
 
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
@@ -2355,7 +2288,6 @@ class FLAME(SMPL):
             full_pose=full_pose if return_full_pose else None,
         )
         return output
-
 
 class FLAMELayer(FLAME):
     def __init__(self, *args, **kwargs) -> None:
@@ -2514,11 +2446,9 @@ class FLAMELayer(FLAME):
             vertices, self.faces_tensor, lmk_faces_idx, lmk_bary_coords
         )
 
-
         joints = self.vertex_joint_selector(vertices, joints)
 
         joints = torch.cat([joints, landmarks], dim=1)
-
 
         if self.joint_mapper is not None:
             joints = self.joint_mapper(joints=joints, vertices=vertices)
@@ -2537,7 +2467,6 @@ class FLAMELayer(FLAME):
             full_pose=full_pose if return_full_pose else None,
         )
         return output
-
 
 def build_layer(
     model_path: str, model_type: str = "smpl", **kwargs
@@ -2604,7 +2533,6 @@ def build_layer(
     else:
         raise ValueError(f"Unknown model type {model_type}, exiting!")
 
-
 def create(
     model_path: str, model_type: str = "smpl", **kwargs
 ) -> Union[SMPL, SMPLH, SMPLX, MANO, FLAME]:
@@ -2647,7 +2575,6 @@ def create(
         ValueError: In case the model type is not one of SMPL, SMPLH,
         SMPLX, MANO or FLAME
     """
-
 
     if osp.isdir(model_path):
         model_path = os.path.join(model_path, model_type)

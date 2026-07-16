@@ -27,7 +27,6 @@ from pytorch3d.ops import knn_points
 from data.interhand.train import Renderer_mesh
 
 
-
 from plyfile import PlyData, PlyElement
 from pytorch3d.transforms import matrix_to_quaternion
 from pytorch3d.transforms.rotation_conversions import quaternion_multiply
@@ -58,18 +57,14 @@ def auto_repeat_size(tensor, repeat_num, axis=0):
     repeat_size[axis] = repeat_num
     return repeat_size
 
-
 def aabb(xyz):
     return torch.min(xyz, dim=0).values, torch.max(xyz, dim=0).values
 
-
 def inverse_sigmoid(x):
-
     if isinstance(x, float):
         x = torch.tensor(x).float()
 
     return torch.log(x / (1 - x))
-
 
 def ndc_T_world(xyzs_world, K, E, H, W):
     E = E.cuda()
@@ -78,20 +73,11 @@ def ndc_T_world(xyzs_world, K, E, H, W):
     xyzs_cam = xyzs_world
     xys_2d = img_T_cam(xyzs_cam, K)
 
-
-
-
-
-
-
-
-
     xs = ((xys_2d[:, 0, :] / W) * 2. - 1.)
     ys = ((xys_2d[:, 1, :] / W) * 2. - (H / W))
     zs = xyzs_cam[:, 2]
     xyzs_ndc = torch.stack([xs, ys, zs], dim=-1)
     return xyzs_ndc
-
 
 def img_T_cam(xyzs_cam, K):
     K = K.unsqueeze(0).float()
@@ -99,12 +85,10 @@ def img_T_cam(xyzs_cam, K):
     xys = xys_[:, :2] / xys_[:, 2:]
     return xys
 
-
 def img_T_world(xyzs_world, K, E):
     xyzs_cam = cam_T_world(xyzs_world, E)
     xys = img_T_cam(xyzs_cam, K)
     return xys
-
 
 def cam_T_world(xyzs_world, E):
     E=E.unsqueeze(0).float()
@@ -112,7 +96,6 @@ def cam_T_world(xyzs_world, E):
     xyzs_cam_ = torch.bmm(E, xyzs_world_)
     xyzs_cam = xyzs_cam_[:, :3] / xyzs_cam_[:, 3:]
     return xyzs_cam
-
 
 def world_from_ndc(xyzs_ndc, K, E, H, W):
     """
@@ -136,42 +119,28 @@ def world_from_ndc(xyzs_ndc, K, E, H, W):
         恢复得到的世界坐标下的三维点。
     """
 
-
     x_ndc, y_ndc, z_cam = xyzs_ndc[..., 0], xyzs_ndc[..., 1], xyzs_ndc[..., 2]
 
-
-
     if H < W:
-
         u = (W - x_ndc * H) / 2
 
         v = H * (1 - y_ndc) / 2
     else:
-
         u = W * (1 - x_ndc) / 2
 
         v = (H - y_ndc * W) / 2
-
-
-
-
 
     x_h = u * z_cam
     y_h = v * z_cam
     z_h = z_cam
     xyzs_pix = torch.stack([x_h, y_h, z_h], dim=-1)
 
-
     K_inv = torch.inverse(K)
-
 
     original_shape = xyzs_pix.shape
     xyzs_flat = xyzs_pix.reshape(-1, 3).unsqueeze(-1)
     cam_xyz_flat = torch.bmm(K_inv.unsqueeze(0).expand(xyzs_flat.size(0), -1, -1), xyzs_flat)
     cam_xyz = cam_xyz_flat.squeeze(-1).reshape(original_shape)
-
-
-
 
     R = E[:3, :3]
     t = E[:3, 3:]
@@ -182,17 +151,14 @@ def world_from_ndc(xyzs_ndc, K, E, H, W):
     E_h[3, 3] = 1.0
     E_h_inv = torch.inverse(E_h)
 
-
     ones = torch.ones(*original_shape[:-1], 1, device=cam_xyz.device, dtype=cam_xyz.dtype)
     cam_xyz_h = torch.cat([cam_xyz, ones], dim=-1)
-
 
     cam_xyz_h_flat = cam_xyz_h.reshape(-1, 4).unsqueeze(-1)
     world_h_flat = torch.bmm(E_h_inv.unsqueeze(0).expand(cam_xyz_h_flat.size(0), -1, -1), cam_xyz_h_flat)
     world_xyz = world_h_flat.squeeze(-1)[..., :3].reshape(original_shape)
 
     return world_xyz
-
 
 def generate_rotation_matrix_y(degrees):
     theta = math.radians(degrees)
@@ -203,16 +169,10 @@ def generate_rotation_matrix_y(degrees):
 
     return np.asarray(R, dtype=np.float32)
 
-
 def getProjectionMatrix_new(K, zfar=100, znear=0.01):
     focalx, focaly = K[0, 0].item(), K[1, 1].item()
     px, py = K[0, 2].item(), K[1, 2].item()
     h, w = 720, 1280
-
-
-
-
-
 
     K_ndc = torch.tensor([
                 [2 * focalx / w, 0, (2 * px - w) / w, 0],
@@ -221,7 +181,6 @@ def getProjectionMatrix_new(K, zfar=100, znear=0.01):
                 [0, 0, 1, 0]
             ]).float().to(K.device)
     return K_ndc
-
 
 def getProjectionMatrix(znear, zfar, fovX, fovY):
     tanHalfFovY = math.tan((fovY / 2))
@@ -245,22 +204,17 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     P[2, 3] = -(zfar * znear) / (zfar - znear)
     return P
 
-
 def getProjectionMatrix_refine(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
     fx, fy = K[0, 0], K[1, 1]
     cx, cy = K[0, 2], K[1, 2]
-
-
 
     s = 0
     P = torch.zeros(4, 4, dtype=K.dtype, device=K.device)
     z_sign = 1.0
 
-
     P[0, 0] = 2 * fx / W
     P[0, 1] = 2 * s / W
     P[0, 2] = -1 + 2 * (cx / W)
-
 
     P[1, 1] = 2 * fy / H
     P[1, 2] = -1 + 2 * (cy / H)
@@ -269,26 +223,13 @@ def getProjectionMatrix_refine(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
     P[2, 3] = -1 * z_sign * 2 * zfar * znear / (zfar - znear)
     P[3, 2] = z_sign
 
-
-
-
-
-
-
-
-
     return P
-
 
 def intrinsic_to_fov(intrinsic, w, h):
     fx, fy = intrinsic[0, 0], intrinsic[1, 1]
     fov_x = 2 * torch.arctan2(w, 2 * fx)
     fov_y = 2 * torch.arctan2(h, 2 * fy)
     return fov_x, fov_y
-
-
-
-
 
 def getWorld2View2(c2w, translate=np.array([.0, .0, .0]), scale=1.0):
     C2W = torch.linalg.inv(c2w)
@@ -297,7 +238,6 @@ def getWorld2View2(c2w, translate=np.array([.0, .0, .0]), scale=1.0):
     C2W[:3, 3] = cam_center
     Rt = torch.linalg.inv(C2W)
     return (Rt)
-
 
 class Camera:
     def __init__(
@@ -321,19 +261,8 @@ class Camera:
 
         self.world_view_transform = getWorld2View2(w2c, self.trans, self.scale)
 
-
         self.zfar = 100.0
         self.znear = 0.01
-
-
-
-
-
-
-
-
-
-
 
         self.projection_matrix = (
             getProjectionMatrix_refine(
@@ -341,8 +270,6 @@ class Camera:
             .transpose(0, 1)
             .to(w2c.device)
         )
-
-
 
         self.full_proj_transform = (
             self.world_view_transform.unsqueeze(0).bmm(
@@ -371,8 +298,6 @@ class Camera:
 
         )
 
-
-
 class Hand_Camera:
     def __init__( self, w2c, intrinsic,
                     FoVx, FoVy, height, width,
@@ -389,21 +314,10 @@ class Hand_Camera:
         self.trans = trans
         self.scale = scale
 
-
         self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1).cuda()
 
         self.zfar = 100.0
         self.znear = 0.01
-
-
-
-
-
-
-
-
-
-
 
         self.projection_matrix = (
             getProjectionMatrix_refine(
@@ -411,8 +325,6 @@ class Hand_Camera:
             .transpose(0, 1)
             .to(w2c.device)
         )
-
-
 
         self.full_proj_transform = (
             self.world_view_transform.unsqueeze(0).bmm(
@@ -423,19 +335,14 @@ class Hand_Camera:
 
         self.intrinsic = intrinsic
 
-
-
 class GaussianModel32:
-
     def setup_functions(self):
-
         self.scaling_activation = torch.exp
         self.scaling_inverse_activation = torch.log
 
         self.opacity_activation = torch.sigmoid
         self.inverse_opacity_activation = inverse_sigmoid
         self.rotation_activation = torch.nn.functional.normalize
-
 
         self.rgb_activation = torch.sigmoid
 
@@ -474,10 +381,8 @@ class GaussianModel32:
         return self.xyz
 
     def training_setup(self):
-
         self._xyz = nn.Parameter(self.xyz.requires_grad_(True))
         self._features_color = nn.Parameter(self.shs.requires_grad_(True))
-
 
         self._scaling = nn.Parameter(self.scaling.requires_grad_(True))
         self._rotation = nn.Parameter(self.rotation.requires_grad_(True))
@@ -490,7 +395,6 @@ class GaussianModel32:
             {'params': [self._xyz], 'lr': 0.001, "name": "xyz"},
             {'params': [self._features_color], 'lr': 0.001, "name": "f_color"},
 
-
             {'params': [self._opacity], 'lr': 0.05, "name": "opacity"},
             {'params': [self._scaling], 'lr': 0.005, "name": "scaling"},
             {'params': [self._rotation], 'lr': 0.005, "name": "rotation"}
@@ -502,7 +406,6 @@ class GaussianModel32:
                                                     lr_delay_mult=0.02,
                                                     max_steps=500)
 
-
     def update_learning_rate(self, iteration):
         ''' Learning rate scheduling per step '''
         for param_group in self.optimizer.param_groups:
@@ -511,17 +414,8 @@ class GaussianModel32:
                 param_group['lr'] = lr
                 return lr
 
-
     def construct_list_of_attributes(self):
         l = ["x", "y", "z", "nx", "ny", "nz"]
-
-
-
-
-
-
-
-
 
         for i in range(self.shs.shape[1]):
             l.append("f_color_{}".format(i))
@@ -533,7 +427,6 @@ class GaussianModel32:
         return l
 
     def save_ply(self, path):
-
         xyz = self.xyz.detach().cpu().numpy()
         normals = np.zeros_like(xyz)
 
@@ -542,20 +435,7 @@ class GaussianModel32:
         else:
             shs = self.shs
 
-
-
         features_color = shs
-
-
-
-
-
-
-
-
-
-
-
 
         opacities = (
             inverse_sigmoid(torch.clamp(self.opacity, 1e-3, 1 - 1e-3))
@@ -580,7 +460,6 @@ class GaussianModel32:
         PlyData([el]).write(path)
 
     def load_ply(self, path):
-
         plydata = PlyData.read(path)
 
         xyz = np.stack(
@@ -612,7 +491,6 @@ class GaussianModel32:
         features_extra = np.zeros((xyz.shape[0], len(extra_f_names)))
         for idx, attr_name in enumerate(extra_f_names):
             features_extra[:, idx] = np.asarray(plydata.elements[0][attr_name])
-
 
         features_extra = features_extra.reshape(
             (features_extra.shape[0], 3, (sh_degree + 1) ** 2 - 1)
@@ -667,20 +545,14 @@ class GaussianModel32:
         use_rgb = self.use_rgb
         return GaussianModel(xyz, opacity, rotation, scaling, shs, use_rgb)
 
-
-
-
 class GaussianModel:
-
     def setup_functions(self):
-
         self.scaling_activation = torch.exp
         self.scaling_inverse_activation = torch.log
 
         self.opacity_activation = torch.sigmoid
         self.inverse_opacity_activation = inverse_sigmoid
         self.rotation_activation = torch.nn.functional.normalize
-
 
         self.rgb_activation = torch.sigmoid
 
@@ -712,7 +584,6 @@ class GaussianModel:
         self.shs: Tensor = shs
         self.object_dc: Tensor = labels
 
-
         self.xyz: Tensor = torch.cat([xyz, xyz_densify], dim=0)
         self.opacity: Tensor = torch.cat([opacity, opacity_densify], dim=0)
         self.rotation: Tensor = torch.cat([rotation, rotation_densify], dim=0)
@@ -720,17 +591,6 @@ class GaussianModel:
 
         self.shs: Tensor = torch.cat([shs, shs_densify], dim=0)
         self.object_dc: Tensor = torch.cat([labels, labels_densify], dim=0)
-
-
-
-
-
-
-
-
-
-
-
 
         self.nail_mask = labels.cuda()
 
@@ -749,7 +609,6 @@ class GaussianModel:
         return self.xyz
 
     def training_setup(self):
-
         self._xyz = nn.Parameter(self.xyz.requires_grad_(True))
         self._features_dc = nn.Parameter(self.shs[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(self.shs[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
@@ -775,7 +634,6 @@ class GaussianModel:
                                                     lr_delay_mult=0.02,
                                                     max_steps=500)
 
-
     def update_learning_rate(self, iteration):
         ''' Learning rate scheduling per step '''
         for param_group in self.optimizer.param_groups:
@@ -783,7 +641,6 @@ class GaussianModel:
                 lr = self.xyz_scheduler_args(iteration)
                 param_group['lr'] = lr
                 return lr
-
 
     def construct_list_of_attributes(self):
         l = ["x", "y", "z", "nx", "ny", "nz"]
@@ -802,7 +659,6 @@ class GaussianModel:
         return l
 
     def save_ply(self, path):
-
         xyz = self.xyz.detach().cpu().numpy()
         normals = np.zeros_like(xyz)
 
@@ -848,7 +704,6 @@ class GaussianModel:
         PlyData([el]).write(path)
 
     def load_ply(self, path):
-
         plydata = PlyData.read(path)
 
         xyz = np.stack(
@@ -880,7 +735,6 @@ class GaussianModel:
         features_extra = np.zeros((xyz.shape[0], len(extra_f_names)))
         for idx, attr_name in enumerate(extra_f_names):
             features_extra[:, idx] = np.asarray(plydata.elements[0][attr_name])
-
 
         features_extra = features_extra.reshape(
             (features_extra.shape[0], 3, (sh_degree + 1) ** 2 - 1)
@@ -935,12 +789,10 @@ class GaussianModel:
         use_rgb = self.use_rgb
         return GaussianModel(xyz, opacity, rotation, scaling, shs, use_rgb)
 
-
 class GSLayer(nn.Module):
     """W/O Activation Function"""
 
     def setup_functions(self):
-
         self.scaling_activation = trunc_exp
         self.scaling_inverse_activation = torch.log
 
@@ -977,7 +829,6 @@ class GSLayer(nn.Module):
             self.clip_scaling_pruner = StaticParameterTuner(clip_scaling)
         self.clip_scaling = self.clip_scaling_pruner.get_value(0)
 
-
         self.use_rgb = use_rgb
         self.restrict_offset = restrict_offset
         self.xyz_offset = xyz_offset
@@ -985,7 +836,6 @@ class GSLayer(nn.Module):
         self.fix_opacity = fix_opacity
         self.fix_rotation = fix_rotation
         self.use_fine_feat = use_fine_feat
-
 
         if not feature_map:
             self.attr_dict = {
@@ -1038,7 +888,6 @@ class GSLayer(nn.Module):
                     nn.init.constant_(layer.bias, inverse_sigmoid(init_density))
             self.out_layers[key] = layer
 
-
         if self.use_fine_feat:
             fine_shs_layer = nn.Linear(in_channels, shs_out_ch)
             nn.init.constant_(fine_shs_layer.weight, 0)
@@ -1049,22 +898,6 @@ class GSLayer(nn.Module):
         self.clip_scaling = self.clip_scaling_pruner.get_value(step)
 
     def constrain_forward(self, ret, constrain_dict):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         is_upper_body = constrain_dict['is_upper_body']
         scaling = ret['scaling']
 
@@ -1074,24 +907,18 @@ class GSLayer(nn.Module):
 
         return ret
 
-
     def constrain_expr(self, ret, constrain_head):
         head_mask = constrain_head['head']
         face_mask = constrain_head['face']
         xyz = ret['offset_xyz']
 
-
         head_only_mask = head_mask & (~face_mask)
 
-
-
         xyz[head_only_mask] = xyz[head_only_mask] * 0.5
-
 
         ret['offset_xyz'] = xyz
 
         return ret
-
 
     def forward(self, x, pts, x_fine=None, constrain_dict=None, constrain_head=None):
         assert len(x.shape) == 2
@@ -1106,10 +933,8 @@ class GSLayer(nn.Module):
                         torch.eye(3).type_as(x)[None, :, :].repeat(x.shape[0], 1, 1)
                     )
                 else:
-
                     v = self.rotation_activation(v)
             elif k == "scaling":
-
                 v = self.scaling_activation(v)
 
                 if self.clip_scaling is not None:
@@ -1118,13 +943,10 @@ class GSLayer(nn.Module):
                 if self.fix_opacity:
                     v = torch.ones_like(x)[..., 0:1]
                 else:
-
                     v = self.opacity_activation(v)
             elif k == "shs":
                 if self.use_rgb:
-
                     v = self.rgb_activation(v)
-
 
                     if self.use_fine_feat:
                         v_fine = self.out_layers["fine_shs"](x_fine)
@@ -1135,9 +957,7 @@ class GSLayer(nn.Module):
                     if self.use_fine_feat:
                         v_fine = self.out_layers["fine_shs"](x_fine)
                         v = v + v_fine
-
             elif k == "xyz":
-
                 if self.restrict_offset:
                     max_step = self.xyz_offset_max_step
 
@@ -1160,13 +980,10 @@ class GSLayer(nn.Module):
 
         return GaussianAppOutput(**ret)
 
-
-
 class GSLayer_Hand(nn.Module):
     """W/O Activation Function"""
 
     def setup_functions(self):
-
         self.scaling_activation = trunc_exp
         self.scaling_inverse_activation = torch.log
 
@@ -1206,7 +1023,6 @@ class GSLayer_Hand(nn.Module):
             self.clip_scaling_pruner = StaticParameterTuner(clip_scaling)
         self.clip_scaling = self.clip_scaling_pruner.get_value(0)
 
-
         self.use_rgb = use_rgb
         self.restrict_offset = restrict_offset
         self.xyz_offset = xyz_offset
@@ -1215,101 +1031,28 @@ class GSLayer_Hand(nn.Module):
         self.fix_rotation = fix_rotation
         self.use_fine_feat = use_fine_feat
 
-
         self.mano_face = mano.faces_tensor.long()
         self.mano_verts = mano.v_template
         self.face_area = calc_face_areas(self.mano_verts, self.mano_face)
         self.mano_face = self.mano_face.to('cuda')
 
-
         F_num = self.mano_face.shape[0]
         init_bary = torch.tensor([1/3, 1/3, 1/3], dtype=torch.float32)
-
-
-
-
 
         self.barycentric_raw = nn.Parameter(
                             torch.tensor([1/3, 1/3, 1/3], dtype=torch.float32).unsqueeze(0).repeat(F_num, 1).cuda(), requires_grad=True)
 
-
-
-
         self.color_latent_gamma = nn.Parameter(torch.zeros(1, in_channels, device='cuda'))
         self.color_latent_beta = nn.Parameter(torch.zeros(1, in_channels, device='cuda'))
-
-
-
-
 
         self.register_buffer(
             "stage1_color_field_freqs",
             torch.tensor([1.0, 2.0], dtype=torch.float32, device='cuda'),
         )
 
-
-
         self.stage1_color_coeff = nn.Parameter(torch.zeros(16, 1, device='cuda'))
         self.stage1_color_rgb = nn.Parameter(torch.ones(1, 3, device='cuda'))
         self.stage1_color_field_alpha = 1.0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         if not feature_map:
             self.attr_dict = {
@@ -1328,7 +1071,6 @@ class GSLayer_Hand(nn.Module):
                 "rotation": None,
             }
 
-
         self.densify_attr_dict = {
                 "activation": 1,
                 "shs": (sh_degree + 1) ** 2 * 3,
@@ -1345,7 +1087,6 @@ class GSLayer_Hand(nn.Module):
         if not self.fix_rotation:
             self.attr_dict["rotation"] = 4
             self.densify_attr_dict["rotation"] = 4
-
 
         self.out_layers = nn.ModuleDict()
         for key, out_ch in self.attr_dict.items():
@@ -1377,18 +1118,9 @@ class GSLayer_Hand(nn.Module):
                 if not self.fix_opacity:
                     nn.init.constant_(layer.bias, inverse_sigmoid(init_density))
 
-
-
             self.out_layers[key] = layer
 
         self.out_layers = self.out_layers.cuda()
-
-
-
-
-
-
-
 
         self.densify_out_layers = nn.ModuleDict()
         for key, out_ch in self.densify_attr_dict.items():
@@ -1424,7 +1156,6 @@ class GSLayer_Hand(nn.Module):
 
         self.densify_out_layers = self.densify_out_layers.cuda()
 
-
         if self.use_fine_feat:
             fine_shs_layer = nn.Linear(in_channels, shs_out_ch)
             nn.init.constant_(fine_shs_layer.weight, 0)
@@ -1447,20 +1178,12 @@ class GSLayer_Hand(nn.Module):
             "thumb3": 16
         }
 
-
         nail_indices = np.isin(self.labels, list(NAIL_PARTS.values()))
-
-
 
         nail_mask = torch.isin(self.labels.to(torch.int64), torch.tensor(list(NAIL_PARTS.values())).to(self.labels.device))
         self.nail_mask = nail_mask.cuda()
 
         self.objects_dc = nail_mask.to(torch.float32).unsqueeze(1).cuda()
-
-
-
-
-
 
     def _expand_shared_style(self, tensor, feat):
         if tensor is None:
@@ -1550,22 +1273,6 @@ class GSLayer_Hand(nn.Module):
         self.clip_scaling = self.clip_scaling_pruner.get_value(step)
 
     def constrain_forward(self, ret, constrain_dict):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         is_upper_body = constrain_dict['is_upper_body']
         scaling = ret['scaling']
 
@@ -1575,27 +1282,20 @@ class GSLayer_Hand(nn.Module):
 
         return ret
 
-
     def constrain_expr(self, ret, constrain_head):
         head_mask = constrain_head['head']
         face_mask = constrain_head['face']
         xyz = ret['offset_xyz']
 
-
         head_only_mask = head_mask & (~face_mask)
 
-
-
         xyz[head_only_mask] = xyz[head_only_mask] * 0.5
-
 
         ret['offset_xyz'] = xyz
 
         return ret
 
-
     def densify_by_mesh(self, ret, threshold=0.8):
-
         densify_mask = (ret['activation']>threshold)
         densify_face = self.mano_face[densify_mask]
         densify_bary = self.barycentric_raw[densify_mask]
@@ -1607,118 +1307,20 @@ class GSLayer_Hand(nn.Module):
             scaling = (ret['scaling'][densify_mask] * densify_bary).sum(dim=2)
             rotation = (ret['rotation'][densify_mask] * densify_bary).sum(dim=2)
 
-
-
         return ret_densify
-
 
     def forward(self, x, pts, x_fine=None, constrain_dict=None, constrain_head=None,
                 global_feat=None, film_param=None, vis_mask=None):
         assert len(x.shape) == 2
 
-
         ret = {}
         color_x = self._apply_color_latent_modulation(x, global_feat)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         for k in self.attr_dict:
             layer = self.out_layers[k]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             feat_in = color_x if k == "shs" else x
             v = layer(feat_in)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
             if k == "rotation":
                 if self.fix_rotation:
@@ -1726,30 +1328,20 @@ class GSLayer_Hand(nn.Module):
                         torch.eye(3).type_as(x)[None, :, :].repeat(x.shape[0], 1, 1)
                     )
                 else:
-
                     v = self.rotation_activation(v)
             elif k == "scaling":
-
                 v = self.scaling_activation(v)
 
                 if self.clip_scaling is not None:
-
-
                     v[self.labels != 1] = torch.clamp(v[self.labels != 1], min=0.001, max=0.3)
                     v[self.labels == 1] = torch.clamp(v[self.labels == 1], min=0.005, max=0.4)
-
-
-
             elif k == "opacity":
                 if self.fix_opacity:
                     v = torch.ones_like(x)[..., 0:1]
                 else:
-
                     v = self.opacity_activation(v)
-
             elif k == "shs":
                 if self.use_rgb:
-
                     v = self.rgb_activation(v)
                     v = torch.reshape(v, (v.shape[0], -1, 3))
                     if self.use_fine_feat:
@@ -1762,9 +1354,7 @@ class GSLayer_Hand(nn.Module):
                     if self.use_fine_feat:
                         v_fine = self.out_layers["fine_shs"](x_fine)
                         v = v + v_fine
-
             elif k == "xyz":
-
                 if self.restrict_offset:
                     max_step = self.xyz_offset_max_step
 
@@ -1777,8 +1367,6 @@ class GSLayer_Hand(nn.Module):
                 k = "offset_xyz"
             ret[k] = v
 
-
-
         densify_ret = {}
 
         bary = torch.softmax(self.barycentric_raw, dim=-1).unsqueeze(0).unsqueeze(-1)
@@ -1787,42 +1375,27 @@ class GSLayer_Hand(nn.Module):
         color_face_feats = color_x.unsqueeze(0)[:, self.mano_face, :]
         color_face_feats = (color_face_feats * bary).sum(dim=2).squeeze()
 
-
         for j in self.densify_attr_dict:
             densify_layer = self.densify_out_layers[j]
-
-
-
-
-
-
-
 
             x = color_face_feats if j == "shs" else face_feats
             v = densify_layer(x)
 
             if j == "activation":
-
                 v = self.opacity_activation(v)
-
             elif j == "bary":
                 v = torch.softmax(v, dim=-1)
-
             elif j == "opacity":
                 if self.fix_opacity:
                     v = torch.ones_like(x)[..., 0:1]
                 else:
-
                     v = self.opacity_activation(v)
-
             elif j == "scaling":
                 v = self.scaling_activation(v)
             elif j == "rotation":
                 v = self.rotation_activation(v)
-
             elif j == "shs":
                 if self.use_rgb:
-
                     v = self.rgb_activation(v)
                     v = torch.reshape(v, (v.shape[0], -1, 3))
                     if self.use_fine_feat:
@@ -1845,11 +1418,7 @@ class GSLayer_Hand(nn.Module):
         if constrain_head is not None:
             ret = self.constrain_expr(ret, constrain_head)
 
-
-
-
         return GaussianAppOutput(**ret), GaussianDensifyOutput(**densify_ret)
-
 
     def face_vertex_latents(self, vertex_latent):
         """
@@ -1862,9 +1431,6 @@ class GSLayer_Hand(nn.Module):
         L1 = vertex_latent[:, v1_idx, :]
         L2 = vertex_latent[:, v2_idx, :]
         return L0, L1, L2
-
-
-
 
 class PointEmbed(nn.Module):
     def __init__(self, hidden_dim=48, dim=128):
@@ -1905,29 +1471,6 @@ class PointEmbed(nn.Module):
         self.mlp = nn.Linear(self.embedding_dim + 3, dim)
         self.norm = nn.LayerNorm(dim)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         self.to('cuda')
 
     @staticmethod
@@ -1938,40 +1481,13 @@ class PointEmbed(nn.Module):
         return embeddings
 
     def forward(self, input_):
-
         input = self.normalize_coords(input_)
         embed = self.mlp(
             torch.cat([self.embed(input, self.basis), input], dim=2)
         )
         embed = self.norm(embed)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         return embed
-
 
     def normalize_coords(self, verts_pos):
         """
@@ -1985,10 +1501,6 @@ class PointEmbed(nn.Module):
         max_val = v.abs().amax(dim=(1,2), keepdim=True)
         v = v / (max_val + 1e-6)
         return v
-
-
-
-
 
 class HierarchicalPointEmbed_ori(nn.Module):
     def __init__(
@@ -2029,24 +1541,7 @@ class HierarchicalPointEmbed_ori(nn.Module):
         )
         self.part_broadcast_proj = nn.Linear(part_dim, out_dim)
 
-
-
-
-
-
-
-
-
-
-
         self.output_norm = nn.LayerNorm(out_dim)
-
-
-
-
-
-
-
 
         labels_path = 'pretrained_models/dense_sample_points/manohd_semantic.ply'
         with open(labels_path, 'rb') as f:
@@ -2057,7 +1552,6 @@ class HierarchicalPointEmbed_ori(nn.Module):
 
         self.labels = torch.tensor(pc[:, 6].astype(np.int64)).cuda()
 
-
         NAIL_PARTS = {
             "index3": 4,
             "middle3": 7,
@@ -2066,20 +1560,7 @@ class HierarchicalPointEmbed_ori(nn.Module):
             "thumb3": 16
         }
 
-
-
-
-
-
         self.nail_mask = torch.isin(self.labels.to(torch.int64), torch.tensor(list(NAIL_PARTS.values())).to(self.labels.device))
-
-
-
-
-
-
-
-
 
     def forward(self, verts_pos, part_idx=None, joint_xyz=None, img_feat=None, nail_mask=None):
         """
@@ -2096,20 +1577,10 @@ class HierarchicalPointEmbed_ori(nn.Module):
         B, N, _ = verts_pos.shape
         device = verts_pos.device
 
-
-
-
-
-
-
         base_in = verts_pos
         base = self.base_proj(base_in)
 
-
-
-
         center_feat = base
-
 
         scale_outs = []
         for aggr in self.neigh_aggrs:
@@ -2117,15 +1588,9 @@ class HierarchicalPointEmbed_ori(nn.Module):
             scale_outs.append(out_s)
         ms_cat = torch.cat([center_feat] + scale_outs, dim=-1)
 
-
         ms_f = self.ms_fuse(ms_cat)
 
-
         v_pre = self.vertex_mlp(ms_f)
-
-
-
-
 
         part_idx = self.labels.unsqueeze(0).repeat(B, 1)
         P = int(part_idx.max().item()+1)
@@ -2135,42 +1600,27 @@ class HierarchicalPointEmbed_ori(nn.Module):
         part_token = self.part_pool_proj(part_token)
         part_token = self.part_processor(part_token)
 
-
         gather_idx = part_idx
 
         part_bcast = part_token[torch.arange(B)[:,None], gather_idx]
         part_bcast = self.part_broadcast_proj(part_bcast)
         v_pre = v_pre + part_bcast
 
-
         if joint_xyz is not None:
-
             j_embed = self.joint_embed(joint_xyz)
             j_global = j_embed.mean(dim=1, keepdim=True)
             j_bcast = self.joint_broadcast_proj(j_global)
             v_pre = v_pre + j_bcast
 
-
         v_refined = v_pre
 
-
-
-
         flat = v_pre.view(B*N, -1)
-
-
-
 
         v_refined = flat.view(B, N, -1)
 
         v_refined = self.output_norm(v_refined)
 
-
-
-
         return v_refined
-
-
 
 class HierarchicalPointEmbed(nn.Module):
     def __init__(
@@ -2191,22 +1641,15 @@ class HierarchicalPointEmbed(nn.Module):
         self.use_image_feat = use_image_feat and in_feat_dim>0
         self.pos_embed_dim = pos_embed_dim
 
-
-
         self.point_pos_embed = PointEmbed(hidden_dim=pos_hidden_dim, dim=pos_embed_dim)
-
 
         in_base_dim = pos_embed_dim + (in_feat_dim if self.use_image_feat else 0)
         self.base_proj = nn.Linear(in_base_dim, base_dim)
-
-
-
 
         self.neigh_aggrs = nn.ModuleList([
             NeighborAggregation((in_feat_dim if self.use_image_feat else 0) + base_dim, base_dim, K=k, agg='max')
             for k in scales
         ])
-
 
         ms_in = base_dim * len(scales) + base_dim
         self.ms_fuse = nn.Sequential(
@@ -2228,7 +1671,6 @@ class HierarchicalPointEmbed(nn.Module):
 
         self.output_norm = nn.LayerNorm(out_dim)
 
-
         labels_path = 'pretrained_models/dense_sample_points/manohd_semantic.ply'
         with open(labels_path, 'rb') as f:
             pc = PlyData.read(f)
@@ -2244,7 +1686,6 @@ class HierarchicalPointEmbed(nn.Module):
             "thumb3": 16
         }
         self.nail_mask = torch.isin(self.labels.to(torch.int64), torch.tensor(list(NAIL_PARTS.values())).to(self.labels.device))
-
 
     def normalize_coords(self, verts_pos):
         """
@@ -2267,12 +1708,9 @@ class HierarchicalPointEmbed(nn.Module):
         B, N, _ = verts_pos.shape
         device = verts_pos.device
 
-
         verts_norm = self.normalize_coords(verts_pos)
 
-
         pos_feat = self.point_pos_embed(verts_norm)
-
 
         if self.use_image_feat:
             assert img_feat is not None, "use_image_feat=True but img_feat is None"
@@ -2282,33 +1720,24 @@ class HierarchicalPointEmbed(nn.Module):
 
         base = self.base_proj(base_in)
 
-
         center_feat = base
         scale_outs = []
         for aggr in self.neigh_aggrs:
-
             if self.use_image_feat:
                 aggr_feat_input = torch.cat([center_feat, img_feat], dim=-1)
             else:
                 aggr_feat_input = center_feat
             out_s = aggr(verts_pos, aggr_feat_input)
 
-
-
-
             scale_outs.append(out_s)
         ms_cat = torch.cat([center_feat] + scale_outs, dim=-1)
-
-
 
         ms_f = self.ms_fuse(ms_cat)
         v_pre = self.vertex_mlp(ms_f)
 
-
         part_idx = self.labels.unsqueeze(0).repeat(B, 1)
         P = int(part_idx.max().item()+1)
         part_token = scatter_mean_torch(v_pre, part_idx, dim_size=P)
-
 
         part_token = self.part_pool_proj(part_token)
         part_token = self.part_processor(part_token)
@@ -2316,16 +1745,11 @@ class HierarchicalPointEmbed(nn.Module):
         part_bcast = self.part_broadcast_proj(part_bcast)
         v_pre = v_pre + part_bcast
 
-
-
-
         v_refined = v_pre.view(B, N, -1)
 
         v_refined = self.output_norm(v_refined)
 
         return v_refined
-
-
 
 class HierarchicalPointEmbedTransformer(nn.Module):
     def __init__(
@@ -2344,13 +1768,9 @@ class HierarchicalPointEmbedTransformer(nn.Module):
         self.scales = scales
         self.use_image_feat = use_image_feat and in_feat_dim > 0
 
-
         in_base_dim = in_feat_dim + (in_feat_dim if self.use_image_feat else 0)
 
         self.base_proj = nn.Linear(in_base_dim, base_dim)
-
-
-
 
         self.neigh_aggrs = nn.ModuleList([
             NeighborAggregation(
@@ -2362,19 +1782,16 @@ class HierarchicalPointEmbedTransformer(nn.Module):
             for k in scales
         ])
 
-
         ms_in = base_dim * (len(scales) + 1)
         self.ms_fuse = nn.Sequential(
             nn.Linear(ms_in, 256), nn.GELU(),
             nn.Linear(256, 256)
         )
 
-
         self.vertex_mlp = nn.Sequential(
             nn.Linear(256, 512), nn.GELU(),
             nn.Linear(512, out_dim)
         )
-
 
         self.part_pool_proj = nn.Linear(out_dim, part_dim)
         self.part_processor = nn.Sequential(
@@ -2385,49 +1802,16 @@ class HierarchicalPointEmbedTransformer(nn.Module):
 
         self.output_norm = nn.LayerNorm(out_dim)
 
-
-
         labels_path = 'pretrained_models/dense_sample_points/manohd_semantic.ply'
 
         with open(labels_path, 'rb') as f:
             pc = PlyData.read(f)
 
-
         if pc.elements:
             pc = pd.DataFrame(pc.elements[0].data).values
         pts = pc[:, :3]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         self.labels = torch.tensor(pc[:, 6].astype(np.int64)).cuda()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def forward(
         self,
@@ -2443,77 +1827,22 @@ class HierarchicalPointEmbedTransformer(nn.Module):
         B, N, C_in = point_feat.shape
         device = point_feat.device
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         v_pre = point_feat
-
-
 
         part_idx = self.labels.unsqueeze(0).repeat(B, 1).to(device)
         P = int(part_idx.max().item() + 1)
 
-
         part_token = scatter_mean_torch(v_pre, part_idx, dim_size=P)
-
 
         part_token = self.part_processor(part_token)
 
-
         part_bcast = part_token[torch.arange(B)[:, None], part_idx]
 
-
         v_pre = v_pre + part_bcast
-
-
-
 
         v_refined = self.output_norm(v_pre)
 
         return v_refined
-
-
-
 
 class NeighborAggregation_new(nn.Module):
     """
@@ -2528,7 +1857,6 @@ class NeighborAggregation_new(nn.Module):
         self.agg = agg
         self.out_dim = out_dim
 
-
         self.inp_dim = 3 + 1 + in_feat_dim * 2
         self.mlp = nn.Sequential(
             nn.Linear(self.inp_dim, out_dim),
@@ -2537,52 +1865,39 @@ class NeighborAggregation_new(nn.Module):
         )
 
     def forward(self, pos, feat, idx=None):
-
         B, N, C = feat.shape
         device = pos.device
 
-
         if idx is None:
-
             idx = knn_idx(pos, self.K)
         else:
-
             if idx.size(-1) < self.K:
                 raise ValueError(f"idx.size(-1)={idx.size(-1)} < K={self.K}")
             idx = idx[..., :self.K]
 
-
         batch_idx = torch.arange(B, device=device)[:, None, None]
-
 
         neigh_pos  = pos[batch_idx, idx]
         neigh_feat = feat[batch_idx, idx]
-
 
         center = pos.unsqueeze(2)
         rel    = neigh_pos - center
         dist   = torch.norm(rel, dim=-1, keepdim=True)
 
-
         center_feat = feat.unsqueeze(2).expand(-1, -1, self.K, -1)
 
-
         inp = torch.cat([rel, dist, center_feat, neigh_feat], dim=-1)
-
 
         BnK = B * N * self.K
         inp_flat = inp.view(BnK, -1)
         out_flat = self.mlp(inp_flat)
         out = out_flat.view(B, N, self.K, -1)
 
-
         if self.agg == 'max':
             out_agg, _ = out.max(2)
         else:
             out_agg = out.mean(2)
         return out_agg
-
-
 
 class NeighborAggregation(nn.Module):
     """
@@ -2603,16 +1918,9 @@ class NeighborAggregation(nn.Module):
             nn.Linear(out_dim, out_dim)
         )
 
-
-
-
-
     def forward(self, pos, feat):
-
         B, N, C = feat.shape
         idx = knn_idx(pos, self.K)
-
-
 
         device = pos.device
         batch_idx = torch.arange(B, device=device)[:, None, None]
@@ -2637,34 +1945,18 @@ class NeighborAggregation(nn.Module):
             out_agg = out.mean(2)
         return out_agg
 
-
-
-
 def pairwise_dist(x, y):
-
-
     x2 = (x**2).sum(-1, keepdim=True)
     y2 = (y**2).sum(-1, keepdim=True).transpose(1, 2)
     xy = x @ y.transpose(1, 2)
     dist = x2 + y2 - 2*xy
     return dist
 
-
-
 def knn_idx(pts, K):
-
-
-
-
-
-
-
     idx = knn_points(pts, pts, K=K).idx
     return idx
 
-
 def knn_faiss(x, K):
-
     B, N, D = x.shape
     x_np = x.detach().cpu().numpy()
     idx_all = []
@@ -2678,11 +1970,7 @@ def knn_faiss(x, K):
 
     return torch.stack(idx_all).to(x.device)
 
-
-
 def scatter_mean_torch(src, idx, dim_size):
-
-
     B, N, C = src.shape
     out = src.new_zeros(B, dim_size, C)
     count = src.new_zeros(B, dim_size, 1)
@@ -2694,15 +1982,11 @@ def scatter_mean_torch(src, idx, dim_size):
     out = out / count
     return out
 
-
-
-
 class CrossAttnBlock(nn.Module):
     """
     Transformer block that takes in a cross-attention condition.
     Designed for SparseLRM architecture.
     """
-
 
     def __init__(
         self,
@@ -2717,8 +2001,6 @@ class CrossAttnBlock(nn.Module):
         feedforward=False,
     ):
         super().__init__()
-
-
 
         self.norm_q = nn.Identity()
         self.norm_k = nn.Identity()
@@ -2753,8 +2035,6 @@ class CrossAttnBlock(nn.Module):
             )
 
     def forward(self, x, cond):
-
-
         x = self.cross_attn(
             self.norm_q(x), self.norm_k(cond), cond, need_weights=False
         )[0]
@@ -2767,7 +2047,6 @@ class CrossAttnBlock(nn.Module):
             x = x + self.mlp(self.norm3(x))
         return x
 
-
 class SwiGLU_FF(nn.Module):
     def __init__(self, dim, inner_dim, dropout=0.0):
         super().__init__()
@@ -2775,14 +2054,11 @@ class SwiGLU_FF(nn.Module):
         self.proj_out = nn.Linear(inner_dim, dim)
         self.act = nn.SiLU()
 
-
     def forward(self, x):
         x1, x2 = self.proj_in(x).chunk(2, dim=-1)
         x = self.act(x1) * x2
         x = self.proj_out(x)
         return x
-
-
 
 class DecoderCrossAttn(nn.Module):
     def __init__(
@@ -2871,7 +2147,6 @@ class DecoderCrossAttn(nn.Module):
                 return out_dict
         return out
 
-
 class Head_Res_Net(nn.Module):
     def __init__(self, W, H):
         super(Head_Res_Net, self).__init__()
@@ -2892,7 +2167,6 @@ class Head_Res_Net(nn.Module):
     def forward(self, x):
         return self.feature_out(x)
 
-
 class Linear_Res(nn.Module):
     def __init__(self, W):
         super(Linear_Res, self).__init__()
@@ -2902,20 +2176,17 @@ class Linear_Res(nn.Module):
         x = F.relu(x)
         return x + self.main_stream(x)
 
-
 def initialize_zeros_weights(m):
     if isinstance(m, nn.Linear):
         init.constant_(m.weight, 0)
         if m.bias is not None:
             init.constant_(m.bias, 0)
 
-
 def initialize_weights(m):
     if isinstance(m, nn.Linear):
         init.xavier_uniform_(m.weight,gain=1)
         if m.bias is not None:
             init.xavier_uniform_(m.weight,gain=1)
-
 
 class GridOffset(nn.Module):
     def __init__(self):
@@ -2929,19 +2200,14 @@ class GridOffset(nn.Module):
         self.W, self.D = 64, 1
         self.input_ch = 27
 
-
         self.grid = HexPlaneField(bounds=1.6, multires=[1], planeconfig=kplanes_config)
 
-
         self.pos_, self.sceles_, self.rots_, self.opacity_ = self.create_res_net()
-
 
         self.apply(initialize_weights)
         self.pos_.initialize_weights()
 
-
     def create_res_net(self):
-
         self.feature_out = [nn.Linear(self.grid.feat_dim, self.W)]
 
         for i in range(self.D - 1):
@@ -2956,8 +2222,6 @@ class GridOffset(nn.Module):
                 Head_Res_Net(self.W, 4),\
                 Head_Res_Net(self.W, 1)
 
-
-
 class HyperFiLM(nn.Module):
     """
     Hypernetwork that maps a global latent z (B, zdim) into FiLM parameters.
@@ -2967,13 +2231,9 @@ class HyperFiLM(nn.Module):
     def __init__(self, z_dim=1024, in_channels=1024, attributes=None, hidden=512):
         super().__init__()
         if attributes is None:
-
             attributes = ["activation", "bary"]
         self.attrs = attributes
         self.in_ch = in_channels
-
-
-
 
         self.mlp = nn.Sequential(
             nn.SiLU(),
@@ -2982,29 +2242,12 @@ class HyperFiLM(nn.Module):
             nn.Linear(hidden, hidden),
         )
 
-
-
-
-
-
         self.attr_proj = nn.Linear(hidden, in_channels * 2)
         nn.init.constant_(self.attr_proj.weight, 0.0)
         nn.init.constant_(self.attr_proj.bias, 0.0)
 
-
         with torch.no_grad():
             self.attr_proj.bias[:in_channels].fill_(1.0)
-
-
-
-
-
-
-
-
-
-
-
 
     def forward(self, z):
         """
@@ -3013,23 +2256,10 @@ class HyperFiLM(nn.Module):
         """
         h = self.mlp(z)
 
-
         v = self.attr_proj(h)
         gamma, beta = v[:, :self.in_ch], v[:, self.in_ch:]
         out = (gamma.unsqueeze(1), beta.unsqueeze(1))
         return out
-
-
-
-
-
-
-
-
-
-
-
-
 
 class FiLMModulator(nn.Module):
     """
@@ -3046,7 +2276,6 @@ class FiLMModulator(nn.Module):
 
         self.mlp_per_layer = nn.ModuleList()
         for dim in self.layer_dims:
-
             self.mlp_per_layer.append(
                 nn.Sequential(
                     nn.Linear(gdim, hidden),
@@ -3065,9 +2294,6 @@ class FiLMModulator(nn.Module):
             out.append((gamma, beta))
         return out
 
-
-
-
 class LoRAAdapter(nn.Module):
     """Simple LoRA adapter: low-rank update for a vector of dim `dim`.
 
@@ -3080,7 +2306,6 @@ class LoRAAdapter(nn.Module):
         self.alpha = alpha
         self.down = nn.Linear(dim, rank, bias=False)
         self.up = nn.Linear(rank, dim, bias=False)
-
 
         nn.init.kaiming_uniform_(self.down.weight, a=math.sqrt(5))
         nn.init.zeros_(self.up.weight)
@@ -3096,7 +2321,6 @@ class LoRAAdapter(nn.Module):
             return x
         delta = self.up(self.down(x)) * (self.alpha / self.rank)
         return delta
-
 
 class GS_Hand_3DRenderer(nn.Module):
     def __init__(
@@ -3138,7 +2362,6 @@ class GS_Hand_3DRenderer(nn.Module):
         else:
             self.dataset_center_add_map = dataset_center_add_map
 
-
         if not self.skip_decoder:
             self.pcl_embed = PointEmbed(dim=query_dim)
             self.decoder_cross_attn = DecoderCrossAttn(
@@ -3152,7 +2375,6 @@ class GS_Hand_3DRenderer(nn.Module):
         self.mlp_network_config = mlp_network_config
         self.use_lora = use_lora
 
-
         if self.mlp_network_config is not None:
             self.mlp_net = MLP(query_dim, query_dim, **self.mlp_network_config).to('cuda')
 
@@ -3164,24 +2386,11 @@ class GS_Hand_3DRenderer(nn.Module):
             self.mlp_net = None
             self.lora_mlp = None
 
-
-
-
-
-
-
-
-
-
-
-
         self.feature_map = feature_map
 
         if feature_map:
             raise ValueError('feature_map refinement is not part of the OASIS hand runtime')
         self.neural_refiner = None
-
-
 
         self.edit_mask_mode = False
         self.edit_vis_mask = None
@@ -3191,9 +2400,6 @@ class GS_Hand_3DRenderer(nn.Module):
         self.edit_soft_vis_blend = False
         self.edit_vis_prob_low = 0.2
         self.edit_vis_prob_high = 0.8
-
-
-
 
         self.gs_net = GSLayer_Hand(
             pcl_embed,
@@ -3218,7 +2424,6 @@ class GS_Hand_3DRenderer(nn.Module):
             feature_map=self.feature_map,
         )
 
-
         if self.use_lora:
             self.lora_gs = LoRAAdapter(query_dim, rank=16, alpha=1.0).to('cuda')
         else:
@@ -3227,24 +2432,6 @@ class GS_Hand_3DRenderer(nn.Module):
         self.renderer_mesh = Renderer_mesh()
 
         self.quat_helper = PerVertQuaternion(self.gs_net.mano_verts.to('cuda'), self.gs_net.mano_face.to('cuda')).to('cuda')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def hyper_step(self, step):
         self.gs_net.hyper_step(step)
@@ -3260,12 +2447,10 @@ class GS_Hand_3DRenderer(nn.Module):
         """
         query_dim = getattr(self, 'query_dim', 1024)
 
-
         if self.mlp_net is not None and self.lora_mlp is None:
             self.lora_mlp = LoRAAdapter(query_dim, rank=rank, alpha=alpha).to('cuda')
             self.use_lora = True
             print(f"[ensure_lora_adapters] Created lora_mlp with rank={rank}, alpha={alpha}")
-
 
         if self.lora_gs is None:
             self.lora_gs = LoRAAdapter(query_dim, rank=rank, alpha=alpha).to('cuda')
@@ -3278,7 +2463,6 @@ class GS_Hand_3DRenderer(nn.Module):
             background_color: Optional[Float[Tensor, "3"]],
             ret_mask: bool = True,
     ):
-
         screenspace_points = (torch.zeros_like(gs.xyz, dtype=gs.xyz.dtype, requires_grad=True, device=self.device) + 0)
 
         try:
@@ -3288,15 +2472,11 @@ class GS_Hand_3DRenderer(nn.Module):
 
         bg_color = background_color
 
-
-
-
         tanfovx = math.tan(viewpoint_camera['FoVx'] * 0.5)
         tanfovy = math.tan(viewpoint_camera['FoVy'] * 0.5)
 
         raster_settings = GaussianRasterizationSettings(
             image_height=int(viewpoint_camera['height']),
-
 
             image_width=int(viewpoint_camera['width']),
             tanfovx=tanfovx,
@@ -3309,29 +2489,10 @@ class GS_Hand_3DRenderer(nn.Module):
             sh_degree=self.sh_degree,
             campos=viewpoint_camera['camera_center'],
 
-
-
-
             prefiltered=False,
             debug=False,
             **({"antialiasing": False} if os.environ.get("LHM_USE_DGR32", "0") == "1" else {}),
         )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         rasterizer = GaussianRasterizer(raster_settings=raster_settings)
 
@@ -3339,15 +2500,11 @@ class GS_Hand_3DRenderer(nn.Module):
         means2D = screenspace_points
         opacity = gs.opacity
 
-
-
         scales = None
         rotations = None
         cov3D_precomp = None
         scales = gs.scaling
         rotations = gs.rotation
-
-
 
         shs = None
         colors_precomp = None
@@ -3357,7 +2514,6 @@ class GS_Hand_3DRenderer(nn.Module):
         else:
             colors_precomp = None
             shs = gs.shs.float()
-
 
         means3D = torch.nan_to_num(means3D, nan=0.0, posinf=0.0, neginf=0.0)
         scales = torch.nan_to_num(scales, nan=1e-4, posinf=1e-4, neginf=1e-4).clamp_min(1e-6)
@@ -3373,7 +2529,6 @@ class GS_Hand_3DRenderer(nn.Module):
             and colors_precomp.shape[-1] < 32
         ):
             colors_precomp = F.pad(colors_precomp, (0, 32 - colors_precomp.shape[-1]), value=0.0)
-
 
         color_scale = getattr(self, "color_scale", None)
         color_shift = getattr(self, "color_shift", None)
@@ -3400,10 +2555,7 @@ class GS_Hand_3DRenderer(nn.Module):
                 shs = shs * cs
                 shs[:, :1, :] = shs[:, :1, :] + ct.view(1, 1, 3)
 
-
-
         with torch.autocast(device_type=self.device.type, dtype=torch.float32):
-
             _n3d = means3D.shape[0]
             for _nm, _t in [('means2D', means2D), ('opacity', opacity), ('scales', scales), ('rotations', rotations)]:
                 if _t is not None and _t.shape[0] != _n3d:
@@ -3438,16 +2590,6 @@ class GS_Hand_3DRenderer(nn.Module):
             if rendered_image.shape[0] > 3:
                 rendered_image = rendered_image[:3]
 
-
-
-
-
-
-
-
-
-
-
         ret = {
             "comp_rgb": rendered_image.permute(1, 2, 0),
             "comp_rgb_bg": bg_color,
@@ -3458,7 +2600,6 @@ class GS_Hand_3DRenderer(nn.Module):
 
         return ret
 
-
     def forward_single_view_32(
             self,
             gs: GaussianModel32,
@@ -3466,7 +2607,6 @@ class GS_Hand_3DRenderer(nn.Module):
             background_color: Optional[Float[Tensor, "3"]],
             ret_mask: bool = True,
     ):
-
         screenspace_points = (torch.zeros_like(gs.xyz, dtype=gs.xyz.dtype, requires_grad=True, device=self.device) + 0)
 
         try:
@@ -3476,15 +2616,11 @@ class GS_Hand_3DRenderer(nn.Module):
 
         bg_color = background_color
 
-
-
-
         tanfovx = math.tan(viewpoint_camera['FoVx'] * 0.5)
         tanfovy = math.tan(viewpoint_camera['FoVy'] * 0.5)
 
         raster_settings = GaussianRasterizationSettings_32(
             image_height=int(viewpoint_camera['height']),
-
 
             image_width=int(viewpoint_camera['width']),
             tanfovx=tanfovx,
@@ -3495,9 +2631,6 @@ class GS_Hand_3DRenderer(nn.Module):
             projmatrix=viewpoint_camera['full_proj_transform'].float(),
             sh_degree=self.sh_degree,
             campos=viewpoint_camera['camera_center'],
-
-
-
 
             prefiltered=False,
             debug=False,
@@ -3510,15 +2643,11 @@ class GS_Hand_3DRenderer(nn.Module):
         means2D = screenspace_points
         opacity = gs.opacity
 
-
-
         scales = None
         rotations = None
         cov3D_precomp = None
         scales = gs.scaling
         rotations = gs.rotation
-
-
 
         shs = None
         colors_precomp = None
@@ -3529,10 +2658,7 @@ class GS_Hand_3DRenderer(nn.Module):
             colors_precomp = gs.shs.float()
             shs = None
 
-
-
         with torch.autocast(device_type=self.device.type, dtype=torch.float32):
-
             rendered_image, radii, rendered_depth = rasterizer(
                 means3D=means3D.float(),
                 means2D=means2D.float(),
@@ -3547,7 +2673,6 @@ class GS_Hand_3DRenderer(nn.Module):
         raw_images = rendered_image.unsqueeze(0)
         rendered_image = self.neural_refiner(raw_images)
 
-
         ret = {
             "comp_rgb": rendered_image.squeeze().permute(1,2,0),
             "comp_rgb_bg": bg_color,
@@ -3557,7 +2682,6 @@ class GS_Hand_3DRenderer(nn.Module):
 
         return ret
 
-
     def get_mano_model(self, dataset_id):
         """Return a MANOVoxelMeshModel instance for the given dataset_id.
         If dataset_id is None or not provided, return the default `self.mano_model`.
@@ -3565,14 +2689,12 @@ class GS_Hand_3DRenderer(nn.Module):
         if dataset_id is None:
             return self.mano_model
 
-
         try:
             if hasattr(dataset_id, "item"):
                 dataset_id = int(dataset_id.item())
             else:
                 dataset_id = int(dataset_id)
         except Exception:
-
             return self.mano_model
 
         if dataset_id in self.mano_models:
@@ -3582,7 +2704,6 @@ class GS_Hand_3DRenderer(nn.Module):
         model = MANOVoxelMeshModel(center_add=center_add)
         self.mano_models[dataset_id] = model
         return model
-
 
     def calc_face_areas(self, mesh_verts, mesh_faces):
         vertices_faces = mesh_verts[mesh_faces]
@@ -3596,8 +2717,6 @@ class GS_Hand_3DRenderer(nn.Module):
         face_areas = faces_normals.norm(dim=-1, keepdim=True) / 2.0
         return face_areas
 
-
-
     def animate_gs_model(
             self, gs_attr: GaussianAppOutput, gs_densify_attr, query_points,
             smplx_data, dataset_id=None, debug=False,
@@ -3608,14 +2727,10 @@ class GS_Hand_3DRenderer(nn.Module):
 
         device = gs_attr.offset_xyz.device
 
-
         cano_smplx_data_keys = [
-
 
             "shape",
             "poses",
-
-
 
         ]
 
@@ -3628,55 +2743,13 @@ class GS_Hand_3DRenderer(nn.Module):
 
         merge_smplx_data["shape"] = smplx_data["shape"]
 
-
-
         with torch.autocast(device_type=device.type, dtype=torch.float32):
             mean_3d = (
                     query_points + gs_attr.offset_xyz
             )
 
-
-
-
-
-
-
-
-
-
-
-
             num_view = merge_smplx_data["poses"].shape[0]
             mean_3d = mean_3d.unsqueeze(0).repeat(num_view, 1, 1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
             mano_for_dataset = self.get_mano_model(dataset_id)
             mean_3d, transform_matrix = (
@@ -3684,16 +2757,8 @@ class GS_Hand_3DRenderer(nn.Module):
                     mean_3d,
                     smplx_data,
 
-
-
                 )
             )
-
-
-
-
-
-
 
             _, N, _, _ = transform_matrix.shape
             transform_rotation = transform_matrix[:, :, :3, :3]
@@ -3702,30 +2767,13 @@ class GS_Hand_3DRenderer(nn.Module):
                 matrix_to_quaternion(transform_rotation), dim=-1
             )
 
-
-
-
-
             rotation_neutral_pose = gs_attr.rotation.unsqueeze(0).repeat(num_view, 1, 1)
-
-
-
 
             rotation_pose_verts = quaternion_multiply(
                 rigid_rotation_matrix, rotation_neutral_pose
             )
 
-
             densify_mask = (gs_densify_attr.activation>=0.5).squeeze(-1)
-
-
-
-
-
-
-
-
-
 
             triangle_verts = mean_3d[1, :][self.gs_net.mano_face]
 
@@ -3735,7 +2783,6 @@ class GS_Hand_3DRenderer(nn.Module):
             densify_gau_rot = torch.nn.functional.normalize(torch.einsum('bij, bi->bj', tri_quats.squeeze(), gs_densify_attr.bary))
 
             densify_gau_rot = torch.nn.functional.normalize(quaternion_multiply(densify_gau_rot, gs_densify_attr.rotation))
-
 
             densify_gau_scaling_alter = self.quat_helper.calc_face_area_change(smplx_data["posed_verts"].squeeze())
             mean_val = densify_gau_scaling_alter.mean()
@@ -3752,17 +2799,10 @@ class GS_Hand_3DRenderer(nn.Module):
 
             densify_gau_scaling = (gs_densify_attr.scaling * densify_gau_scaling_alter)[densify_mask, :]
 
-
             knn = knn_points(densify_gau_mean.unsqueeze(0), mean_3d[1, :].unsqueeze(0), K=1)
             knn_idx = knn.idx.squeeze()
 
             densify_labels = self.gs_net.objects_dc[knn_idx]
-
-
-
-
-
-
 
         gs_list = []
         cano_gs_list = []
@@ -3795,19 +2835,15 @@ class GS_Hand_3DRenderer(nn.Module):
 
         return gs_list, cano_gs_list
 
-
     def forward_gs_attr(self, x, query_points, global_feature=None,
                         batch=None, verts_cam=None, nail_image=None, debug=False, x_fine=None, vis_prob=None):
         device = x.device
 
-
         if vis_prob is not None:
             self.edit_vis_prob = vis_prob
 
-
         if not getattr(self, "edit_mask_mode", False) or getattr(self, "edit_vis_mask", None) is None:
             self.edit_invisible_cache = None
-
 
         batched = (x.dim() == 3) or (query_points is not None and query_points.dim() == 3)
 
@@ -3821,7 +2857,6 @@ class GS_Hand_3DRenderer(nn.Module):
                 if getattr(self, "edit_mask_mode", False) and torch.is_tensor(getattr(self, "edit_vis_mask", None)):
                     vis_mask = self.edit_vis_mask
                     mask_flat = (vis_mask > 0.5).reshape(-1, 1).float().to(x_flat.device)
-
 
                     weight_flat = mask_flat
                     if torch.is_tensor(getattr(self, "edit_vis_prob", None)):
@@ -3848,23 +2883,12 @@ class GS_Hand_3DRenderer(nn.Module):
                         x_flat = x_flat_lora * weight_flat + cached_after * inv_weight_flat
                     else:
                         x_flat = x_flat * weight_flat + cached_mlp * inv_weight_flat
-
-
-
-
-
-
-
                 else:
                     if getattr(self, "lora_mlp", None) is not None:
-
                         x_lora = self.lora_mlp.try_1(x_ori)
                         x_flat = x_lora + x_flat
 
-
                 x = x_flat.view(B, x.shape[1], -1)
-
-
             else:
                 x = self.mlp_net(x)
 
@@ -3919,27 +2943,9 @@ class GS_Hand_3DRenderer(nn.Module):
                         if getattr(self, "lora_mlp", None) is not None:
                             x_fine = self.lora_mlp(x_fine)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         constrain_dict, constrain_head = None, None
         film_param = None
         visible_mask = None
-
 
         if not batched:
             if getattr(self, "lora_gs", None) is not None:
@@ -3952,7 +2958,6 @@ class GS_Hand_3DRenderer(nn.Module):
             )
             return gs_attr, gs_density_attr, visible_mask
 
-
         B, N, _ = x.shape
         x_flat = x.reshape(-1, x.shape[-1])
         pts_flat = query_points.reshape(-1, query_points.shape[-1])
@@ -3960,12 +2965,10 @@ class GS_Hand_3DRenderer(nn.Module):
         if x_fine is not None:
             x_fine_flat = x_fine.reshape(-1, x_fine.shape[-1])
 
-
         if getattr(self, "lora_gs", None) is not None:
             x_flat = self.lora_gs(x_flat)
             if x_fine_flat is not None:
                 x_fine_flat = self.lora_gs(x_fine_flat)
-
 
         global_feat_flat = None
         if global_feature is not None:
@@ -3981,20 +2984,17 @@ class GS_Hand_3DRenderer(nn.Module):
             x_flat, pts_flat, x_fine_flat, constrain_dict, constrain_head, global_feat_flat, film_param, visible_mask
         )
 
-
         batched_gs = {}
         for name, val in gs_attr_flat.__dict__.items():
             if torch.is_tensor(val) and val.shape[0] == B * N:
                 new_shape = (B, N) + tuple(val.shape[1:])
                 batched_gs[name] = val.view(*new_shape)
             else:
-
                 batched_gs[name] = val
 
         batched_densify = {}
         for name, val in gs_density_flat.__dict__.items():
             if torch.is_tensor(val) and hasattr(self.gs_net, 'mano_face') and val.shape[0] == B * (self.gs_net.mano_face.shape[0]):
-
                 F = self.gs_net.mano_face.shape[0]
                 batched_densify[name] = val.view(B, F, *val.shape[1:])
             elif torch.is_tensor(val) and val.shape[0] == B * N:
@@ -4007,7 +3007,6 @@ class GS_Hand_3DRenderer(nn.Module):
     def get_query_points(self, smplx_data, device):
         with torch.no_grad():
             with torch.autocast(device_type=device.type, dtype=torch.float32):
-
                 positions, _, transform_mat_neutral_pose = (
                     self.mano_model.get_query_points(smplx_data, device=device)
                 )
@@ -4017,20 +3016,6 @@ class GS_Hand_3DRenderer(nn.Module):
         return positions, smplx_data
 
     def decoder_cross_attn_wrapper(self, pcl_embed, latent_feat, extra_info):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         gs_feats = self.decoder_cross_attn(
             pcl_embed.to(dtype=latent_feat.dtype), latent_feat, extra_info
         )
@@ -4066,8 +3051,6 @@ class GS_Hand_3DRenderer(nn.Module):
             gs_list: list[GaussianModel32],
             batch,
 
-
-
             height: int,
             width: int,
             background_color: Optional[Float[Tensor, "Nv 3"]],
@@ -4077,14 +3060,8 @@ class GS_Hand_3DRenderer(nn.Module):
         out_list = []
         self.device = gs_list[0].xyz.device
 
-
-
-
-
-
         render_elapsed_time = 0.0
         for v_idx in range(len(gs_list)):
-
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
             render_start = time.perf_counter()
@@ -4095,11 +3072,9 @@ class GS_Hand_3DRenderer(nn.Module):
                     gs_list[0],
                     batch,
 
-
                     background_color,
                 )
             )
-
 
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
@@ -4115,7 +3090,6 @@ class GS_Hand_3DRenderer(nn.Module):
         out['offset'] = offset_xyz
         out['shs'] = gs_list[0].shs
         out['nail_3d_mask'] = gs_list[0].nail_mask
-
 
         out['render_time'] = render_elapsed_time
         out['render_views'] = len(gs_list)
@@ -4134,31 +3108,11 @@ class GS_Hand_3DRenderer(nn.Module):
                                             ]
         return smpl_data_single_batch
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def get_single_view_cam(self, cam_data, bidx):
         cam_data_single_view = {}
 
         for k, v in cam_data.items():
-
             if isinstance(v, torch.Tensor):
-
                 if v.dim() == 0:
                     raise ValueError(f"[{k}] got scalar tensor, expect batch dim, v={v}")
 
@@ -4170,7 +3124,6 @@ class GS_Hand_3DRenderer(nn.Module):
                 try:
                     cam_data_single_view[k] = v[bidx].to('cuda')
                 except RuntimeError as e:
-
                     print("\n[CAM ERROR] key:", k)
                     print("  type:", type(v))
                     print("  shape:", v.shape)
@@ -4179,28 +3132,19 @@ class GS_Hand_3DRenderer(nn.Module):
                     print("  exception:", e)
                     print()
                     raise
-
-
             elif isinstance(v, list):
                 if not (0 <= bidx < len(v)):
                     raise IndexError(
                         f"[{k}] list index out of range: bidx={bidx}, len={len(v)}"
                     )
                 cam_data_single_view[k] = v[bidx]
-
-
             else:
-
                 if k in ("dataset_id", "dataset_name"):
                     cam_data_single_view[k] = v
                 else:
-
-
                     continue
 
         return cam_data_single_view
-
-
 
     def get_single_view_smpl_data(self, smpl_data, vidx):
         smpl_data_single_view = {}
@@ -4208,7 +3152,6 @@ class GS_Hand_3DRenderer(nn.Module):
             smpl_data_single_view[k] = v[vidx: vidx + 1, ...]
 
         return smpl_data_single_view
-
 
     def forward_gs(
             self,
@@ -4219,7 +3162,6 @@ class GS_Hand_3DRenderer(nn.Module):
             verts_cam,
             nail_image,
 
-
             additional_features: Optional[dict] = None,
             color_bias: Optional[Float[Tensor, "B N 3"]] = None,
             opacity_bias: Optional[Float[Tensor, "B N 1"]] = None,
@@ -4227,12 +3169,7 @@ class GS_Hand_3DRenderer(nn.Module):
             debug: bool = False,
             **kwargs,
     ):
-
         batch_size = gs_hidden_features.shape[0]
-
-
-
-
 
         query_gs_features, query_points = self.query_latent_feat(
             query_points, gs_hidden_features, additional_features
@@ -4250,27 +3187,23 @@ class GS_Hand_3DRenderer(nn.Module):
                 gs_attr_batch, densify_batch = batched_out[0], batched_out[1]
 
                 if hasattr(gs_attr_batch, "__dict__"):
-
                     for b in range(batch_size):
                         kwargs = {}
                         for name, val in gs_attr_batch.__dict__.items():
                             if torch.is_tensor(val) and val.shape[0] == batch_size:
                                 kwargs[name] = val[b]
                             else:
-
                                 try:
                                     kwargs[name] = val[b]
                                 except Exception:
                                     kwargs[name] = val
                         gs_attr_list.append(GaussianAppOutput(**kwargs))
                 else:
-
                     try:
                         for b in range(batch_size):
                             gs_attr_list.append(gs_attr_batch[b])
                     except Exception:
                         raise RuntimeError("Batched forward_gs_attr returned unexpected format")
-
 
                 if hasattr(densify_batch, "__dict__"):
                     for b in range(batch_size):
@@ -4293,7 +3226,6 @@ class GS_Hand_3DRenderer(nn.Module):
             else:
                 raise RuntimeError("Batched forward_gs_attr returned unexpected format")
         except Exception:
-
             for b in range(batch_size):
                 if batch_size == 1:
                     gs_attr, densify_gs_attr, vis_mask = self.forward_gs_attr(
@@ -4307,7 +3239,6 @@ class GS_Hand_3DRenderer(nn.Module):
                     )
                 gs_attr_list.append(gs_attr)
                 densify_gs_attr_list.append(densify_gs_attr)
-
 
         if color_bias is not None or opacity_bias is not None:
             for b_idx, gs_attr in enumerate(gs_attr_list):
@@ -4336,18 +3267,9 @@ class GS_Hand_3DRenderer(nn.Module):
                         ob = ob.unsqueeze(-1)
                     gs_attr.opacity = gs_attr.opacity + ob
 
-
-
         self._color_applied_in_gs = False
         color_shift = getattr(self, "color_shift", None)
         color_scale = getattr(self, "color_scale", None)
-
-
-
-
-
-
-
 
         if color_shift is not None or color_scale is not None:
             def _normalize_global_color_param(param, ref):
@@ -4400,10 +3322,7 @@ class GS_Hand_3DRenderer(nn.Module):
                 else:
                     densify_attr.shs = shs_dc
 
-
             self._color_applied_in_gs = True
-
-
 
         if hasattr(self, "gs_net") and self.gs_net is not None:
             for b_idx, gs_attr in enumerate(gs_attr_list):
@@ -4437,18 +3356,14 @@ class GS_Hand_3DRenderer(nn.Module):
 
         return gs_attr_list, densify_gs_attr_list, query_points
 
-
     def forward_animate_gs(
             self,
             gs_attr_list,
             gs_densify_attr_list,
             query_points,
 
-
             batch,
             smplx_data,
-
-
 
             height,
             width,
@@ -4463,40 +3378,8 @@ class GS_Hand_3DRenderer(nn.Module):
 
         N_view = smplx_data["poses"].shape[0]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         gs_attr = gs_attr_list
         query_pt = query_points
-
 
         dataset_id = None
         try:
@@ -4507,7 +3390,6 @@ class GS_Hand_3DRenderer(nn.Module):
                     if val.dim() == 0:
                         dataset_id = int(val.item())
                     else:
-
                         dataset_id = int(val[0].item())
                 elif isinstance(val, (list, tuple)):
                     dataset_id = int(val[0])
@@ -4527,14 +3409,10 @@ class GS_Hand_3DRenderer(nn.Module):
 
         animatable_gs_model_list = merge_animatable_gs_model_list[:N_view]
 
-
-
-
         out_list.append(
             self.forward_single_batch(
                 animatable_gs_model_list,
                 batch,
-
 
                 height,
                 width,
@@ -4552,30 +3430,17 @@ class GS_Hand_3DRenderer(nn.Module):
             if isinstance(v[0], torch.Tensor):
                 out[k] = torch.stack(v, dim=0)
             else:
-
                 out[k] = v[0] if len(v) > 0 else v
 
         out["comp_rgb"] = out["comp_rgb"].permute(
             0, 1, 4, 2, 3
         )
 
-
-
-
-
-
         out["comp_depth"] = out["comp_depth"].permute(
             0, 1, 4, 2, 3
         )
 
-
-
-
-
-
-
         return out
-
 
     def forward(
             self,
@@ -4591,9 +3456,6 @@ class GS_Hand_3DRenderer(nn.Module):
             debug: bool = False,
             **kwargs,
     ):
-
-
-
         gs_attr_list, query_points, smplx_data = self.forward_gs(
             gs_hidden_features,
             query_points,

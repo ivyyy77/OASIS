@@ -81,9 +81,7 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
 def main(argv):
-
     parser = argparse.ArgumentParser(description="OHTA-style Edit Wild Finetuner")
     parser.add_argument("--runner", default=DEFAULT_RUNNER, type=str, help="Runner to launch")
     parser.add_argument("--checkpoint-path", type=str, default=None)
@@ -93,7 +91,6 @@ def main(argv):
     parser.add_argument("--input-dir", type=str, default=None)
     parser.add_argument("--test-iter", type=int, default=None)
     args, unknown = parser.parse_known_args()
-
 
     cli_checkpoint = None
     cli_checkpoint_file = None
@@ -178,7 +175,6 @@ def main(argv):
         except Exception:
             pass
 
-
     if not dist.is_available():
         print("[Warning] torch.distributed not available, skipping init_process_group")
     else:
@@ -201,7 +197,6 @@ def main(argv):
 
     os.makedirs(FLAGS.output_dir, exist_ok=True)
     set_seed(42)
-
 
     import glob
     img_glob = []
@@ -257,13 +252,11 @@ def main(argv):
     torch.autograd.set_detect_anomaly(False)
     writer = SummaryWriter(log_dir=os.path.join(image_checkpoint_dir, 'logs'))
 
-
     if not multi_image_mode:
         if not img_glob:
             raise ValueError("No input image provided. Please specify --input-dir with a valid image path.")
         test_hand = HandDataset(split='test_wild', img_path=img_glob[0], edit=FLAGS.edit)
         test_dataloader = make_dataloader(test_hand, shuffle=False, batch_size=1)
-
 
     import re
     if args.test_iter is not None:
@@ -298,7 +291,6 @@ def main(argv):
     if hasattr(runner, 'hand_model') and hasattr(runner.hand_model, 'checkpoint_path'):
         runner.hand_model.checkpoint_path = image_checkpoint_dir
 
-
     handavatar_dataloader = None
     if FLAGS.animate_to_handavatar:
         try:
@@ -311,7 +303,6 @@ def main(argv):
         except Exception as e:
             print(f"\033[91m[Warning] Failed to load HandAvatar dataset: {e}\033[0m")
             handavatar_dataloader = None
-
 
     total_iters = FLAGS.iter
     inv_iters = int(getattr(FLAGS, 'iter_inversion', 200))
@@ -333,7 +324,6 @@ def main(argv):
     print(f"  Edit mask weight: {edit_mask_weight}")
     print(f"  Pseudo-view weight (unmasked): {pseudo_view_weight}")
     print(f"\033[94m{'='*60}\033[0m\n")
-
 
     if inv_iters > 0:
         inv_pbar = tqdm(range(1, inv_iters + 1), desc='Edit Inversion', dynamic_ncols=True)
@@ -357,7 +347,6 @@ def main(argv):
         runner.save(iteration=inv_iters, is_latest=False)
         print(f"\033[92m[+] Completed Edit Inversion ({inv_iters} iters)\033[0m")
 
-
     pseudo_batch = None
     if inv_iters > 0:
         if hasattr(runner, 'load_checkpoint_with_color_shift_scale'):
@@ -373,7 +362,6 @@ def main(argv):
                 use_canonical_root=True,
             )
             print(f"\033[92m[+] Generated pseudo-GT views for reference\033[0m")
-
 
     if finetune_iters > 0:
         finetune_pbar = tqdm(range(1, finetune_iters + 1), desc='Edit Stage2', dynamic_ncols=True)
@@ -398,7 +386,6 @@ def main(argv):
                 edit_mask_weight=edit_mask_weight,
                 pseudo_view_weight=pseudo_view_weight,
             )
-
 
             is_last = (total_step == total_iters)
             do_test = is_last or (total_step % 1000 == 0)
@@ -475,12 +462,10 @@ def main(argv):
 
                 runner.hand_model.train()
 
-
     runner._finetune_edit_stage = None
     runner.hand_model.renderer.edit_mask_mode = False
     runner.hand_model.renderer.edit_vis_mask = None
     print(f"[edit_wild_stage2] Finished. Visibility masking cleared.")
-
 
 if __name__ == "__main__":
     app.run(main)

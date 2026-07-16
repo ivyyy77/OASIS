@@ -1,5 +1,3 @@
-
-
 import copy
 
 import cv2
@@ -41,9 +39,7 @@ class BaseModel(object):
         raise NotImplementedError
 
     def __repr__(self):
-
         return f"model: \n{self.model}"
-
 
 def get_dtype_string(arr):
     if arr.dtype == np.uint8:
@@ -55,24 +51,19 @@ def get_dtype_string(arr):
     else:
         return "unknow"
 
-
 class BaseSeg(BaseModel):
     def __init__(self):
         pass
 
-
 class Bbox:
     def __init__(self, box, mode="whwh"):
-
         assert len(box) == 4
         assert mode in ["whwh", "xywh"]
         self.box = box
         self.mode = mode
 
     def to_xywh(self):
-
         if self.mode == "whwh":
-
             l, t, r, b = self.box
 
             center_x = (l + r) / 2
@@ -84,11 +75,9 @@ class Bbox:
             return self
 
     def to_whwh(self):
-
         if self.mode == "whwh":
             return self
         else:
-
             cx, cy, w, h = self.box
             l = cx - w // 2
             t = cy - h // 2
@@ -98,7 +87,6 @@ class Bbox:
             return Bbox([l, t, r, b], mode="whwh")
 
     def area(self):
-
         box = self.to_xywh()
         _, __, w, h = box.box
 
@@ -131,7 +119,6 @@ class Bbox:
 
         return f"BBox(left={l}, top={t}, right={r}, bottom={b})"
 
-
 class Image:
     """TODO need to debug"""
 
@@ -162,7 +149,6 @@ class Image:
             raise NotImplementedError
 
     def to_numpy(self, type_mode="uint8", order="RGB"):
-
         data = copy.deepcopy(self.data)
 
         if not order == self.order:
@@ -209,7 +195,6 @@ class Image:
 
         img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
 
-
         if len(img.shape) == 3:
             if order in ["RGB", "RGBA"]:
                 if img.shape[-1] == 4:
@@ -217,11 +202,9 @@ class Image:
                 elif img.shape[-1] == 3:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-
             if img.shape[-1] == 4 and "A" not in order:
                 img = img.astype(np.float32) / 255
                 img = img[..., :3] * img[..., 3:] + (1 - img[..., 3:])
-
 
         if mode == "uint8":
             if img.dtype != np.uint8:

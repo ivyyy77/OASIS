@@ -4,14 +4,12 @@ import random
 import math
 
 
-
 def get_m1to1_gaussian_rand(scale):
     r = 2
     while r < -1 or r > 1:
         r = np.random.normal(scale=scale)
 
     return r
-
 
 def get_bbox(joint_img, joint_valid):
     x_img, y_img = joint_img[:, 0], joint_img[:, 1]
@@ -35,9 +33,7 @@ def get_bbox(joint_img, joint_valid):
     bbox = np.array([xmin, ymin, xmax - xmin, ymax - ymin]).astype(np.float32)
     return bbox
 
-
 def process_bbox(bbox, img_width, img_height, input_img_shape=(256, 256)):
-
     x, y, w, h = bbox
     x1 = np.max((0, x))
     y1 = np.max((0, y))
@@ -47,7 +43,6 @@ def process_bbox(bbox, img_width, img_height, input_img_shape=(256, 256)):
         bbox = np.array([x1, y1, x2 - x1, y2 - y1])
     else:
         raise ValueError('bbox is invalid, x1={}, y1={}, x2={}, y2={}, w={}, h={}'.format(x1, y1, x2, y2, w, h))
-
 
     w = bbox[2]
     h = bbox[3]
@@ -65,9 +60,7 @@ def process_bbox(bbox, img_width, img_height, input_img_shape=(256, 256)):
 
     return bbox
 
-
 def get_aug_config(exclude_flip, base_scale=1.1, scale_factor=0.25, rot_factor=60, color_factor=0.2, gaussian_std=1):
-
     scale = get_m1to1_gaussian_rand(gaussian_std) * scale_factor + base_scale
     rot = get_m1to1_gaussian_rand(gaussian_std) * rot_factor
     shift = [get_m1to1_gaussian_rand(gaussian_std), get_m1to1_gaussian_rand(gaussian_std)]
@@ -82,7 +75,6 @@ def get_aug_config(exclude_flip, base_scale=1.1, scale_factor=0.25, rot_factor=6
 
     return scale, rot, shift, color_scale, do_flip
 
-
 def augmentation(img, bbox, data_split, exclude_flip=False, input_img_shape=(256, 256), mask=None, base_scale=1.1, scale_factor=0.25, rot_factor=60, shift_wh=None, gaussian_std=1, color_aug=False, bordervalue=(0,0,0)):
     if data_split == 'train':
         scale, rot, shift, color_scale, do_flip = get_aug_config(exclude_flip, base_scale=base_scale, scale_factor=scale_factor, rot_factor=rot_factor, gaussian_std=gaussian_std)
@@ -93,7 +85,6 @@ def augmentation(img, bbox, data_split, exclude_flip=False, input_img_shape=(256
     if color_aug:
         img = np.clip(img * color_scale[None, None, :], 0, 255)
     return img, trans, inv_trans, np.array([rot, scale, *shift_xy]), do_flip, input_img_shape[0]/(bbox[3]*scale), mask
-
 
 def augmentation_kps2d(img, joint_img, hand_type, joint_type, trans, do_flip, pose_pair):
     joint_img = joint_img.copy()
@@ -109,7 +100,6 @@ def augmentation_kps2d(img, joint_img, hand_type, joint_type, trans, do_flip, po
         joint_img[i,:2] = trans_point2d(joint_img[i,:2], trans)
 
     return joint_img, hand_type
-
 
 def augmentation_2d(img, joint_img, princpt, trans, do_flip):
     joint_img = joint_img.copy()
@@ -146,9 +136,7 @@ def augmentation_kps(img, joint_img, joint_cam, joint_valid, hand_type, joint_ty
             princpt[0] = original_img_shape[1] - princpt[0] - 1
         princpt = trans_point2d(princpt, trans)
 
-
     return joint_img, joint_cam, joint_valid, hand_type, princpt
-
 
 def generate_patch_image(cvimg, bbox, scale, rot, shift, do_flip, out_shape, shift_wh=None, mask=None, bordervalue=(0,0,0)):
     img = cvimg.copy()
@@ -175,7 +163,6 @@ def generate_patch_image(cvimg, bbox, scale, rot, shift, do_flip, out_shape, shi
 
     return img_patch, trans, inv_trans, mask, shift_xy
 
-
 def rotate_2d(pt_2d, rot_rad):
     x = pt_2d[0]
     y = pt_2d[1]
@@ -184,9 +171,7 @@ def rotate_2d(pt_2d, rot_rad):
     yy = x * sn + y * cs
     return np.array([xx, yy], dtype=np.float32)
 
-
 def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_height, scale, rot, shift, shift_wh=None, inv=False, return_shift=False):
-
     src_w = src_width * scale
     src_h = src_height * scale
     if shift_wh is not None:
@@ -196,7 +181,6 @@ def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_heig
     else:
         x_shift = y_shift = 0
     src_center = np.array([c_x + x_shift, c_y + y_shift], dtype=np.float32)
-
 
     rot_rad = np.pi * rot / 180
     src_downdir = rotate_2d(np.array([0, src_h * 0.5], dtype=np.float32), rot_rad)
@@ -227,7 +211,6 @@ def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_heig
     if return_shift:
         return trans, [x_shift/src_w, y_shift/src_h]
     return trans
-
 
 def trans_point2d(pt_2d, trans):
     src_pt = np.array([pt_2d[0], pt_2d[1], 1.]).T

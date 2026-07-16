@@ -1,4 +1,3 @@
-
 """Generate InterHand annotation pickle (anno_cam.pkl) used by the dataset.
 
 Usage:
@@ -17,9 +16,6 @@ from data.utils.augm_util import augmentation, trans_point2d
 from data.utils.camera_util import apply_global_tfm_to_camera
 
 
-
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset-root', default=os.environ.get('INTERHAND_ROOT'), help='Root path that contains InterHand annotations and images')
@@ -31,8 +27,6 @@ def main():
 
     parser.add_argument('--frame', default=None, help='Optional frame name or full image path')
 
-
-
     args = parser.parse_args()
     if not args.dataset_root:
         parser.error('--dataset-root is required when INTERHAND_ROOT is not set')
@@ -40,7 +34,6 @@ def main():
     dataset_root = args.dataset_root
     subject = args.subject
     phase = args.phase
-
 
     image_dir = os.path.join(dataset_root, f'InterHand2.6M_{cfg.interhand.fps}fps_batch1/images')
     anno_name = os.path.join(image_dir.replace('images', 'preprocess'), subject, 'anno_cam.pkl')
@@ -62,7 +55,6 @@ def main():
             bbox = {}
             framelist = []
     else:
-
         try:
             print('Combined anno not found; importing Dataset to trigger preprocessing (may require proper env).')
             from data.interhand.train import HandAvatarDataset as Dataset
@@ -77,7 +69,6 @@ def main():
             print('or provide an existing anno pickle. Exiting.')
             return
 
-
     if args.frame:
         frame_input = args.frame
         if os.path.exists(frame_input):
@@ -90,7 +81,6 @@ def main():
             rel = frame_input
 
         if framelist and rel not in framelist:
-
             jpg_idx = rel.find('.jpg')
             if jpg_idx != -1:
                 rel_trunc = rel[:jpg_idx+4]
@@ -100,7 +90,6 @@ def main():
             if rel_trunc in framelist:
                 rel = rel_trunc
             else:
-
                 name_no_ext = os.path.splitext(os.path.basename(rel))[0]
                 candidates = [f for f in framelist if name_no_ext in f]
                 if candidates:
@@ -125,15 +114,10 @@ def main():
         safe = safe.replace('.jpg', '')
         out_path = os.path.join(out_dir, f'{safe}.pkl')
 
-
-
-
-
         cam_orig = cameras.get(frame, None)
         mesh_orig = mesh_infos.get(frame, None)
         bbox_orig = bbox.get(frame, None)
         img_type = 'rgb'
-
 
         img_path = os.path.join(image_dir, frame)
         mask_path = img_path.replace('/images/', '/masks_removeblack/').replace('.jpg', '.png')
@@ -151,9 +135,7 @@ def main():
             if m is not None:
                 alpha = m
 
-
         bgcolor = np.array([0.0, 0.0, 0.0], dtype='float32')
-
 
         if bbox_orig is None:
             print('No bbox for frame, skipping:', frame)
@@ -165,7 +147,6 @@ def main():
         except Exception as e:
             print('augmentation failed for', frame, e)
             continue
-
 
         img_save_path = os.path.join(out_img_dir, f'{safe}.jpg')
         mask_save_path = os.path.join(out_mask_dir, f'{safe}.png')
@@ -186,7 +167,6 @@ def main():
             cv2.imwrite(mask_save_path, mask_u8)
         else:
             cv2.imwrite(img_save_path, img_aug.astype(np.uint8))
-
 
         cam_sub = None
         if cam_orig is not None and 'intrinsics' in cam_orig:
@@ -210,7 +190,6 @@ def main():
         else:
             cam_sub = {frame: None}
 
-
         mesh_sub = mesh_orig
         bbox_sub = {frame: bbox_orig}
 
@@ -220,8 +199,6 @@ def main():
         print('Wrote:', out_path)
 
     print(f'Done. Wrote {written} per-frame pkl files to {out_dir}')
-
-
 
 if __name__ == '__main__':
     main()

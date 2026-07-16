@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 import torch
 import math
 import numpy as np
@@ -68,16 +58,6 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     P[2, 3] = -2 * (zfar * znear) / (zfar - znear)
     return P
 
-
-
-
-
-
-
-
-
-
-
 def getProjectionMatrix_refine(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
     fx = K[0, 0]
     fy = K[1, 1]
@@ -105,7 +85,6 @@ def fov2focal(fov, pixels):
 
 def focal2fov(focal, pixels):
     return 2*math.atan(pixels/(2*focal))
-
 
 def img2gau(gau, img):
     device = img.device

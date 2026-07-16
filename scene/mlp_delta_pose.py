@@ -22,8 +22,6 @@ class BodyPoseRefiner(nn.Module):
         self.block_mlps = nn.Sequential(*block_mlps)
         initseq(self.block_mlps)
 
-
-
         init_val = 1e-5
         last_layer = self.block_mlps[-1]
         last_layer.weight.data.uniform_(-init_val, init_val)
@@ -38,10 +36,6 @@ class BodyPoseRefiner(nn.Module):
         return {
             "Rs": Rs
         }
-
-
-
-
 
 def xaviermultiplier(m, gain):
     """
@@ -125,15 +119,12 @@ def initmod(m, gain=1.0, weightinitfunc=xavier_uniform_):
         if hasattr(m, 'bias'):
             m.bias.data.zero_()
 
-
     if isinstance(m, nn.ConvTranspose2d):
-
         m.weight.data[:, :, 0::2, 1::2] = m.weight.data[:, :, 0::2, 0::2]
         m.weight.data[:, :, 1::2, 0::2] = m.weight.data[:, :, 0::2, 0::2]
         m.weight.data[:, :, 1::2, 1::2] = m.weight.data[:, :, 0::2, 0::2]
 
     if isinstance(m, nn.ConvTranspose3d):
-
         m.weight.data[:, :, 0::2, 0::2, 1::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
         m.weight.data[:, :, 0::2, 1::2, 0::2] = m.weight.data[:, :,

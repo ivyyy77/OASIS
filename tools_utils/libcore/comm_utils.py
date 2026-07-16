@@ -1,7 +1,3 @@
-
-
-
-
 def read_list_from_txt(fn):
     frm_list = []
     with open(fn) as f:
@@ -11,14 +7,12 @@ def read_list_from_txt(fn):
                 frm_list.append(line)
     return frm_list
 
-
 from collections import namedtuple
 
 def to_namedtuple(class_name, contents):
     ClassT = namedtuple(class_name, [k for k in contents.keys()])
     item = ClassT(**contents)
     return item
-
 
 import concurrent.futures
 
@@ -29,13 +23,10 @@ def parallel_foreach(_func, _args_list, max_workers=8):
             res_list.append(res)
     return res_list
 
-
 from datetime import datetime
 
 def datetime_strftime(format='@%Y%m%d-%H%M%S'):
     return datetime.now().strftime(format)
-
-
 
 class CacheBuffer:
     def __init__(self, max_size=20) -> None:
@@ -68,7 +59,6 @@ class CacheBuffer:
             items = sorted(self.cache.items(), key=lambda item: item[1]['timestamp'])
             last_key = items[0][0]
             self.cache.pop(last_key)
-
 
 def set_seed(seed=0):
     try:

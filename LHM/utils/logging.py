@@ -21,7 +21,6 @@ class TqdmStreamHandler(logging.StreamHandler):
     def emit(self, record):
         tqdm.write(self.format(record))
 
-
 def configure_logger(stream_level, log_level, file_path = None):
     _stream_level = stream_level.upper()
     _log_level = log_level.upper()

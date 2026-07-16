@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import cv2
 import copy
@@ -42,7 +40,6 @@ def detachToNumpy(img):
         img = img.squeeze(0)
     return (img.detach().cpu() * 255.0).numpy().astype(np.uint8)
 
-
 def colorizeWeightsMap(weights, colormap=cv2.COLORMAP_JET,
                        min_val=None, max_val=None,
                        to_rgb=False):
@@ -59,9 +56,7 @@ def colorizeWeightsMap(weights, colormap=cv2.COLORMAP_JET,
     else:
         return canvas
 
-
 def cvshow(img, max_width=1920, title='image'):
-
     if not isinstance(img, np.ndarray):
         img = img.detach().float().cpu().squeeze().numpy()
 
@@ -71,14 +66,12 @@ def cvshow(img, max_width=1920, title='image'):
         else:
             img = (img * 255.0).clip(0, 255).astype(np.uint8)
 
-
     if max_width > 0 and img.shape[1] > max_width:
         scale = float(max_width) / img.shape[1]
         img = cv2.resize(img, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
 
     cv2.imshow(title, img)
     cv2.waitKey(100)
-
 
 def write_tensor_image(fn, tensor, rgb2bgr=False):
     if len(tensor.shape) == 3:
@@ -92,7 +85,6 @@ def write_tensor_image(fn, tensor, rgb2bgr=False):
             tensor = tensor[:, :, [2, 1, 0, 3]]
 
     cv2.imwrite(fn, (tensor.clamp(0, 1) * 255).detach().cpu().numpy().astype(np.uint8))
-
 
 def draw_pixel_points(img, pixels, radius=3, color=None, thickness=0,
                       fontFace=0, fontScale=1.0,
@@ -108,7 +100,6 @@ def draw_pixel_points(img, pixels, radius=3, color=None, thickness=0,
             cv2.putText(canvas, str(i + text_start_number), (pixels[i] + 10).astype(int),
                         fontFace, fontScale, clr)
     return canvas
-
 
 def draw_pixel_pairs(img, pxls0, pxls1, pxls0_color=[0, 0, 255], pxls1_color=[255, 0, 0],
                      line_color=[255, 255, 255], thickness=1):

@@ -41,12 +41,10 @@ class BasicBlock(nn.Module):
         )
 
     def forward(self, x):
-
         before_sa = self.norm1(x)
         x = x + self.self_attn(before_sa, before_sa, before_sa, need_weights=False)[0]
         x = x + self.mlp(self.norm2(x))
         return x
-
 
 class ConditionBlock(nn.Module):
     """
@@ -76,14 +74,11 @@ class ConditionBlock(nn.Module):
         )
 
     def forward(self, x, cond):
-
-
         x = x + self.cross_attn(self.norm1(x), cond, cond, need_weights=False)[0]
         before_sa = self.norm2(x)
         x = x + self.self_attn(before_sa, before_sa, before_sa, need_weights=False)[0]
         x = x + self.mlp(self.norm3(x))
         return x
-
 
 class ConditionModulationBlock(nn.Module):
     """
@@ -113,9 +108,6 @@ class ConditionModulationBlock(nn.Module):
         )
 
     def forward(self, x, cond, mod):
-
-
-
         x = x + self.cross_attn(self.norm1(x, mod), cond, cond, need_weights=False)[0]
         before_sa = self.norm2(x, mod)
         x = x + self.self_attn(before_sa, before_sa, before_sa, need_weights=False)[0]

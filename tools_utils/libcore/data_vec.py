@@ -1,5 +1,3 @@
-
-
 from .camera import *
 from .ply_utils import saveCamerasToPly
 import json
@@ -9,7 +7,6 @@ from copy import deepcopy
 
 def _load_image_file(img_fn):
     img = cv2.imread(img_fn, cv2.IMREAD_UNCHANGED)
-
 
     if (img.dtype == np.dtype('uint16')):
         img = img.astype(float) / 10000.0
@@ -135,7 +132,6 @@ class DataVec:
 def loadDataVecFromFolder(dir, with_frames=True, max_workers=4):
     data_vec = DataVec()
 
-
     data_vec.loadFromFile(dir + "/cameras.json")
 
     data_vec.frames = []
@@ -144,7 +140,6 @@ def loadDataVecFromFolder(dir, with_frames=True, max_workers=4):
     for i in range(0, data_vec.size):
         img_fn = dir + '/%02d.png' % i
         data_vec.images_path.append(img_fn)
-
 
     if with_frames:
         if max_workers <= 0:
@@ -160,16 +155,13 @@ def saveDataVecToFolder(dir, data_vec, with_frames=True):
         print('[saveDataVecToFolder][ERROR] make dir failed: %s' % dir)
         return
 
-
     data_vec.saveToFile(dir + "/cameras.json")
-
 
     if with_frames:
         print('[saveDataVecToFolder] saving ', end='')
         for i in range(0, len(data_vec.frames)):
             print('.', end='')
             img = data_vec.frames[i]
-
 
             if (img.dtype == np.float32 or img.dtype == np.float64):
                 img = (img * 10000.0).astype(np.uint16)

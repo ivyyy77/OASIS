@@ -37,15 +37,11 @@ import numpy as np
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 
-
-
 from tqdm import tqdm
 from data.hand_dataset import merge_batch
 from LHM.losses import _is_better
 
 from torch.utils.tensorboard import SummaryWriter
-
-
 
 
 flags.DEFINE_string('output_dir', 'output', 'Output directory')
@@ -96,22 +92,7 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
-
 def main(argv):
-
-
-
-
-
-
-
-
-
-
-
-
-
     parser = argparse.ArgumentParser(description="OpenLRM launcher")
     parser.add_argument("--runner", default=DEFAULT_RUNNER, type=str, help="Runner to launch")
     parser.add_argument("--checkpoint-path", type=str, default=None,
@@ -128,17 +109,11 @@ def main(argv):
                         help="Iteration to load and test (overrides hardcoded value)")
     args, unknown = parser.parse_known_args()
 
-
     cli_checkpoint = None
     cli_checkpoint_file = None
     cli_output = None
     cli_handavatar = None
     cli_input_dir = None
-
-
-
-
-
 
     raw_tokens = unknown if unknown else sys.argv[1:]
     i = 0
@@ -149,21 +124,16 @@ def main(argv):
             i += 1
             continue
 
-
         if '=' in tok and not tok.startswith('-'):
             k, value = tok.split('=', 1)
             k = k.strip()
             value = value.strip()
             i += 1
-
-
         elif ' ' in tok and not tok.startswith('-'):
             k, value = tok.split(' ', 1)
             k = k.strip()
             value = value.strip()
             i += 1
-
-
         elif not tok.startswith('-'):
             if i + 1 < len(raw_tokens) and not raw_tokens[i + 1].startswith('-') and '=' not in raw_tokens[i + 1]:
                 k = tok.strip()
@@ -175,7 +145,6 @@ def main(argv):
         else:
             i += 1
             continue
-
 
         if k in ('checkpoint-file', 'checkpoint_file') and cli_checkpoint_file is None:
             cli_checkpoint_file = value
@@ -197,7 +166,6 @@ def main(argv):
         raise ValueError("Runner {} not found".format(args.runner))
 
     RunnerClass = REGISTRY_RUNNERS[args.runner]
-
 
     if cli_checkpoint is None:
         cli_checkpoint = args.checkpoint_path
@@ -223,10 +191,6 @@ def main(argv):
     except Exception:
         pass
 
-
-
-
-
     _resume = not FLAGS.no_pretrain
     try:
         runner = RunnerClass(checkpoint_path=cli_checkpoint, checkpoint_file=cli_checkpoint_file, output_path=cli_output, resume=_resume)
@@ -245,35 +209,18 @@ def main(argv):
         except Exception:
             pass
 
-
-
-
-
-
-
-
-
-
-
-
-
     os.makedirs(FLAGS.output_dir, exist_ok=True)
     set_seed(42)
-
-
 
     import glob
     img_glob = []
     if cli_input_dir is not None and os.path.exists(cli_input_dir):
-
         if os.path.isdir(cli_input_dir):
             for ext in ('*.png', '*.jpg', '*.jpeg', '*.bmp'):
                 img_glob.extend(glob.glob(os.path.join(cli_input_dir, ext)))
             img_glob = sorted(img_glob)
 
             multi_image_mode = (len(img_glob) > 1)
-
-
         elif os.path.isfile(cli_input_dir):
             _, ext = os.path.splitext(cli_input_dir)
             if ext.lower() in ('.png', '.jpg', '.jpeg', '.bmp'):
@@ -282,27 +229,21 @@ def main(argv):
     else:
         multi_image_mode = False
 
-
-
     if multi_image_mode or not img_glob:
         image_name = "default"
     else:
         image_name = os.path.splitext(os.path.basename(img_glob[0]))[0]
 
-
     base_output_root = cli_output or FLAGS.output_dir
-
 
     ablation_suffix = '_no_pretrain' if FLAGS.no_pretrain else ''
     image_checkpoint_dir = os.path.join(base_output_root, f"finetune_{image_name}{ablation_suffix}")
     os.makedirs(image_checkpoint_dir, exist_ok=True)
 
-
     if hasattr(runner, 'checkpoint_path'):
         runner.checkpoint_path = image_checkpoint_dir
     else:
         setattr(runner, 'checkpoint_path', image_checkpoint_dir)
-
 
     test_output_dir = os.path.join(image_checkpoint_dir, 'test_images')
     os.makedirs(test_output_dir, exist_ok=True)
@@ -311,7 +252,6 @@ def main(argv):
     else:
         setattr(runner, 'test_path', test_output_dir)
     runner.save_test_gt_images = bool(getattr(FLAGS, 'save_test_gt_images', False))
-
 
     print(f"\033[94m{'='*80}\033[0m")
     print(f"\033[94mFine-tuning (wild) Configuration:\033[0m")
@@ -329,8 +269,6 @@ def main(argv):
     torch.autograd.set_detect_anomaly(False)
     writer = SummaryWriter(log_dir=os.path.join(image_checkpoint_dir, 'logs'))
 
-
-
     if not multi_image_mode:
         if not img_glob:
             raise ValueError("No input image provided. Please specify --input-dir with a valid image path.")
@@ -343,32 +281,15 @@ def main(argv):
 
         test_dataloader = make_dataloader(test_hand, shuffle=False, batch_size=1)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     import re
     if args.test_iter is not None:
         test_iters = {args.test_iter}
     elif cli_checkpoint_file is not None:
-
         base = os.path.basename(cli_checkpoint_file)
         m = re.search(r'iteration[_-]?(\d+)', base)
         if m:
             test_iters = int(m.group(1))
         else:
-
             m2 = re.search(r'(\d{3,7})', base)
             if m2:
                 test_iters = int(m2.group(1))
@@ -377,17 +298,10 @@ def main(argv):
     else:
         test_iters = 12000
 
-
-
     runner.no_pretrain = FLAGS.no_pretrain
 
     if FLAGS.no_pretrain:
-
         print(f"\033[93m[========== ABLATION: No pretrained checkpoint (training from scratch) ==========]\033[0m")
-
-
-
-
 
         gs_net = runner.hand_model.renderer.gs_net
         for layer_dict_name in ('out_layers', 'densify_out_layers'):
@@ -409,15 +323,11 @@ def main(argv):
 
     print(f"\033[91m[========== Running Finetune ! Loading model for iteration {test_iters} ==========]\033[0m")
 
-
-
     runner.checkpoint_path = image_checkpoint_dir
     print(f"\033[94mCheckpoint output: {runner.checkpoint_path}\033[0m")
     if hasattr(runner, 'hand_model') and hasattr(runner.hand_model, 'checkpoint_path'):
         runner.hand_model.checkpoint_path = image_checkpoint_dir
         print(f"\033[94mModel checkpoint output: {runner.hand_model.checkpoint_path}\033[0m")
-
-
 
     handavatar_dataloader = None
     if FLAGS.animate_to_handavatar:
@@ -434,11 +344,8 @@ def main(argv):
             handavatar_dataloader = None
 
     if FLAGS.only_eval:
-
-
         eval_iter = FLAGS.iter
         if isinstance(eval_iter, set):
-
             eval_iter = next(iter(eval_iter))
         print(f"\033[91m[========== Running EVAL ONLY @ iter {eval_iter} ==========]\033[0m")
         runner.load_checkpoint(iteration=eval_iter, is_latest=False, checkpoint_path=image_checkpoint_dir)
@@ -449,11 +356,9 @@ def main(argv):
         image_full = 0
         count = 0
 
-
         infer_batch = test_hand.get_img()
 
         gs_model_list, gs_densify_list, query_points = runner.infer_handavatar(infer_batch)
-
 
         if handavatar_dataloader is not None and FLAGS.animate_to_handavatar:
             print(f"\033[94m[Animating GS to HandAvatar poses for iteration {eval_iter}]\033[0m")
@@ -533,9 +438,6 @@ def main(argv):
         print(f"\033[92m[✓] Saved eval metrics to {metrics_path}\033[0m")
         return
 
-
-
-
     total_iters = FLAGS.iter
 
     use_two_stage_inversion = getattr(FLAGS, 'use_two_stage_inversion', True)
@@ -544,7 +446,6 @@ def main(argv):
     inv_stage2_iters = max(0, int(getattr(FLAGS, 'iter_inversion_stage2', 200) or 200)) if use_two_stage_inversion else 0
     inv_iters = inv_stage1_iters + inv_stage2_iters
     color_consistency_weight = float(getattr(FLAGS, 'color_consistency_weight', 1.0) or 1.0)
-
 
     _vis_only_raw = getattr(FLAGS, 'use_visible_only', False)
     if isinstance(_vis_only_raw, str):
@@ -556,7 +457,6 @@ def main(argv):
     finetune_iters = max(0, total_iters - inv_iters)
     pseudo_batch = None
     batches = None
-
 
     edit_unmask_iter = max(0, int(getattr(FLAGS, 'edit_unmask_iter', 300)))
     edit_mask_weight = float(getattr(FLAGS, 'edit_mask_weight', 100.0))
@@ -579,7 +479,6 @@ def main(argv):
         print(f"  Edit mask weight: {edit_mask_weight}")
         print(f"  Pseudo-view weight (unmasked): {pseudo_view_weight}")
     print(f"\033[94m{'='*60}\033[0m\n")
-
 
     if inv_stage1_iters > 0:
         inv_pbar = tqdm(range(1, inv_stage1_iters + 1), desc='Edit Inversion' if is_edit_mode else 'Inversion Stage1', dynamic_ncols=True)
@@ -614,11 +513,8 @@ def main(argv):
                     total_iters=inv_stage1_iters,
                 )
 
-
         runner.save(iteration=inv_stage1_iters, is_latest=False)
         print(f"\033[92m[✓] Completed Inversion Stage 1 ({inv_stage1_iters} iters)\033[0m")
-
-
 
         if finetune_iters == 0:
             eval_iter = inv_stage1_iters
@@ -739,9 +635,7 @@ def main(argv):
             print(f"\033[92m[✓] Saved stage1 eval metrics to {metrics_path}\033[0m")
             return
 
-
     if inv_stage2_iters > 0:
-
         if hasattr(runner, 'load_checkpoint_with_color_shift_scale'):
             runner.load_checkpoint_with_color_shift_scale(
                 iteration=inv_stage1_iters,
@@ -749,14 +643,12 @@ def main(argv):
                 checkpoint_path=image_checkpoint_dir,
             )
 
-
         if batches is None:
             try:
                 batches = next(data_iterator)
             except Exception:
                 data_iterator = iter(test_dataloader)
                 batches = next(data_iterator)
-
 
         if hasattr(runner, 'build_pseudo_gt_batch'):
             pseudo_batch = runner.build_pseudo_gt_batch(
@@ -771,7 +663,6 @@ def main(argv):
             pseudo_batch = batches
             print(f"\033[93m[Warning] build_pseudo_gt_batch not available, using original batch\033[0m")
 
-
         inv_stage2_pbar = tqdm(range(1, inv_stage2_iters + 1), desc='Inversion Stage2', dynamic_ncols=True)
         for step in inv_stage2_pbar:
             runner.run_wild_inversion_stage2(
@@ -785,10 +676,8 @@ def main(argv):
                 color_consistency_weight=color_consistency_weight,
             )
 
-
         runner.save(iteration=inv_iters, is_latest=False)
         print(f"\033[92m[✓] Completed Inversion Stage 2 ({inv_stage2_iters} iters)\033[0m")
-
 
         if hasattr(runner, 'load_checkpoint_with_color_shift_scale'):
             runner.load_checkpoint_with_color_shift_scale(
@@ -796,7 +685,6 @@ def main(argv):
                 is_latest=False,
                 checkpoint_path=image_checkpoint_dir,
             )
-
 
         if hasattr(runner, 'build_pseudo_gt_batch'):
             pseudo_batch = runner.build_pseudo_gt_batch(
@@ -806,9 +694,7 @@ def main(argv):
                 save_prefix=None,
                 use_canonical_root=False,
             )
-
     elif inv_stage1_iters > 0:
-
         if hasattr(runner, 'load_checkpoint_with_color_shift_scale'):
             runner.load_checkpoint_with_color_shift_scale(
                 iteration=inv_stage1_iters,
@@ -831,7 +717,6 @@ def main(argv):
         else:
             pseudo_batch = batches
 
-
     if finetune_iters > 0:
         if pseudo_batch is None:
             try:
@@ -839,7 +724,6 @@ def main(argv):
             except Exception:
                 data_iterator = iter(test_dataloader)
                 batches = next(data_iterator)
-
 
             if 'text-to-avatar' in cli_input_dir:
                 batches[0]['dataset_id'] = 0
@@ -862,8 +746,6 @@ def main(argv):
             total_step = inv_iters + step
 
             if use_visible_only_strategy:
-
-
                 if batches is None:
                     try:
                         batches = next(data_iterator)
@@ -882,7 +764,6 @@ def main(argv):
                     pretrain_regularization=pretrain_reg_weight,
                 )
             else:
-
                 runner.run_wild_stage_2(
                     batch=pseudo_batch,
                     scaler=scaler,
@@ -895,10 +776,6 @@ def main(argv):
                     edit_mask_weight=edit_mask_weight if is_edit_mode else 0.0,
                 )
 
-
-
-
-
             is_last = (total_step == total_iters)
             do_test = is_last
 
@@ -907,7 +784,6 @@ def main(argv):
                 checkpoint_name = f"{image_name}_iter{iteration}"
                 runner.save(iteration=iteration, is_latest=False)
                 print(f"\033[92m[✓] Saved checkpoint: {checkpoint_name} at iteration {iteration}\033[0m")
-
 
                 runner.hand_model.eval()
                 runner._sync_color_inversion_params()
@@ -925,7 +801,6 @@ def main(argv):
                 else:
                     infer_batch = test_hand.get_img()
                 gs_model_list, gs_densify_list, query_points = runner.infer_handavatar(infer_batch)
-
 
                 if handavatar_dataloader is not None and FLAGS.animate_to_handavatar:
                     print(f"\033[94m[Animating GS to HandAvatar poses for iteration {iteration}]\033[0m")
@@ -956,7 +831,6 @@ def main(argv):
                         dynamic_ncols=True
                     ) as pbar:
                         with torch.no_grad():
-
                             if 'text-to-avatar' in cli_input_dir:
                                 test_batch[0]['dataset_id'] = 0
                             else:
@@ -991,7 +865,6 @@ def main(argv):
                     f"LPIPS: {lpips_full/count:.4f}\n"
                 )
 
-
                 runner.hand_model.train()
 
                 current_metrics = {
@@ -1009,9 +882,5 @@ def main(argv):
                     json.dump(current_metrics, f, indent=2)
                 print(f"\033[92m[✓] Saved metrics to {metrics_path}\033[0m")
 
-
-
-
 if __name__ == "__main__":
-
     app.run(main)

@@ -24,9 +24,7 @@ import torch.utils.checkpoint
 from torch.nn.init import trunc_normal_
 
 
-
 from ..layers import Mlp, PatchEmbed, SwiGLUFFNFused, MemEffAttention, Block, BlockWithModulation
-
 
 
 logger = logging.getLogger("dinov2")
@@ -42,13 +40,11 @@ def named_apply(fn: Callable, module: nn.Module, name="", depth_first=True, incl
         fn(module=module, name=name)
     return module
 
-
 class BlockChunk(nn.ModuleList):
     def forward(self, x):
         for b in self:
             x = b(x)
         return x
-
 
 class DinoVisionTransformer(nn.Module):
     def __init__(
@@ -104,7 +100,6 @@ class DinoVisionTransformer(nn.Module):
             interpolate_offset: (float) work-around offset to apply when interpolating positional embeddings
         """
         super().__init__()
-
 
         block_norm_layer = None
         if modulation_dim is not None:
@@ -179,7 +174,6 @@ class DinoVisionTransformer(nn.Module):
             chunked_blocks = []
             chunksize = depth // block_chunks
             for i in range(0, depth, chunksize):
-
                 chunked_blocks.append([nn.Identity()] * i + blocks_list[i : i + chunksize])
             self.blocks = nn.ModuleList([BlockChunk(p) for p in chunked_blocks])
         else:
@@ -188,11 +182,6 @@ class DinoVisionTransformer(nn.Module):
 
         self.norm = norm_layer(embed_dim)
         self.head = nn.Identity()
-
-
-
-
-
 
         self.init_weights()
 
@@ -218,7 +207,6 @@ class DinoVisionTransformer(nn.Module):
         w0 = w // self.patch_size
         h0 = h // self.patch_size
 
-
         w0, h0 = w0 + self.interpolate_offset, h0 + self.interpolate_offset
 
         sqrt_N = math.sqrt(N)
@@ -239,10 +227,7 @@ class DinoVisionTransformer(nn.Module):
         B, nc, w, h = x.shape
         x = self.patch_embed(x)
         if masks is not None:
-
             raise NotImplementedError("Masking is not supported in hacked DINOv2")
-
-
 
         x = torch.cat((self.cls_token.expand(x.shape[0], -1, -1), x), dim=1)
 
@@ -280,7 +265,6 @@ class DinoVisionTransformer(nn.Module):
             )
         return output
 
-
     def forward_features(self, x, masks=None, mod=None):
         if isinstance(x, list):
             raise DeprecationWarning("forward_features_list is deprecated, use forward_features")
@@ -303,7 +287,6 @@ class DinoVisionTransformer(nn.Module):
             "x_prenorm": x,
             "masks": masks,
         }
-
 
     def _get_intermediate_layers_not_chunked(self, x, n=1):
         x = self.prepare_tokens_with_masks(x)
@@ -364,17 +347,12 @@ class DinoVisionTransformer(nn.Module):
         else:
             return self.head(ret["x_norm_clstoken"])
 
-
 def init_weights_vit_timm(module: nn.Module, name: str = ""):
     """ViT weight initialization, original timm impl (for reproducibility)"""
     if isinstance(module, nn.Linear):
         trunc_normal_(module.weight, std=0.02)
         if module.bias is not None:
             nn.init.zeros_(module.bias)
-
-
-
-
 
 def _block_cls(**kwargs):
     modulation_dim = kwargs.get("modulation_dim", None)
@@ -383,7 +361,6 @@ def _block_cls(**kwargs):
     else:
         block_cls = BlockWithModulation
     return block_cls
-
 
 def vit_small(patch_size=16, num_register_tokens=0, **kwargs):
     model = DinoVisionTransformer(
@@ -398,7 +375,6 @@ def vit_small(patch_size=16, num_register_tokens=0, **kwargs):
     )
     return model
 
-
 def vit_base(patch_size=16, num_register_tokens=0, **kwargs):
     model = DinoVisionTransformer(
         patch_size=patch_size,
@@ -412,7 +388,6 @@ def vit_base(patch_size=16, num_register_tokens=0, **kwargs):
     )
     return model
 
-
 def vit_large(patch_size=16, num_register_tokens=0, **kwargs):
     model = DinoVisionTransformer(
         patch_size=patch_size,
@@ -425,7 +400,6 @@ def vit_large(patch_size=16, num_register_tokens=0, **kwargs):
         **kwargs,
     )
     return model
-
 
 def vit_giant2(patch_size=16, num_register_tokens=0, **kwargs):
     """

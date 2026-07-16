@@ -33,7 +33,6 @@ class SwiGLUFFN(nn.Module):
         hidden = F.silu(x1) * x2
         return self.w3(hidden)
 
-
 XFORMERS_ENABLED = os.environ.get("XFORMERS_DISABLED") is None
 try:
     if XFORMERS_ENABLED:
@@ -49,7 +48,6 @@ except ImportError:
     XFORMERS_AVAILABLE = False
 
     warnings.warn("xFormers is not available (SwiGLU)")
-
 
 class SwiGLUFFNFused(SwiGLU):
     def __init__(

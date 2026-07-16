@@ -52,7 +52,6 @@ def convert(rot, src, tar):
       rot6d = np.reshape(np.transpose(rot[:, :, :2], [0, 2, 1]), data_shape + (6,))
       return rot6d
     if tar == 'axangle':
-
       angle = np.arccos((rot[:, 0, 0] + rot[:, 1, 1] + rot[:, 2, 2] - 1) / 2)
       angle = np.expand_dims(angle, -1)
       norm = np.sqrt(
@@ -68,7 +67,6 @@ def convert(rot, src, tar):
       axangle = np.reshape(axangle, data_shape + (3,))
       return axangle
     if tar == 'quat':
-
       quat = []
       for i in range(rot.shape[0]):
         tr = rot[i, 0, 0] + rot[i, 1, 1] + rot[i, 2, 2]
@@ -120,7 +118,6 @@ def convert(rot, src, tar):
 
   raise NotImplementedError(f'Unsupported conversion: from {src} to {tar}.')
 
-
 def sphere_sampling(n):
   theta = np.random.uniform(0, 2 * np.pi, size=n)
   phi = np.random.uniform(0, np.pi, size=n)
@@ -129,12 +126,10 @@ def sphere_sampling(n):
   )
   return v
 
-
 def random_rotation(n):
   axis = sphere_sampling(n)
   angle = np.random.uniform(np.pi, size=[n, 1])
   return convert(axis * angle, 'axangle', 'rotmat')
-
 
 def slerp_batch(a, b, t):
   dot = np.einsum('NJD, NJD -> NJ', a, b)
@@ -146,7 +141,6 @@ def slerp_batch(a, b, t):
   mask = np.tile(np.prod(a == b, axis=-1, keepdims=True, dtype=np.bool), (1, 4))
   p = np.where(mask, a, p)
   return p
-
 
 def rotmat_rel_to_abs_batch(rel_rotmat, parents):
   rel_rotmat = np.array(rel_rotmat)
@@ -161,7 +155,6 @@ def rotmat_rel_to_abs_batch(rel_rotmat, parents):
   abs_rotmat = np.stack(abs_rotmat, 1)
   return abs_rotmat
 
-
 def rotmat_abs_to_rel(abs_rotmat, parents):
   n_joints = len(parents)
   rel_rotmat = [None] * n_joints
@@ -173,7 +166,6 @@ def rotmat_abs_to_rel(abs_rotmat, parents):
       rel_rotmat[c] = np.dot(abs_rotmat[p].T, abs_rotmat[c])
   rel_rotmat = np.stack(rel_rotmat, 0)
   return rel_rotmat
-
 
 def rotmat_rel_to_abs(rel_rotmat, parents, batch=False):
   if not batch:
@@ -192,7 +184,6 @@ def rotmat_rel_to_abs(rel_rotmat, parents, batch=False):
     abs_rotmat = abs_rotmat[0]
   return abs_rotmat
 
-
 def keypoints_to_bones_batch(keypoints, parents):
   keypoints = np.array(keypoints)
   bones = []
@@ -203,7 +194,6 @@ def keypoints_to_bones_batch(keypoints, parents):
       bones.append(keypoints[:, c] - keypoints[:, p])
   bones = np.stack(bones, 1)
   return bones
-
 
 def bones_to_keypoints_batch(bones, parents):
   bones = np.array(bones)
@@ -217,14 +207,12 @@ def bones_to_keypoints_batch(bones, parents):
     keypoints = np.stack(keypoints, 1)
   return keypoints
 
-
 def forward_kinematics_batch(ref_bones, abs_rotmat, parents):
   ref_bones = np.array(ref_bones)
   abs_rotmat = np.array(abs_rotmat)
   bones = np.einsum('NJHW, NJW -> NJH', abs_rotmat, ref_bones)
   keypoints = bones_to_keypoints_batch(bones, parents)
   return keypoints, bones
-
 
 def measure_hand_size(keypoints, skeleton):
   bones = keypoints_to_bones_batch([keypoints], skeleton.parents)[0]

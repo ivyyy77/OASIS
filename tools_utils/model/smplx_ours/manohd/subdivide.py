@@ -35,7 +35,6 @@ def _next_ring(mesh, last_ring, other):
     return res
 
 def extract_spirals(mesh, seq_length, dilation=1):
-
     spirals = []
     one_ring_list = []
     next_ring_list = []
@@ -81,7 +80,6 @@ def preprocess_spiral(face, seq_length, vertices=None, dilation=1):
     return one_ring_list, next_ring_list, spirals
 
 def smooth(v, f, start, times=1):
-
     one_ring_list, next_ring_list, spirals = preprocess_spiral(f, 9, v)
     v_org = v.copy()
 
@@ -94,7 +92,6 @@ def smooth(v, f, start, times=1):
             v[idx] = mean
 
     return v, spirals
-
 
 def sub_mano(mano, t, pretrain=None):
     for i in range(t):
@@ -115,7 +112,6 @@ def sub_mano(mano, t, pretrain=None):
         new_posedirs = new_posedirs.mean(dim=1)
         new_posedirs = new_posedirs.view(len(edges) * 3, 135).permute(1, 0)
         posedirs = torch.cat((mano.posedirs, new_posedirs), dim=1)
-
 
         new_J_regressor = torch.zeros(16, len(edges)).to(mano.J_regressor.dtype).to(mano.J_regressor.device)
         J_regressor = torch.cat((mano.J_regressor, new_J_regressor), dim=1)
@@ -143,9 +139,6 @@ def sub_mano(mano, t, pretrain=None):
     mano.update_seal()
     return mano, edges, spirals
 
-
-
-
 def sub_mano_in_smplx(v_template, mano, t, pretrain=None):
     for i in range(t):
         if i == 0:
@@ -169,7 +162,6 @@ def sub_mano_in_smplx(v_template, mano, t, pretrain=None):
         new_posedirs = new_posedirs.mean(dim=1)
         new_posedirs = new_posedirs.view(len(edges) * 3, 135).permute(1, 0)
         posedirs = torch.cat((mano.posedirs, new_posedirs), dim=1)
-
 
         new_J_regressor = torch.zeros(16, len(edges)).to(mano.J_regressor.dtype).to(mano.J_regressor.device)
         J_regressor = torch.cat((mano.J_regressor, new_J_regressor), dim=1)

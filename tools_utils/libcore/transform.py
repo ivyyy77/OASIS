@@ -1,8 +1,5 @@
-
-
 import numpy as np
 import torch
-
 
 
 def projectPointToPixel(cam, pt, with_Rt = True):
@@ -24,8 +21,6 @@ def projectPointToPixel(cam, pt, with_Rt = True):
     else:
         return np.stack([px, py], axis=1)
 
-
-
 def unprojectPixelToPoint(cam, px, py, depth=None, with_Rt = True):
     x = (px - cam.cx) / cam.fx
     y = (py - cam.cy) / cam.fy
@@ -38,12 +33,10 @@ def unprojectPixelToPoint(cam, px, py, depth=None, with_Rt = True):
     else:
         pt = np.array([depth * x, depth * y, depth])
 
-
     if (with_Rt):
         pt = backwardTransform(pt, cam.R, cam.t)
 
     return pt
-
 
 def convertDepthToDisp(depth, baseline, focal):
     disp = baseline * focal / depth
@@ -54,7 +47,6 @@ def convertDispToDepth(disp, baseline, focal):
     depth = baseline * focal / disp
     depth[disp < 0.01] = 0
     return depth
-
 
 def forwarkTransform(pt, R, t):
     if len(pt.shape) == 1:
@@ -67,7 +59,6 @@ def backwardTransform(pt, R, t):
         return R.transpose().dot((pt - t))
     else:
         return (pt - t).dot(R)
-
 
 def calcVMap(cam, depth=None, with_Rt=True):
     h = cam.h
@@ -108,12 +99,7 @@ def calcNMap(vmap):
     nmap[:] = np.NaN
     nmap[yy, xx] = np.cross((v01 - v00), (v00 - v10))
 
-
-
-
-
     return nmap
-
 
 def calcVNMap(cam, depth):
     vmap = calcVMap(cam, depth)
@@ -137,11 +123,6 @@ def lookAt(eye, center, top):
     R[2,:] = (z / np.linalg.norm(z)).reshape(1,3)
     return R
 
-
-
-
-
-
 def perspectiveFromCamera(cam, near=0.1, far=100.0):
     return np.array([
         [2 * cam.fx / cam.w,    0, (cam.w - 2 * cam.cx) / cam.w, 0],
@@ -150,20 +131,9 @@ def perspectiveFromCamera(cam, near=0.1, far=100.0):
         [0,    0,           -1,           0]
     ]).astype(np.float32)
 
-
-
-
-
-
-
 def makeTransform(R, t):
     Rt = np.concatenate((R, t[:, None]), axis=1)
     return np.concatenate((Rt, np.array([[0, 0, 0, 1]])), axis=0).astype(np.float32)
-
-
-
-
-
 
 def convertRtFromCV2GL(R, t):
     R_gl = np.array([
@@ -175,15 +145,10 @@ def convertRtFromCV2GL(R, t):
     t_gl = np.array([t[0], -t[1], -t[2]]).astype(np.float32)
     return R_gl, t_gl
 
-
-
 def fitLineCenterDirectionToPoints(points):
-
     pt_mean = points.mean(axis=0)
 
-
     uu, dd, vv = np.linalg.svd(points - pt_mean)
-
 
     return pt_mean, vv[0]
 

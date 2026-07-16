@@ -40,7 +40,6 @@ def get_activation(name):
         except AttributeError:
             raise ValueError(f"Unknown activation function: {name}")
 
-
 class MLP(nn.Module):
     def __init__(
         self,
@@ -91,10 +90,7 @@ class MLP(nn.Module):
         else:
             raise NotImplementedError
 
-
 class _TruncExp(Function):
-
-
     @staticmethod
     @custom_fwd(cast_inputs=torch.float32)
     def forward(ctx, x):
@@ -106,6 +102,5 @@ class _TruncExp(Function):
     def backward(ctx, g):
         x = ctx.saved_tensors[0]
         return g * torch.exp(torch.clamp(x, max=15))
-
 
 trunc_exp = _TruncExp.apply

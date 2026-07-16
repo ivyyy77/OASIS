@@ -26,7 +26,6 @@ from .utils import to_tensor
 
 
 class VertexJointSelector(nn.Module):
-
     def __init__(self, vertex_ids=None,
                  use_hands=True,
                  use_feet_keypoints=True, **kwargs):

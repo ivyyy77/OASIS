@@ -1,5 +1,3 @@
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -31,19 +29,9 @@ class ACAP_Loss(nn.Module):
 
         offset_norm = offset.norm(p=2, dim=-1)
 
-
-
-
         offset_loss = torch.clamp(offset_norm, min=d) - d
 
         return offset_loss.mean()
-
-
-
-
-
-
-
 
 class Heuristic_ACAP_Loss(nn.Module):
     """As close as possibel loss"""
@@ -51,9 +39,7 @@ class Heuristic_ACAP_Loss(nn.Module):
     def __init__(self):
         super(Heuristic_ACAP_Loss, self).__init__()
 
-
     def _heurisitic_loss(self, _offset_loss):
-
         _loss = 0.0
         for key in self.group_dict.keys():
             key_weights = self.group_dict[key]

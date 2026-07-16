@@ -7,7 +7,6 @@ def linear(*args, **kwargs):
     """
     return nn.Linear(*args, **kwargs)
 
-
 class LinerParameterTuner:
     def __init__(self, start, start_value, end_value, end):
         self.start = start
@@ -28,7 +27,6 @@ class LinerParameterTuner:
 
         current_value = self.start_value + ratio * (self.end_value - self.start_value)
         return current_value
-
 
 class StaticParameterTuner:
     def __init__(self, v):

@@ -1,5 +1,3 @@
-
-
 import torch
 import time
 
@@ -55,8 +53,6 @@ def stopCudaTimer(key, print_count = 1):
         print('[CUDA Timer] %s takes %.4f ms' % (key, ave_ms))
 
         CUDA_TIMERS[key].reset()
-
-
 
 class CpuTimerStatus:
     def __init__(self) -> None:

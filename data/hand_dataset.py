@@ -1,7 +1,5 @@
-
 import os
 import sys
-
 
 
 import pickle
@@ -93,7 +91,6 @@ def getNerfppNorm(cam_info):
 
     return {"translate": translate, "radius": radius}
 
-
 def getNerfppNorm_bs(cam_info):
     def get_center_and_diag(cam_centers):
         cam_centers = np.hstack(cam_centers)
@@ -120,12 +117,10 @@ def cnt_area(cnt):
     area = cv2.contourArea(cnt)
     return area
 
-
 def create_dataset(data_type='train', subject=None):
     dataset_name = cfg[data_type].dataset
 
     args = DatasetArgs.get(dataset_name)
-
 
     args['bgcolor'] = None if data_type == 'train' else cfg.bgcolor
     args['data_type'] = data_type
@@ -135,7 +130,6 @@ def create_dataset(data_type='train', subject=None):
             args['maxframes'] = -1
         else:
             total_train_imgs = 20000
-
 
             args['skip'] = 16
             args['maxframes'] = 16
@@ -172,9 +166,7 @@ class DatasetArgs(object):
         attrs = DatasetArgs.dataset_attrs[name]
         return attrs.copy()
 
-
 class Dataset(torch.utils.data.Dataset):
-
     @torch.no_grad()
     def __init__(
             self, dataset_path, keyfilter=None, maxframes=-1, bgcolor=None,
@@ -184,16 +176,7 @@ class Dataset(torch.utils.data.Dataset):
 
         self.img_res = [256, 256]
 
-
         self.mano = tools_utils.model.smplx.create(**cfg.smpl_cfg)
-
-
-
-
-
-
-
-
 
         if cfg.smpl_cfg['manohd'] > 0:
             self.mano, _, _ = sub_mano(self.mano, cfg.smpl_cfg['manohd'])
@@ -204,23 +187,6 @@ class Dataset(torch.utils.data.Dataset):
         if self.handtype == 'left':
             self.mano.shapedirs[:, 0, :] *= -1
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         self.phase = kwargs.get('data_type', 'train')
         if subject is None:
             if self.phase == 'train':
@@ -229,47 +195,6 @@ class Dataset(torch.utils.data.Dataset):
                 subject = cfg[kwargs['data_type']].subject
         if isinstance(subject, list):
             subject = subject[0]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         self.image_dir = os.path.join(dataset_path, f'InterHand2.6M_{cfg.interhand.fps}fps_batch1/images')
         if 'prior_learning' in subject:
@@ -287,7 +212,6 @@ class Dataset(torch.utils.data.Dataset):
             with open(anno_name_handAvatar, 'rb') as f:
                 _, _, _, framelist_handAvatar = pickle.load(f)
 
-
         mano_res = self.mano(
             torch.zeros(1, 10).float(),
             torch.zeros(1, 3).float(),
@@ -297,45 +221,6 @@ class Dataset(torch.utils.data.Dataset):
         self.canonical_verts = mano_res.vertices.numpy()
         self.canonical_faces = mano_res.faces_tensor.numpy()
         self.canonical_bbox = self.skeleton_to_bbox(self.canonical_verts)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         self.cameras = {k : self.cameras[k] for k in self.framelist}
         self.bbox = {k : self.bbox[k] for k in self.framelist}
@@ -377,7 +262,6 @@ class Dataset(torch.utils.data.Dataset):
 
     @torch.no_grad()
     def anno_preprocess(self, dataset_path, subject, anno_name, data_type, with_mask=True):
-
         th_hands_mean_right = np.array([0.1117, -0.0429, 0.4164, 0.1088, 0.0660, 0.7562, -0.0964, 0.0909,
                                         0.1885, -0.1181, -0.0509, 0.5296, -0.1437, -0.0552, 0.7049, -0.0192,
                                         0.0923, 0.3379, -0.4570, 0.1963, 0.6255, -0.2147, 0.0660, 0.5069,
@@ -386,7 +270,6 @@ class Dataset(torch.utils.data.Dataset):
                                         -0.0266, -0.0529, 0.5356, -0.0460, 0.2774])
         th_hands_mean_left = th_hands_mean_right.copy().reshape(-1, 3)
         th_hands_mean_left[:, 1:] *= -1
-
 
         phase = subject.split('/')[0]
         dir_name = '/'.join(subject.split('/')[1:])
@@ -429,7 +312,6 @@ class Dataset(torch.utils.data.Dataset):
                 print(f'{i}, Discard {image_name}, {hand_type} is not agree with {self.handtype}')
                 continue
 
-
             img_width, img_height = img['width'], img['height']
             bbox = np.array(ann['bbox'], dtype=np.float32)
             if data_type != 'infer':
@@ -438,16 +320,10 @@ class Dataset(torch.utils.data.Dataset):
 
                     continue
 
-
                 img_path = os.path.join(self.image_dir, f'{phase}/{image_name}')
-
-
-
-
 
                 img = cv2.imread(img_path)
                 if img.max() < 20:
-
                     continue
                 if np.allclose(img[..., 0], img[..., 1], atol=1) or np.allclose(img[..., 2], img[..., 1],
                                                                                 atol=1) or np.allclose(img[..., 0],
@@ -456,15 +332,12 @@ class Dataset(torch.utils.data.Dataset):
 
                     continue
 
-
                 mask_path = img_path.replace('images', 'masks_removeblack').replace('.jpg', '.png')
                 if not os.path.exists(mask_path):
-
                     continue
                 mask = cv2.imread(img_path.replace('images', 'masks_removeblack').replace('.jpg', '.png'))
                 mask_sum = mask[..., 0].astype('bool').sum()
                 if mask.max() < 255 or mask_sum < 3000:
-
                     continue
 
                 mask_bool = mask[..., 0] == 255
@@ -477,10 +350,8 @@ class Dataset(torch.utils.data.Dataset):
             self.bbox[f'{phase}/{image_name}'] = bbox
             self.framelist.append(f'{phase}/{image_name}')
 
-
             T, R = np.array(cameras[str(capture_id)]['campos'][str(cam)], dtype=np.float32), np.array(
                 cameras[str(capture_id)]['camrot'][str(cam)], dtype=np.float32)
-
 
             focal, princpt = np.array(cameras[str(capture_id)]['focal'][str(cam)], dtype=np.float32), np.array(
                 cameras[str(capture_id)]['princpt'][str(cam)], dtype=np.float32)
@@ -490,8 +361,6 @@ class Dataset(torch.utils.data.Dataset):
 
             poses = np.array(mano_param['pose'])
             betas = np.array(mano_param['shape'])
-
-
 
             poses[3:] += (th_hands_mean_left, th_hands_mean_right)[self.handtype == 'right']
 
@@ -507,18 +376,10 @@ class Dataset(torch.utils.data.Dataset):
             verts = posed_res.vertices.numpy()
             center = posed_res.center[0].numpy
 
-
-
-
-
-
-
-
             joint_world = np.array(joints_interhand[str(capture_id)][str(frame_idx)]['world_coord'], dtype=np.float32) / 1000 * cfg.smpl_cfg.scale
             joint_cam = np.dot(R, joint_world.T).T - np.dot(R, T) / 1000 * cfg.smpl_cfg.scale
             joint_cam = joint_cam[:21][INTERHAND2MANO] if self.handtype=='right' else joint_cam[21:][INTERHAND2MANO]
             T = joint_cam[0] - np.dot(R,joints[0])
-
 
             self.cameras[f'{phase}/{image_name}'] = {
                 'intrinsics': K,
@@ -526,7 +387,6 @@ class Dataset(torch.utils.data.Dataset):
                 'img_width' :img_width,
                 'img_height':img_height
             }
-
 
             self.mesh_infos[f'{phase}/{image_name}'] = {
                 'poses': poses.reshape(-1),
@@ -541,7 +401,6 @@ class Dataset(torch.utils.data.Dataset):
         with open(anno_name, 'wb') as f:
             pickle.dump([self.cameras, self.mesh_infos, self.bbox, self.framelist], f)
 
-
     def query_dst_skeleton(self, frame_name):
         return {
             'poses': self.mesh_infos[frame_name]['poses'].astype('float32'),
@@ -550,7 +409,6 @@ class Dataset(torch.utils.data.Dataset):
             'joints': self.mesh_infos[frame_name]['joints'].astype('float32'),
             'Rh': self.mesh_infos[frame_name]['Rh'].astype('float32'),
             'Th': self.mesh_infos[frame_name]['Th'].astype('float32'),
-
 
         }
 
@@ -566,15 +424,11 @@ class Dataset(torch.utils.data.Dataset):
         else:
             alpha_mask = np.ones_like(orig_img) * 255
 
-
         if frame_name in self.cameras and 'distortions' in self.cameras[frame_name]:
             K = self.cameras[frame_name]['intrinsics']
             D = self.cameras[frame_name]['distortions']
             orig_img = cv2.undistort(orig_img, K, D)
             alpha_mask = cv2.undistort(alpha_mask, K, D)
-
-
-
 
         img = alpha_mask / 255. * orig_img + (1.0 - alpha_mask / 255.) * bg_color[None, None, :]
         if cfg.resize_img_scale != 1.:
@@ -591,7 +445,6 @@ class Dataset(torch.utils.data.Dataset):
 
     def get_total_frames(self):
         return len(self.framelist)
-
 
     def mask_from_mano(self, frame_name,filtering=True):
         save_name = os.path.join(self.image_dir, frame_name).replace('images', 'masks_removeblack').replace('.jpg',
@@ -624,7 +477,6 @@ class Dataset(torch.utils.data.Dataset):
             cv2.fillConvexPoly(mask, triangle, (255, 255, 255))
 
         if filtering:
-
             mask_bool = mask[..., 0] == 255
             sel_img = img[mask_bool].mean(axis=-1)
 
@@ -656,16 +508,12 @@ class Dataset(torch.utils.data.Dataset):
 
         r13, r23, r33 = R[0, 2], R[1, 2], R[2, 2]
 
-
         elevation = np.degrees(np.arcsin(r23))
         azimuth = np.degrees(np.arctan2(r13, r33))
 
         return elevation, azimuth
 
-
-
     def readHandCameras(self):
-
         cam_info = []
         mano_res = self.mano(
             torch.zeros(1, 10).float(),
@@ -683,9 +531,7 @@ class Dataset(torch.utils.data.Dataset):
         big_pose_smpl_param['center'] = mano_res.center.detach().numpy().squeeze()
         big_pose_smpl_param['faces'] = faces.detach()
 
-
         mesh_py3d = Meshes(vertices.float(), torch.from_numpy(faces[None, ...].detach().numpy()))
-
 
         big_pose_min_xyz = np.min(big_pose_xyz, axis=0)
         big_pose_max_xyz = np.max(big_pose_xyz, axis=0)
@@ -693,13 +539,7 @@ class Dataset(torch.utils.data.Dataset):
         big_pose_max_xyz += 0.05
         big_pose_world_bound = np.stack([big_pose_min_xyz, big_pose_max_xyz], axis=0)
 
-
         for idx in range(0, len(self.framelist)):
-
-
-
-
-
             frame_name = self.framelist[idx]
             bbox = self.bbox[frame_name]
             cam_extrinsics, cam_intrinsics, width, height = self.cameras[frame_name]['extrinsics'], self.cameras[frame_name]['intrinsics'],\
@@ -737,22 +577,6 @@ class Dataset(torch.utils.data.Dataset):
 
             dst_skel_info.update({'mesh_norms': mesh_norms})
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             min_xyz = np.min(posed_verts.squeeze(), axis=0)
             max_xyz = np.max(posed_verts.squeeze(), axis=0)
             max_xyz -= 0.05
@@ -767,20 +591,9 @@ class Dataset(torch.utils.data.Dataset):
             image_name = image_cam + '_' +image_name
             image = Image.open(image_path)
 
-
-
-
-
-
-
-
-
             mask_path = image_path.replace('images', 'masks_removeblack').replace('.jpg', '.png')
             if os.path.exists(mask_path):
                 mask = Image.open(mask_path)
-
-
-
             else:
                 self.mask_from_mano(key)
                 mask = Image.open(mask_path)
@@ -792,13 +605,7 @@ class Dataset(torch.utils.data.Dataset):
                                        big_pose_world_vertex=big_pose_xyz, big_pose_world_bound=big_pose_world_bound,
                                        big_pose_smpl_param=big_pose_smpl_param))
 
-
-
-
-
-
         return cam_info
-
 
     def readHandCameras_aug(self):
         cam_info = []
@@ -820,18 +627,11 @@ class Dataset(torch.utils.data.Dataset):
         big_pose_smpl_param['vertex_index'] = np.arange(big_pose_xyz.shape[0])
         big_pose_smpl_param['finger_category'] = mano_res.finger_category
 
-
         mesh_py3d = Meshes(vertices.float(), torch.from_numpy(faces[None, ...].detach().numpy()))
-
 
         frame_mesh = mesh_py3d.update_padded(vertices)
         mesh_norms = frame_mesh.verts_normals_packed()
         big_pose_smpl_param['normal'] = mesh_norms
-
-
-
-
-
 
         big_pose_min_xyz = np.min(big_pose_xyz, axis=0)
         big_pose_max_xyz = np.max(big_pose_xyz, axis=0)
@@ -839,9 +639,7 @@ class Dataset(torch.utils.data.Dataset):
         big_pose_max_xyz += 0.3
         big_pose_world_bound = np.stack([big_pose_min_xyz, big_pose_max_xyz], axis=0)
 
-
         for idx in range(0, len(self.framelist)):
-
             frame_name = self.framelist[idx]
             bbox = self.bbox[frame_name]
             cam_extrinsics, cam_intrinsics = self.cameras[frame_name]['extrinsics'], self.cameras[frame_name]['intrinsics']
@@ -854,7 +652,6 @@ class Dataset(torch.utils.data.Dataset):
             image_name = os.path.basename(image_path).split(".")[0]
             image_cam = image_path.split("/")[-2]
             image_name = image_cam + '_' + image_name
-
 
             mask_path = image_path.replace('images', 'masks_new').replace('.jpg', '.png')
 
@@ -876,9 +673,6 @@ class Dataset(torch.utils.data.Dataset):
                                                                                             gaussian_std=3,
                                                                                             bordervalue=bgcolor.tolist())
 
-
-
-
             img = (img / 255.).astype('float32')
             img = img[:, :, [2, 1, 0]]
 
@@ -892,7 +686,6 @@ class Dataset(torch.utils.data.Dataset):
             w2c[:3,3:4] = T
             R = np.transpose(w2c[:3, :3])
             elevation, azimuth = self.calculate_elevation_azimuth(R_)
-
 
             K = self.cameras[key]['intrinsics'][:3, :3].copy()
             if self.aug:
@@ -920,29 +713,6 @@ class Dataset(torch.utils.data.Dataset):
 
             dst_skel_info.update({'mesh_norms': mesh_norms})
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             min_xyz = np.min(posed_verts.squeeze(), axis=0)
             max_xyz = np.max(posed_verts.squeeze(), axis=0)
             max_xyz -= 0.05
@@ -959,14 +729,9 @@ class Dataset(torch.utils.data.Dataset):
                                        big_pose_world_vertex=big_pose_xyz, big_pose_world_bound=big_pose_world_bound,
                                        big_pose_smpl_param=big_pose_smpl_param))
 
-
         return cam_info
 
-
-
-
     def readHandCameras_aug_bs(self, idx):
-
         mano_res = self.mano(
             torch.zeros(1, 10).float(),
             torch.zeros(1, 3).float(),
@@ -982,14 +747,6 @@ class Dataset(torch.utils.data.Dataset):
         big_pose_smpl_param['center'] = mano_res.center.detach().numpy().squeeze()
         big_pose_smpl_param['faces'] = faces.detach()
 
-
-
-
-
-
-
-
-
         big_pose_min_xyz = np.min(big_pose_xyz, axis=0)
         big_pose_max_xyz = np.max(big_pose_xyz, axis=0)
         big_pose_min_xyz -= 0.3
@@ -999,7 +756,6 @@ class Dataset(torch.utils.data.Dataset):
         frame_name = self.framelist[idx][0]
         bbox = self.bbox[frame_name]
         cam_extrinsics, cam_intrinsics = self.cameras[frame_name]['extrinsics'], self.cameras[frame_name]['intrinsics']
-
 
         key = frame_name
         uid = key
@@ -1018,17 +774,6 @@ class Dataset(torch.utils.data.Dataset):
 
         img, mask = self.load_image(key, bgcolor, use_mask=(True, True)[self.phase == 'infer'])
 
-
-
-
-
-
-
-
-
-
-
-
         img = (img / 255.).astype('float32')
         img = img[:, :, [2, 1, 0]]
 
@@ -1038,7 +783,6 @@ class Dataset(torch.utils.data.Dataset):
         R = cam_extrinsics[0]
         T = cam_extrinsics[1].reshape((3, 1))
 
-
         w2c = np.eye(4)
         w2c[:3, :3] = R
         w2c[:3, 3:4] = T
@@ -1046,20 +790,14 @@ class Dataset(torch.utils.data.Dataset):
 
         K = self.cameras[key]['intrinsics'][:3, :3].copy()
 
-
-
-
         focal_length_x = cam_intrinsics[0, 0]
         focal_length_y = cam_intrinsics[1, 1]
 
-
         R = np.eye(3)
-
 
         T = np.array([[.08284344, -0.05660701,  3.572253]], dtype=np.float32).reshape(1,3)
         T = np.array([[-0.13709098, -0.06628575, 3.9246328]], dtype=np.float32).reshape(1, 3)
         raw_K = get_camera_parameters(
-
 
             max(height, width),
             fov=30,
@@ -1070,8 +808,6 @@ class Dataset(torch.utils.data.Dataset):
         K = raw_K.squeeze().cpu().numpy()
         focal_length_y = K[1, 1]
         focal_length_x = K[0, 0]
-
-
 
         FovY = focal2fov(focal_length_y, height)
         FovX = focal2fov(focal_length_x, width)
@@ -1085,14 +821,6 @@ class Dataset(torch.utils.data.Dataset):
         dst_skel_info['R'] = cv2.Rodrigues(Rh)[0].astype(np.float32)
         dst_skel_info.update({'Th': torch.zeros(1, 3)})
         posed_verts = dst_skel_info['vertices']
-
-
-
-
-
-
-
-
 
         from pytorch3d.transforms import matrix_to_axis_angle
         rot_mats = torch.tensor([[[[-0.4013,  0.0466, -0.9148],
@@ -1145,50 +873,11 @@ class Dataset(torch.utils.data.Dataset):
                                    [1.4413e-01, 3.7139e-01, 9.1722e-01]]
                                   ]]).squeeze(0)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         axis_angle = matrix_to_axis_angle(rot_mats)
         axis_angle = axis_angle.reshape(-1).numpy()
 
-
-
         dst_skel_info['poses'] = axis_angle
         dst_skel_info['shape'] = np.array([-0.3097, -0.0901, -0.1211, -0.0245,  0.0185,  0.1052,  0.0570,  0.0015, -0.0388,  0.0508])
-
 
         min_xyz = np.min(posed_verts.squeeze(), axis=0)
         max_xyz = np.max(posed_verts.squeeze(), axis=0)
@@ -1197,47 +886,6 @@ class Dataset(torch.utils.data.Dataset):
         world_bound = np.stack([min_xyz, max_xyz], axis=0)
         bound_mask = get_bound_2d_mask(world_bound, cam_intrinsics, w2c, width, height)
         bound_mask = np.array(bound_mask * 255.0, dtype=np.byte)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         cam_info = CameraInfo(uid=uid, R=R, T=T, K=K, FovY=FovY, FovX=FovX,
                               image=img, bkgd_mask=mask, bound_mask=bound_mask, image_path=image_path,
@@ -1250,73 +898,10 @@ class Dataset(torch.utils.data.Dataset):
 
         return cam_info
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def __len__(self):
         return self.get_total_frames()
 
     def __getitem__(self, idx):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         cam_info = self.readHandCameras_aug_bs(idx)
         results = cam_info
 
@@ -1349,92 +934,7 @@ class Dataset(torch.utils.data.Dataset):
             'big_pose_smpl_param': cam_info.big_pose_smpl_param,
         }
 
-
-
         return results
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 def get_bound_corners(bounds):
     min_x, min_y, min_z = bounds[0]
@@ -1458,9 +958,6 @@ def project(xyz, K, RT):
     RT: [3, 4]
     """
 
-
-
-
     xyz = np.dot(xyz, RT[:3, :3]) + RT[:3, 3:].T
     xyz = np.dot(xyz, K.T)
     xy = xyz[:, :2] / xyz[:, 2:]
@@ -1480,8 +977,6 @@ def get_bound_2d_mask(bounds, K, pose, H, W):
     cv2.fillPoly(mask, [corners_2d[[1, 3, 7, 5, 1]]], 1)
     return mask
 
-
-
 def merge_batch(batch_list):
     merged = {}
     keys = batch_list[0].keys()
@@ -1489,30 +984,20 @@ def merge_batch(batch_list):
     for key in keys:
         values = [b[key] for b in batch_list]
 
-
         if isinstance(values[0], torch.Tensor):
             try:
                 merged[key] = torch.stack(values)
             except RuntimeError:
-
                 merged[key] = values
-
-
         elif isinstance(values[0], np.ndarray):
             try:
                 merged[key] = np.stack(values)
             except ValueError:
                 merged[key] = values
-
-
         elif isinstance(values[0], (float, int, str)):
             merged[key] = values
-
-
         elif isinstance(values[0], dict):
             merged[key] = merge_batch(values)
-
-
         else:
             merged[key] = values
 
@@ -1541,19 +1026,15 @@ def closed_form_inverse_se3(se3, R=None, T=None):
 
     is_numpy = isinstance(se3, np.ndarray)
 
-
     if se3.shape[-2:] != (4, 4) and se3.shape[-2:] != (3, 4):
         raise ValueError(f"se3 must be of shape (N,4,4), got {se3.shape}.")
-
 
     if R is None:
         R = se3[:, :3, :3]
     if T is None:
         T = se3[:, :3, 3:]
 
-
     if is_numpy:
-
         R_transposed = np.transpose(R, (0, 2, 1))
 
         top_right = -np.matmul(R_transposed, T)
@@ -1569,7 +1050,6 @@ def closed_form_inverse_se3(se3, R=None, T=None):
 
     return inverted_matrix
 
-
 def get_camera_parameters(img_size, fov=60, p_x=None, p_y=None, device=torch.device("cuda")):
     """Given image size, fov and principal point coordinates, return K the camera parameter matrix"""
     K = torch.eye(3)
@@ -1577,12 +1057,10 @@ def get_camera_parameters(img_size, fov=60, p_x=None, p_y=None, device=torch.dev
     focal = get_focalLength_from_fieldOfView(fov=fov, img_size=img_size)
     K[0, 0], K[1, 1] = focal, focal
 
-
     if p_x is not None and p_y is not None:
         K[0, -1], K[1, -1] = p_x * img_size, p_y * img_size
     else:
         K[0, -1], K[1, -1] = img_size // 2, img_size // 2
-
 
     K = K.unsqueeze(0).to(device)
     return K

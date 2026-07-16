@@ -22,7 +22,6 @@ def drop_path(x, drop_prob: float = 0.0, training: bool = False):
     output = x * random_tensor
     return output
 
-
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 

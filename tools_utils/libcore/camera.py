@@ -1,5 +1,3 @@
-
-
 import json
 import numpy as np
 import copy
@@ -8,19 +6,11 @@ from .transform import convertRtFromCV2GL
 
 class Camera:
     def __init__(self):
-
         self.info = ''
-
 
         self.w = 0; self.h = 0
 
-
         self.fx = 0; self.fy = 0; self.cx = 0; self.cy = 0; self.fov = 0
-
-
-
-
-
 
         self.R = np.eye(3)
         self.c = np.zeros(3)
@@ -97,7 +87,6 @@ class Camera:
     def sz(self):
         return [int(self.w), int(self.h)]
 
-
     def scaleIntrinsics(self, width, height):
         width = int(width)
         height = int(height)
@@ -129,10 +118,8 @@ class Camera:
         work_h = self.h * scale
         self.scaleIntrinsics(work_w, work_h)
 
-
     def clone(self):
         return copy.deepcopy(self)
-
 
     def copyFrom(self, other):
         self.fx = other.fx
@@ -145,13 +132,11 @@ class Camera:
         self.R = copy.deepcopy(other.R)
         self.c = copy.deepcopy(other.c)
 
-
     def toOpenGL(self):
         cam_gl = copy.deepcopy(self)
         cam_gl.R, t_gl = convertRtFromCV2GL(self.R, self.t)
         cam_gl.setTranslation(t_gl)
         return cam_gl
-
 
     def saveToJson(self):
         cam_value = dict()
@@ -237,7 +222,6 @@ class Rig:
         with open(fn, 'r') as f:
             value = json.load(f)
             return self.loadFromJson(value)
-
 
 def crop_camera_image_boundary(cam, img, top, bottom, left, right):
     crop_cam = copy.deepcopy(cam)

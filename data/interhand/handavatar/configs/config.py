@@ -9,7 +9,6 @@ import torch
 from yacs.config import CfgNode as CN
 
 
-
 _C = CN(new_allowed=True)
 
 
@@ -31,10 +30,8 @@ _C.num_workers = 4
 def get_cfg_defaults():
     return _C.clone()
 
-
 def parse_cfg(cfg):
     cfg.logdir = os.path.join('handavatar/out', cfg.category, cfg.task, cfg.subject.replace('/', '_'), cfg.experiment)
-
 
 def determine_primary_secondary_gpus(cfg):
     print("------------------ GPU Configurations ------------------")
@@ -52,7 +49,6 @@ def determine_primary_secondary_gpus(cfg):
         print(f"CPU job")
     print("--------------------------------------------------------")
 
-
 def make_cfg():
     cfg = get_cfg_defaults()
     config_dir = Path(__file__).resolve().parent
@@ -64,14 +60,11 @@ def make_cfg():
         config_dir.parents[3] / 'runtime_assets' / 'manohd_lbs_weights.pth'
     )
 
-
-
     parse_cfg(cfg)
 
     determine_primary_secondary_gpus(cfg)
 
     return cfg
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--cfg", default='./data/interhand/handavatar/configs/interhand/test_cap0.yaml', type=str)

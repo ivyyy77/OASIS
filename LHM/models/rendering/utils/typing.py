@@ -27,7 +27,6 @@ from typing import (
 )
 
 
-
 from jaxtyping import Bool, Complex, Float, Inexact, Int, Integer, Num, Shaped, UInt
 
 

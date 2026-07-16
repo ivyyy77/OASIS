@@ -19,7 +19,6 @@ def _make_dinov2_model_name(arch_name: str, patch_size: int, num_register_tokens
     registers_suffix = f"_reg{num_register_tokens}" if num_register_tokens else ""
     return f"dinov2_{compact_arch_name}{patch_size}{registers_suffix}"
 
-
 class CenterPadding(nn.Module):
     def __init__(self, multiple):
         super().__init__()

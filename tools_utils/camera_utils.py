@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 import torch
 from torch import nn
 import numpy as np
@@ -17,7 +8,6 @@ from tools_utils.graphics_utils import fov2focal, getWorld2View2, getProjectionM
 WARNED = False
 
 def loadCam(args, id, cam_info, resolution_scale):
-
     orig_w, orig_h = cam_info.image.size
 
     if args.resolution in [1, 2, 4, 8]:
@@ -39,7 +29,6 @@ def loadCam(args, id, cam_info, resolution_scale):
         scale = float(global_down) * float(resolution_scale)
         resolution = (int(orig_w / scale), int(orig_h / scale))
 
-
     from PIL import Image
     with Image.open(cam_info.image_path) as img:
         resized_image_rgb = PILtoTorch(img, resolution)
@@ -56,10 +45,8 @@ def loadCam(args, id, cam_info, resolution_scale):
         resized_bound_mask = None
 
     if cam_info.bkgd_mask is not None:
-
         with Image.open(cam_info.mask_path) as mask:
             resized_bkgd_mask = PILtoTorch(mask, resolution)
-
     else:
         resized_bkgd_mask = None
 
@@ -75,28 +62,11 @@ def loadCam(args, id, cam_info, resolution_scale):
                   data_device=args.data_device)
 
 def loadCam_aug(args, id, cam_info, resolution_scale):
-
     gt_image = torch.from_numpy(cam_info.image).permute(2,0,1)
 
     mask = torch.from_numpy(cam_info.bkgd_mask)
     bound_mask = torch.from_numpy(cam_info.bound_mask)
     loaded_mask = None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, K=cam_info.K,
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, extrinsics = cam_info.extrinsics,
@@ -109,9 +79,7 @@ def loadCam_aug(args, id, cam_info, resolution_scale):
                   big_pose_world_bound=cam_info.big_pose_world_bound,
                   data_device=args.data_device)
 
-
 def loadCam_aug_bs(id, cam_info):
-
     gt_image = torch.from_numpy(cam_info.image).permute(2,0,1)
     mask = torch.from_numpy(cam_info.bkgd_mask)
     nail_mask = torch.from_numpy(cam_info.nail_mask)
@@ -137,7 +105,6 @@ def cameraList_from_camInfos(cam_infos, resolution_scale, args):
 
     for id, c in enumerate(cam_infos):
         yield loadCam_aug(args, id, c, resolution_scale)
-
 
 class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, K, FoVx, FoVy, image, nail_image, nail_mask, verts_cam, gt_alpha_mask,
@@ -183,10 +150,8 @@ class Camera(nn.Module):
         self.zfar = 1000
         self.znear = 0.001
 
-
         self.trans = trans
         self.scale = scale
-
 
         self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1)
         self.projection_matrix = getProjectionMatrix_refine(torch.Tensor(K), self.height, self.width, self.znear, self.zfar).transpose(0, 1)
@@ -219,8 +184,6 @@ def smpl_to_cuda(param, device):
             param[key] = torch.Tensor(param[key])
     return param
 
-
-
 def camera_to_JSON(id, camera : Camera):
     Rt = np.zeros((4, 4))
     Rt[:3, :3] = camera.R.transpose()
@@ -243,8 +206,6 @@ def camera_to_JSON(id, camera : Camera):
     }
     return camera_entry
 
-
-
 def get_rays_from_KRT(H, W, K, R, T):
     r""" Sample rays on an image based on camera matrices (K, R and T)
 
@@ -260,7 +221,6 @@ def get_rays_from_KRT(H, W, K, R, T):
         - rays_d: Array (H, W, 3)
     """
 
-
     rays_o = -np.dot(R.T, T).ravel()
 
     i, j = np.meshgrid(np.arange(W, dtype=np.float32),
@@ -273,8 +233,6 @@ def get_rays_from_KRT(H, W, K, R, T):
     rays_d = pixel_world - rays_o[None, None]
     rays_o = np.broadcast_to(rays_o, rays_d.shape)
     return rays_o, rays_d
-
-
 
 def rays_intersect_3d_bbox(bounds, ray_o, ray_d):
     r"""calculate intersections with 3d bounding box
@@ -312,7 +270,6 @@ def rays_intersect_3d_bbox(bounds, ray_o, ray_d):
     mask_at_box = p_mask_at_box.sum(-1) == 2
     p_intervals = p_intersect[mask_at_box][p_mask_at_box[mask_at_box]].reshape(
         -1, 2, 3)
-
 
     ray_o = ray_o[mask_at_box]
     ray_d = ray_d[mask_at_box]

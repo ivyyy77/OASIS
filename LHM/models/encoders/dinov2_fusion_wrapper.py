@@ -12,7 +12,6 @@
 # limitations under the License.
 
 
-
 import kornia
 import torch
 import torch.nn as nn
@@ -59,7 +58,6 @@ class DPTHead(nn.Module):
         self.to('cuda')
 
     def forward(self, out_features, patch_h, patch_w):
-
         out = []
         for i, x in enumerate(out_features):
             if self.use_clstoken:
@@ -80,7 +78,6 @@ class DPTHead(nn.Module):
         fusion_feats = self.output_conv(fusion_feats)
 
         return fusion_feats
-
 
 class Dinov2FusionWrapper(nn.Module):
     """
@@ -114,7 +111,6 @@ class Dinov2FusionWrapper(nn.Module):
             out_channel=encoder_feat_dim,
         )
 
-
         self.upsample_to_256 = nn.Sequential(
             nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True),
             nn.Conv2d(encoder_feat_dim, encoder_feat_dim, kernel_size=3, stride=1, padding=1, bias=False),
@@ -122,23 +118,6 @@ class Dinov2FusionWrapper(nn.Module):
 
         self.resolution = resolution
         self.antialias = antialias
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         if freeze:
             if modulation_dim is not None:
@@ -156,7 +135,6 @@ class Dinov2FusionWrapper(nn.Module):
     def _preprocess_image(
         self, image: torch.tensor, resolution: int = 1024
     ) -> torch.Tensor:
-
         _, __, H, W = image.shape
         max_size = max(H, W)
         H_pad = max_size - H
@@ -198,10 +176,6 @@ class Dinov2FusionWrapper(nn.Module):
 
     @torch.compile
     def forward(self, image: torch.Tensor, mod: torch.Tensor = None):
-
-
-
-
         image = self._preprocess_image(image, self.resolution)
 
         patch_h, patch_w =(

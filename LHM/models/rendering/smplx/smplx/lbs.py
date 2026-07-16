@@ -100,7 +100,6 @@ def find_dynamic_lmk_idx_and_bcoords(
 
     return dyn_lmk_faces_idx, dyn_lmk_b_coords
 
-
 def vertices2landmarks(
     vertices: Tensor, faces: Tensor, lmk_faces_idx: Tensor, lmk_bary_coords: Tensor
 ) -> Tensor:
@@ -125,17 +124,12 @@ def vertices2landmarks(
         The coordinates of the landmarks for each mesh in the batch
     """
 
-
     batch_size, num_verts = vertices.shape[:2]
     device = vertices.device
 
     lmk_faces = torch.index_select(
         faces, 0, lmk_faces_idx.view(-1).to(torch.long)
     ).view(batch_size, -1, 3)
-
-
-
-
 
     lmk_faces += (
         torch.arange(batch_size, dtype=torch.long, device=device).view(-1, 1, 1)
@@ -146,7 +140,6 @@ def vertices2landmarks(
 
     landmarks = torch.einsum("blfi,blf->bli", [lmk_vertices, lmk_bary_coords])
     return landmarks
-
 
 def lbs(
     betas: Tensor,
@@ -205,19 +198,13 @@ def lbs(
     batch_size = max(betas.shape[0], pose.shape[0])
     device, dtype = betas.device, betas.dtype
 
-
-
     v_shaped = v_template + blend_shapes(betas, shapedirs)
-
-
 
     J = vertices2joints(J_regressor, v_shaped)
     if joint_offset is not None:
         J = J + joint_offset
     if locator_offset is not None:
         J_lo = J + locator_offset
-
-
 
     ident = torch.eye(3, dtype=dtype, device=device)
     if pose2rot:
@@ -236,7 +223,6 @@ def lbs(
 
     v_posed = pose_offsets + v_shaped
 
-
     J_transformed, A = batch_rigid_transform(
         rot_mats, J, parents, dtype=dtype
     )
@@ -244,8 +230,6 @@ def lbs(
         J_transformed, _ = batch_rigid_transform(
             rot_mats, J_lo, parents, dtype=dtype
         )
-
-
 
     W = lbs_weights.unsqueeze(dim=0).expand([batch_size, -1, -1])
 
@@ -262,7 +246,6 @@ def lbs(
     verts = v_homo[:, :, :3, 0]
 
     return verts, J_transformed
-
 
 def vertices2joints(J_regressor: Tensor, vertices: Tensor) -> Tensor:
     """Calculates the 3D joint locations from the vertices
@@ -283,7 +266,6 @@ def vertices2joints(J_regressor: Tensor, vertices: Tensor) -> Tensor:
 
     return torch.einsum("bik,ji->bjk", [vertices, J_regressor])
 
-
 def blend_shapes(betas: Tensor, shape_disps: Tensor) -> Tensor:
     """Calculates the per vertex displacement due to the blend shapes
 
@@ -301,12 +283,8 @@ def blend_shapes(betas: Tensor, shape_disps: Tensor) -> Tensor:
         The per-vertex displacement due to shape deformation
     """
 
-
-
-
     blend_shape = torch.einsum("bl,mkl->bmk", [betas, shape_disps])
     return blend_shape
-
 
 def batch_rodrigues(
     rot_vecs: Tensor,
@@ -332,7 +310,6 @@ def batch_rodrigues(
     cos = torch.unsqueeze(torch.cos(angle), dim=1)
     sin = torch.unsqueeze(torch.sin(angle), dim=1)
 
-
     rx, ry, rz = torch.split(rot_dir, 1, dim=1)
     K = torch.zeros((batch_size, 3, 3), dtype=dtype, device=device)
 
@@ -345,7 +322,6 @@ def batch_rodrigues(
     rot_mat = ident + sin * K + (1 - cos) * torch.bmm(K, K)
     return rot_mat
 
-
 def transform_mat(R: Tensor, t: Tensor) -> Tensor:
     """Creates a batch of transformation matrices
     Args:
@@ -356,7 +332,6 @@ def transform_mat(R: Tensor, t: Tensor) -> Tensor:
     """
 
     return torch.cat([F.pad(R, [0, 0, 0, 1]), F.pad(t, [0, 0, 0, 1], value=1)], dim=2)
-
 
 def batch_rigid_transform(
     rot_mats: Tensor, joints: Tensor, parents: Tensor, dtype=torch.float32
@@ -395,13 +370,10 @@ def batch_rigid_transform(
 
     transform_chain = [transforms_mat[:, 0]]
     for i in range(1, parents.shape[0]):
-
-
         curr_res = torch.matmul(transform_chain[parents[i]], transforms_mat[:, i])
         transform_chain.append(curr_res)
 
     transforms = torch.stack(transform_chain, dim=1)
-
 
     posed_joints = transforms[:, :, :3, 3]
 

@@ -40,7 +40,6 @@ class DINOHead(nn.Module):
         x = self.last_layer(x)
         return x
 
-
 def _build_mlp(nlayers, in_dim, bottleneck_dim, hidden_dim=None, use_bn=False, bias=True):
     if nlayers == 1:
         return nn.Linear(in_dim, bottleneck_dim, bias=bias)

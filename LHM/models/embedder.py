@@ -36,9 +36,6 @@ class CameraEmbedder(nn.Module):
     def forward(self, x):
         return self.mlp(x)
 
-
-
-
 class BodyPoseRefiner(nn.Module):
     def __init__(self,
                  total_bones=16,
@@ -50,17 +47,11 @@ class BodyPoseRefiner(nn.Module):
 
         block_mlps = [nn.Linear(embedding_size, mlp_width), nn.ReLU()]
 
-
         for _ in range(0, mlp_depth):
             block_mlps += [nn.Linear(mlp_width, mlp_width), nn.ReLU()]
 
-
-
-
         self.block_mlps = nn.Sequential(*block_mlps)
         initseq(self.block_mlps)
-
-
 
         init_val = 1e-5
         last_layer = self.block_mlps[-1]
@@ -72,16 +63,6 @@ class BodyPoseRefiner(nn.Module):
     def forward(self, pose_input):
         rvec = self.block_mlps(pose_input)
         return rvec
-
-
-
-
-
-
-
-
-
-
 
 def xaviermultiplier(m, gain):
     """
@@ -165,15 +146,12 @@ def initmod(m, gain=1.0, weightinitfunc=xavier_uniform_):
         if hasattr(m, 'bias'):
             m.bias.data.zero_()
 
-
     if isinstance(m, nn.ConvTranspose2d):
-
         m.weight.data[:, :, 0::2, 1::2] = m.weight.data[:, :, 0::2, 0::2]
         m.weight.data[:, :, 1::2, 0::2] = m.weight.data[:, :, 0::2, 0::2]
         m.weight.data[:, :, 1::2, 1::2] = m.weight.data[:, :, 0::2, 0::2]
 
     if isinstance(m, nn.ConvTranspose3d):
-
         m.weight.data[:, :, 0::2, 0::2, 1::2] = m.weight.data[:, :,
                                                               0::2, 0::2, 0::2]
         m.weight.data[:, :, 0::2, 1::2, 0::2] = m.weight.data[:, :,

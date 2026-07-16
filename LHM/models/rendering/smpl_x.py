@@ -1,5 +1,3 @@
-
-
 import copy
 import math
 import os
@@ -32,7 +30,6 @@ This one-time computation can be reused for all meshes with the same face topolo
 
 
 def avaliable_device():
-
     import torch
 
     if torch.cuda.is_available():
@@ -42,7 +39,6 @@ def avaliable_device():
         device = "cpu"
 
     return device
-
 
 class SMPLX(object):
     def __init__(
@@ -133,7 +129,6 @@ class SMPLX(object):
         self.rhand_vertex_idx = hand_vertex_idx["right_hand"]
         self.lhand_vertex_idx = hand_vertex_idx["left_hand"]
         self.expr_vertex_idx = self.get_expr_vertex_idx()
-
 
         self.joint_num = (
             55
@@ -238,7 +233,6 @@ class SMPLX(object):
 
         self.neutral_jaw_pose = torch.FloatTensor([1 / 3, 0, 0])
 
-
         self.subdivide_num = subdivide_num
         self.subdivider_list = self.get_subdivider(subdivide_num)
         self.subdivider_cpu_list = self.get_subdivider_cpu(subdivide_num)
@@ -262,7 +256,6 @@ class SMPLX(object):
                 lower_body_vertice_idx.append(v_id)
 
         lower_body_vertice_idx = np.asarray(lower_body_vertice_idx)
-
 
         return lower_body_vertice_idx
 
@@ -424,7 +417,6 @@ class SMPLX(object):
         return is_cavity, face_new
 
     def get_expr_vertex_idx(self):
-
         """
         SMPLX + FLAME2019 Version
         according to LBS weights to search related vertices ID
@@ -442,7 +434,6 @@ class SMPLX(object):
         )[
             0
         ]
-
 
         flame_joints_name = ("Neck", "Head", "Jaw", "L_Eye", "R_Eye")
         expr_vertex_idx = []
@@ -486,7 +477,6 @@ class SMPLX(object):
         is_lower_arm = is_arm * (normal[:, 1] <= math.cos(math.pi / 3))
         return is_upper_arm, is_lower_arm
 
-
 class SMPLXModel(nn.Module):
     def __init__(
         self,
@@ -499,14 +489,6 @@ class SMPLXModel(nn.Module):
         apply_pose_blendshape=False,
     ) -> None:
         super().__init__()
-
-
-
-
-
-
-
-
 
         self.smpl_x = SMPLX(
             human_model_path=human_model_path,
@@ -522,7 +504,6 @@ class SMPLXModel(nn.Module):
         self.smplx_init()
 
     def get_body_infos(self):
-
         head_id = torch.where(self.is_face == True)[0]
         body_id = torch.where(self.is_face == False)[0]
         return dict(head=head_id, body=body_id)
@@ -543,9 +524,6 @@ class SMPLXModel(nn.Module):
         """
 
         smpl_x = self.smpl_x
-
-
-
 
         skinning_weight = self.smplx_layer.lbs_weights.float()
 
@@ -573,7 +551,6 @@ class SMPLXModel(nn.Module):
             is_lower_body[smpl_x.lower_body_vertex_idx],
         ) = (1.0, 1.0, 1.0, 1.0, 1.0)
         is_cavity = torch.FloatTensor(smpl_x.is_cavity)[:, None]
-
 
         (
             _,
@@ -618,9 +595,6 @@ class SMPLXModel(nn.Module):
         )
         is_cavity = is_cavity[:, 0] > 0
 
-
-
-
         self.register_buffer("skinning_weight", skinning_weight.contiguous())
         self.register_buffer("pose_dirs", pose_dirs.contiguous())
         self.register_buffer("expr_dirs", expr_dirs.contiguous())
@@ -634,7 +608,6 @@ class SMPLXModel(nn.Module):
     def get_neutral_pose_human(
         self, jaw_zero_pose, use_id_info, shape_param, device, face_offset, joint_offset
     ):
-
         smpl_x = self.smpl_x
         batch_size = shape_param.shape[0]
 
@@ -659,23 +632,18 @@ class SMPLXModel(nn.Module):
         if use_id_info:
             shape_param = shape_param
 
-
             face_offset = face_offset
             joint_offset = (
                 smpl_x.get_joint_offset(joint_offset)
                 if joint_offset is not None
                 else None
             )
-
         else:
             shape_param = (
                 torch.zeros((batch_size, smpl_x.shape_param_dim)).float().to(device)
             )
             face_offset = None
             joint_offset = None
-
-
-
 
         output = self.smplx_layer(
             global_orient=zero_pose,
@@ -731,7 +699,6 @@ class SMPLXModel(nn.Module):
         )
 
         pose = axis_angle_to_matrix(pose)
-
 
         _, transform_mat_neutral_pose = batch_rigid_transform(
             pose[:, :, :, :], joint_neutral_pose[:, :, :], self.smplx_layer.parents
@@ -805,7 +772,6 @@ class SMPLXModel(nn.Module):
 
         transform_mat_joint_1 = transform_mat_neutral_pose
 
-
         root_pose = smplx_param["root_pose"]
         body_pose = smplx_param["body_pose"]
         jaw_pose = smplx_param["jaw_pose"]
@@ -813,8 +779,6 @@ class SMPLXModel(nn.Module):
         reye_pose = smplx_param["reye_pose"]
         lhand_pose = smplx_param["lhand_pose"]
         rhand_pose = smplx_param["rhand_pose"]
-
-
 
         pose = torch.cat(
             (
@@ -855,7 +819,6 @@ class SMPLXModel(nn.Module):
         return transform_mat_vertex
 
     def get_posed_blendshape(self, smplx_param):
-
         root_pose = smplx_param["root_pose"]
         body_pose = smplx_param["body_pose"]
         jaw_pose = smplx_param["jaw_pose"]
@@ -881,7 +844,6 @@ class SMPLXModel(nn.Module):
             axis_angle_to_matrix(pose) - torch.eye(3)[None, None, :, :].float().cuda()
         ).view(batch_size, (self.smpl_x.joint_num - 1) * 9)
 
-
         smplx_pose_offset = torch.matmul(pose.detach(), self.pose_dirs).view(
             batch_size, self.smpl_x.vertex_num_upsampled, 3
         )
@@ -901,8 +863,6 @@ class SMPLXModel(nn.Module):
         return xyz
 
     def lr_idx_to_hr_idx(self, idx):
-
-
         return idx
 
     def transform_to_posed_verts_from_neutral_pose(
@@ -946,7 +906,6 @@ class SMPLXModel(nn.Module):
                     .view(-1, *joint_offset.shape[1:])
                 )
 
-
         try:
             smplx_expr_offset = (
                 smplx_data["expr"].unsqueeze(1).unsqueeze(1) * self.expr_dirs
@@ -956,7 +915,6 @@ class SMPLXModel(nn.Module):
         except:
             smplx_expr_offset = 0.0
 
-
         if self.apply_pose_blendshape:
             smplx_pose_offset = self.get_posed_blendshape(smplx_data)
             mask = (
@@ -965,9 +923,6 @@ class SMPLXModel(nn.Module):
                 .repeat(batch_size, 1)
             )
             mean_3d[mask] += smplx_pose_offset[mask]
-
-
-
 
         nn_vertex_idxs = knn_points(
             mean_3d[:, :, :], mesh_neutral_pose[:, :, :], K=1, return_nn=True
@@ -987,7 +942,6 @@ class SMPLXModel(nn.Module):
             .repeat(batch_size, 1)[mask]
         )
 
-
         joint_zero_pose = self.get_zero_pose_human(
             shape_param=shape_param,
             device=device,
@@ -995,11 +949,9 @@ class SMPLXModel(nn.Module):
             joint_offset=joint_offset,
         )
 
-
         transform_mat_joint, j3d = self.get_transform_mat_joint(
             transform_mat_neutral_pose, joint_zero_pose, smplx_data
         )
-
 
         transform_mat_vertex = self.get_transform_mat_vertex(
             transform_mat_joint, nn_vertex_idxs
@@ -1035,11 +987,9 @@ class SMPLXModel(nn.Module):
             smplx_data (_type_): e.g., body_pose:[B*Nv, 21, 3], betas:[B*Nv, 100]
         """
 
-
         mesh_neutral_pose, _, transform_mat_neutral_pose = self.get_query_points(
             smplx_data, device
         )
-
 
         mean_3d, transform_matrix = self.transform_to_posed_verts_from_neutral_pose(
             mesh_neutral_pose,

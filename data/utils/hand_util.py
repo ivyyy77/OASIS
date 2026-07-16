@@ -63,7 +63,6 @@ class MANOHand:
         'I3', 'M3', 'L3', 'R3', 'T3'
     ]
 
-
     mesh_mapping = {16: 333, 17: 444, 18: 672, 19: 555, 20: 744}
 
     parents = [
@@ -77,7 +76,6 @@ class MANOHand:
     ]
 
     end_points = [0, 16, 17, 18, 19, 20]
-
 
 def _to_skew_matrix(v):
     r""" Compute the skew matrix given a 3D vectors.
@@ -93,7 +91,6 @@ s
     return np.array([[0, -vz, vy],
                     [vz, 0, -vx],
                     [-vy, vx, 0]])
-
 
 def _to_skew_matrices(batch_v):
     r""" Compute the skew matrix given 3D vectors. (batch version)
@@ -112,7 +109,6 @@ def _to_skew_matrices(batch_v):
         skew_matrices[i] = _to_skew_matrix(batch_v[i])
 
     return skew_matrices
-
 
 def _get_rotation_mtx(v1, v2):
     r""" Compute the rotation matrices between two 3D vector. (batch version)
@@ -147,7 +143,6 @@ def _get_rotation_mtx(v1, v2):
 
     return Rs
 
-
 def _construct_G(R_mtx, T):
     r""" Build 4x4 [R|T] matrix from rotation matrix, and translation vector
 
@@ -167,7 +162,6 @@ def _construct_G(R_mtx, T):
         dtype='float32')
 
     return G
-
 
 def _deform_gaussian_volume(
         grid_size,
@@ -193,7 +187,6 @@ def _deform_gaussian_volume(
     R = rotation_mtx
     S = scale_mtx
 
-
     SIGMA = R.dot(S).dot(S).dot(R.T)
 
     min_x, min_y, min_z = bbox_min_xyz
@@ -212,7 +205,6 @@ def _deform_gaussian_volume(
 
     return np.exp(-1 * dist)
 
-
 def _std_to_scale_mtx(stds):
     r""" Build scale matrix from standard deviations
 
@@ -229,7 +221,6 @@ def _std_to_scale_mtx(stds):
     scale_mtx[2][2] = 1.0/stds[2]
 
     return scale_mtx
-
 
 def _rvec_to_rmtx(rvec):
     r''' apply Rodriguez Formula on rotate vector (3,)
@@ -252,7 +243,6 @@ def _rvec_to_rmtx(rvec):
            sin(theta)*skew_mtx +\
            (1-cos(theta))*r.dot(r.T)
 
-
 def body_pose_to_body_RTs(jangles, tpose_joints):
     r""" Convert body pose to global rotation matrix R and translation T.
 
@@ -268,7 +258,6 @@ def body_pose_to_body_RTs(jangles, tpose_joints):
     jangles = jangles.reshape(-1, 3)
     total_joints = jangles.shape[0]
 
-
     Rs = np.zeros(shape=[total_joints, 3, 3], dtype='float32')
     Rs[0] = _rvec_to_rmtx(jangles[0,:])
 
@@ -280,7 +269,6 @@ def body_pose_to_body_RTs(jangles, tpose_joints):
         Ts[i] = tpose_joints[i,:] - tpose_joints[MANOHand.parents[i], :]
 
     return Rs, Ts
-
 
 def get_canonical_global_tfms(canonical_joints):
     r""" Convert canonical joints to 4x4 global transformation matrix.
@@ -303,7 +291,6 @@ def get_canonical_global_tfms(canonical_joints):
                             _construct_G(np.eye(3), translate))
 
     return gtfms
-
 
 def approx_gaussian_bone_volumes(
     tpose_joints,
@@ -333,30 +320,6 @@ def approx_gaussian_bone_volumes(
     g_volumes = []
 
     for joint_idx in range(0, total_joints):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         gaussian_volume = np.zeros(shape=grid_shape, dtype='float32')
         is_parent_joint = False
         for bone_idx, parent_idx in enumerate(MANOHand.parents):
@@ -364,9 +327,6 @@ def approx_gaussian_bone_volumes(
                 continue
 
             S = _std_to_scale_mtx(BONE_STDS * 2. * scales)
-
-
-
 
             start_joint = tpose_joints[parent_idx]
             end_joint = tpose_joints[bone_idx]
@@ -388,23 +348,7 @@ def approx_gaussian_bone_volumes(
         if is_parent_joint:
             g_volumes.append(gaussian_volume)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     g_volumes = np.stack(g_volumes, axis=0)
-
-
 
     bg_volume = 1.0 - np.sum(g_volumes, axis=0, keepdims=True).clip(min=0.0, max=1.0)
     g_volumes = np.concatenate([g_volumes, bg_volume], axis=0)

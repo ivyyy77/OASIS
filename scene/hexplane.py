@@ -15,14 +15,12 @@ def get_normalized_directions(directions):
     """
     return (directions + 1.0) / 2.0
 
-
 def normalize_aabb(pts, aabb):
     return (pts - aabb[0]) * (2.0 / (aabb[1] - aabb[0])) - 1.0
 def grid_sample_wrapper(grid: torch.Tensor, coords: torch.Tensor, align_corners: bool = True) -> torch.Tensor:
     grid_dim = coords.shape[-1]
 
     if grid.dim() == grid_dim + 1:
-
         grid = grid.unsqueeze(0)
     if coords.dim() == 2:
         coords = coords.unsqueeze(0)
@@ -69,7 +67,6 @@ def init_grid_param(
 
     return grid_coefs
 
-
 def interpolate_ms_features(pts: torch.Tensor,
                             ms_grids: Collection[Iterable[nn.Module]],
                             grid_dimensions: int,
@@ -86,7 +83,6 @@ def interpolate_ms_features(pts: torch.Tensor,
     for scale_id,  grid in enumerate(ms_grids[:num_levels]):
         interp_space = 1.
         for ci, coo_comb in enumerate(coo_combs):
-
             feature_dim = grid[ci].shape[1]
             interp_out_plane = (
                 grid_sample_wrapper(grid[ci], pts[..., coo_comb])
@@ -94,7 +90,6 @@ def interpolate_ms_features(pts: torch.Tensor,
             )
 
             interp_space = interp_space * interp_out_plane
-
 
         if concat_features:
             multi_scale_interp.append(interp_space)
@@ -104,7 +99,6 @@ def interpolate_ms_features(pts: torch.Tensor,
     if concat_features:
         multi_scale_interp = torch.cat(multi_scale_interp, dim=-1)
     return multi_scale_interp
-
 
 class HexPlaneField(nn.Module):
     def __init__(
@@ -122,11 +116,9 @@ class HexPlaneField(nn.Module):
         self.multiscale_res_multipliers = multires
         self.concat_features = True
 
-
         self.grids = nn.ModuleList()
         self.feat_dim = 0
         for res in self.multiscale_res_multipliers:
-
             config = self.grid_config[0].copy()
 
             config["resolution"] = [
@@ -146,7 +138,6 @@ class HexPlaneField(nn.Module):
             self.grids.append(gp)
 
         print("feature_dim:",self.feat_dim)
-
 
     def set_aabb(self,xyz_max, xyz_min):
         aabb = torch.tensor([
@@ -169,7 +160,6 @@ class HexPlaneField(nn.Module):
             concat_features=self.concat_features, num_levels=None)
         if len(features) < 1:
             features = torch.zeros((0, 1)).to(features.device)
-
 
         return features
 

@@ -1,6 +1,3 @@
-
-
-
 import os
 import tarfile
 
@@ -23,8 +20,6 @@ def extract_tar_file(tar_path, extract_path):
     print(f"tar {tar_path} done!")
 
 def download_file(url, save_path):
-
-
     file_name = os.path.basename(url)
     save_file = os.path.join(save_path, file_name)
 
@@ -48,14 +43,12 @@ def download_file(url, save_path):
 
         print(f"download: {save_file}")
     except requests.exceptions.RequestException as e:
-
         print(f"error: {e}")
         raise FileExistsError(f"not find url: {url}")
 
     return save_file
 
 def download_extract_tar_from_url(url, save_path='./'):
-
     save_file = download_file(url, save_path)
     extract_tar_file(save_file, save_path)
 

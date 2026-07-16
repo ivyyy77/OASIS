@@ -53,12 +53,10 @@ class ModelOutput:
         data = [(t.name, getattr(self, t.name)) for t in fields(self)]
         return iter(data)
 
-
 @dataclass
 class SMPLOutput(ModelOutput):
     betas: Optional[Tensor] = None
     body_pose: Optional[Tensor] = None
-
 
 @dataclass
 class SMPLHOutput(SMPLOutput):
@@ -66,18 +64,15 @@ class SMPLHOutput(SMPLOutput):
     right_hand_pose: Optional[Tensor] = None
     transl: Optional[Tensor] = None
 
-
 @dataclass
 class SMPLXOutput(SMPLHOutput):
     expression: Optional[Tensor] = None
     jaw_pose: Optional[Tensor] = None
 
-
 @dataclass
 class MANOOutput(ModelOutput):
     betas: Optional[Tensor] = None
     hand_pose: Optional[Tensor] = None
-
 
 @dataclass
 class FLAMEOutput(ModelOutput):
@@ -85,7 +80,6 @@ class FLAMEOutput(ModelOutput):
     expression: Optional[Tensor] = None
     jaw_pose: Optional[Tensor] = None
     neck_pose: Optional[Tensor] = None
-
 
 def find_joint_kin_chain(joint_id, kinematic_tree):
     kin_chain = []
@@ -95,7 +89,6 @@ def find_joint_kin_chain(joint_id, kinematic_tree):
         curr_idx = kinematic_tree[curr_idx]
     return kin_chain
 
-
 def to_tensor(
         array: Union[Array, Tensor], dtype=torch.float32
 ) -> Tensor:
@@ -104,23 +97,17 @@ def to_tensor(
     else:
         return torch.tensor(array, dtype=dtype)
 
-
 class Struct(object):
     def __init__(self, **kwargs):
         for key, val in kwargs.items():
             setattr(self, key, val)
-
 
 def to_np(array, dtype=np.float32):
     if 'scipy.sparse' in str(type(array)):
         array = array.todense()
     return np.array(array, dtype=dtype)
 
-
 def rot_mat_to_euler(rot_mats):
-
-
-
     sy = torch.sqrt(rot_mats[:, 0, 0] * rot_mats[:, 0, 0] +
                     rot_mats[:, 1, 0] * rot_mats[:, 1, 0])
     return torch.atan2(-rot_mats[:, 2, 0], sy)

@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import os
 import pickle
 import sys
@@ -37,7 +31,6 @@ from data.interhand.train import Renderer_mesh
 logger = logging.getLogger(__name__)
 
 
-
 _GAUSSIANHAND_ROOT = Path(__file__).resolve().parents[2].parent / 'GuassianHand'
 if _GAUSSIANHAND_ROOT.exists():
     if str(_GAUSSIANHAND_ROOT) not in sys.path:
@@ -48,8 +41,6 @@ if _GAUSSIANHAND_ROOT.exists():
         gaussianhand_get_uvd = None
 else:
     gaussianhand_get_uvd = None
-
-
 
 class ModelHandLRM(nn.Module):
     """
@@ -86,18 +77,10 @@ class ModelHandLRM(nn.Module):
         fix_opacity=True,
         fix_rotation=False,
     ):
-
         super(ModelHandLRM, self).__init__()
-
-
 
         self.gradient_checkpointing = tf_grad_ckpt
         self.encoder_gradient_checkpointing = encoder_grad_ckpt
-
-
-
-
-
 
         self.encoder = self._encoder_fn(encoder_type)(
             model_name=encoder_model_name,
@@ -108,22 +91,9 @@ class ModelHandLRM(nn.Module):
         self.uv_texture_hw = (256, 256)
         self._warned_missing_uv_mapper = False
 
-
-
-
-
-
         pcl_dim = 1024
 
-
-
-
-
-
-
-
         input_dim = 1024
-
 
         input_dim_ = 1024
 
@@ -135,8 +105,6 @@ class ModelHandLRM(nn.Module):
             linear(mid_dim, pcl_dim),
 
         ).to('cuda')
-
-
 
         skip_decoder = False
         self.latent_query_points_type = 'e2e_smplx_sub1'
@@ -156,15 +124,9 @@ class ModelHandLRM(nn.Module):
         elif self.latent_query_points_type.startswith("e2e_smplx"):
             skip_decoder = True
             self.pcl_embed = PointEmbed(dim=pcl_dim)
-
         else:
             raise NotImplementedError
         print(f"==========skip_decoder:{skip_decoder}")
-
-
-
-
-
 
         self.transformer = self.build_transformer(
             transformer_type,
@@ -178,98 +140,22 @@ class ModelHandLRM(nn.Module):
             if hasattr(blk, "part_aware_point"):
                 blk.part_aware_point.to('cuda:0')
 
-
-
-
-
-
-
-
         self.uvmap_size = 1024
-
-
-
-
-
-
-
-
 
         self.uv_map_bias = None
 
         self.color_b_map = None
         self.opacity_b_map = None
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         self.adapter = QFormerWithSelf(dim=input_dim_).cuda()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         self.aggregator = PatchAggregatorWithPosWeightedPool(
             C_in=input_dim_, D_hidden=128, out_dim=input_dim_).cuda()
 
-
-
         cano_pose_type = 1
         dense_sample_pts = 12337
 
-
-
-
         self.renderer = GS_Hand_3DRenderer(
-
-
 
             pcl_embed=None,
             feat_dim=transformer_dim,
@@ -280,8 +166,6 @@ class ModelHandLRM(nn.Module):
             xyz_offset_max_step=gs_xyz_offset_max_step,
             clip_scaling=gs_clip_scaling,
 
-
-
             fix_opacity=fix_opacity,
             fix_rotation=fix_rotation,
             decoder_mlp=False,
@@ -290,19 +174,14 @@ class ModelHandLRM(nn.Module):
             gradient_checkpointing=self.gradient_checkpointing,
             apply_pose_blendshape=False,
 
-
             feature_map=False,
 
             dataset_center_add_map={0: True, 1: True, 2: False},
         )
 
-
         self._init_uvmap_assets()
 
         params = self.obtain_params()
-
-
-
 
         self.optimizer = torch.optim.AdamW(params)
 
@@ -312,16 +191,10 @@ class ModelHandLRM(nn.Module):
                     eta_min=1e-6
                 )
 
-
-
         self.checkpoint_path = os.path.join('./checkpoint/exp-mix3-1')
         os.makedirs(self.checkpoint_path, exist_ok=True)
 
-
-
-
         self.uv_feat_fusion_weight = torch.nn.Parameter(torch.tensor(0.1, dtype=torch.float32))
-
 
     def _init_uvmap_assets(self):
         """Initialize UV map assets from MANO model for single right hand (256x256 resolution)."""
@@ -330,16 +203,12 @@ class ModelHandLRM(nn.Module):
         mano = self.renderer.mano_model.mano
         uvmap_size = 256
 
-
         faces = mano.faces.numpy() if isinstance(mano.faces, torch.Tensor) else mano.faces
-
-
 
         if hasattr(mano, 'faces_uv_idx') and hasattr(mano, 'texcoords'):
             faces_uv_idx = mano.faces_uv_idx.numpy() if isinstance(mano.faces_uv_idx, torch.Tensor) else mano.faces_uv_idx
             texcoords = mano.texcoords.numpy() if isinstance(mano.texcoords, torch.Tensor) else mano.texcoords
         else:
-
             logger.warning("MANO model doesn't have UV attributes. Attempting to load from assets...")
 
             num_verts = mano.v_template.shape[0]
@@ -350,22 +219,17 @@ class ModelHandLRM(nn.Module):
             v_max = v_template_np.max(axis=0)
             texcoords = (v_template_np[:, :2] - v_min[:2]) / (v_max[:2] - v_min[:2] + 1e-8)
 
-
         uvmap_f_idx = self._get_uvmap_faces_index(faces_uv_idx, texcoords, uv_size=uvmap_size)
 
-
         uvmap_f_bary = self._get_uvmap_faces_barycoord(uvmap_f_idx, faces_uv_idx, texcoords, uv_size=uvmap_size)
-
 
         uvmap_mask = (uvmap_f_idx != -1)
 
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-
         self.register_buffer('uvmap_f_idx', torch.tensor(uvmap_f_idx, dtype=torch.int32, device=device))
         self.register_buffer('uvmap_f_bary', torch.tensor(uvmap_f_bary, dtype=torch.float32, device=device))
         self.register_buffer('uvmap_mask', torch.tensor(uvmap_mask, dtype=torch.bool, device=device))
-
 
         self.uv_mask_flat = uvmap_mask.flatten()
         self.uvmap_size = uvmap_size
@@ -388,7 +252,6 @@ class ModelHandLRM(nn.Module):
         uvmap_faces_idx = np.ones((uv_size, uv_size), dtype=np.int32) * -1
 
         for f_idx in range(len(faces_uv)):
-
             cv2.drawContours(uvmap_faces_idx, [uv_coords_px[faces_uv[f_idx]]], 0, int(f_idx), -1)
 
         return uvmap_faces_idx
@@ -414,11 +277,9 @@ class ModelHandLRM(nn.Module):
                 if f_idx == -1:
                     continue
 
-
                 v_uvs = uv_coords_px[faces_uv[f_idx]]
                 v_uv0, v_uv1, v_uv2 = v_uvs[0], v_uvs[1], v_uvs[2]
                 c_uv = np.array([u_idx, v_idx])
-
 
                 c_0 = c_uv - v_uv0
                 c_1 = c_uv - v_uv1
@@ -449,25 +310,19 @@ class ModelHandLRM(nn.Module):
         batch_size, feature_dim = img_features.shape[0], img_features.shape[1]
         device = img_features.device
 
-
         uv_features = torch.zeros(
             (batch_size, feature_dim, self.uvmap_size, self.uvmap_size),
             device=device, dtype=torch.float32
         )
 
-
         uvmap_f_idx = self.uvmap_f_idx.to(device)
         uvmap_f_bary = self.uvmap_f_bary.to(device)
         uvmap_mask = self.uvmap_mask.to(device)
 
-
         mano = self.renderer.mano_model.mano
         faces = torch.tensor(mano.faces, device=device, dtype=torch.long)
 
-
         uv_vertex_id = faces[uvmap_f_idx]
-
-
 
         uv_vertex = torch.zeros(
             (batch_size, self.uvmap_size, self.uvmap_size, 3, 3),
@@ -476,28 +331,19 @@ class ModelHandLRM(nn.Module):
         for k in range(3):
             uv_vertex[:, :, :, k, :] = deformed_vertices[:, uv_vertex_id[:, :, k], :]
 
-
-
         uv_vertex_interp = torch.einsum('hwk,bhwkn->bhwn', uvmap_f_bary, uv_vertex)
-
 
         uv_vertex_homo = torch.cat([uv_vertex_interp, torch.ones_like(uv_vertex_interp[:, :, :, :1])], dim=-1)
 
-
         uv_vertex_cam = torch.einsum('bij,bhwj->bhwi', w2c_cam, uv_vertex_homo)[:, :, :, :3]
-
-
 
         focal = img_size / 2.0
         vertices_img_x = focal * uv_vertex_cam[:, :, :, 0] / (uv_vertex_cam[:, :, :, 2] + 1e-8)
         vertices_img_y = focal * uv_vertex_cam[:, :, :, 1] / (uv_vertex_cam[:, :, :, 2] + 1e-8)
 
-
         vertices_img_x_norm = 2.0 * (vertices_img_x / img_size) - 1.0
         vertices_img_y_norm = 2.0 * (vertices_img_y / img_size) - 1.0
         vertices_img_norm = torch.stack([vertices_img_x_norm, vertices_img_y_norm], dim=-1)
-
-
 
         uv_features_sampled = torch.nn.functional.grid_sample(
             img_features,
@@ -507,12 +353,10 @@ class ModelHandLRM(nn.Module):
             align_corners=False
         )
 
-
         mask = uvmap_mask.clone()[None, None, :, :].repeat(batch_size, 1, 1, 1).float()
         uv_features = uv_features_sampled * mask
 
         return uv_features
-
 
     def sample_uv_feature_at_points(self, uvmap_features, vert_uv):
         """
@@ -529,14 +373,11 @@ class ModelHandLRM(nn.Module):
         batch_size, n_points, _ = vert_uv.shape
         device = vert_uv.device
 
-
         grid = vert_uv.clone()
         grid[..., 0] = 2.0 * vert_uv[..., 0] - 1.0
         grid[..., 1] = 2.0 * vert_uv[..., 1] - 1.0
 
-
         grid = grid[:, None, :, :].contiguous()
-
 
         sampled = torch.nn.functional.grid_sample(
             uvmap_features, grid,
@@ -545,11 +386,9 @@ class ModelHandLRM(nn.Module):
             align_corners=False
         )
 
-
         sampled = sampled.squeeze(2).permute(0, 2, 1).contiguous()
 
         return sampled
-
 
     def get_uvmap_features_from_image(self, combined_feats, uv_map_dict):
         """
@@ -576,11 +415,8 @@ class ModelHandLRM(nn.Module):
         batch_size = combined_feats.shape[0]
         device = combined_feats.device
 
-
         if uv_map_dict is None or not isinstance(uv_map_dict, dict):
             return {'uvmap_features': None, 'point_uv_features': None}
-
-
 
         vert_uv = uv_map_dict.get('vert_uv')
         face_uv = uv_map_dict.get('face_uv')
@@ -591,27 +427,22 @@ class ModelHandLRM(nn.Module):
         if vert_uv is None or face_uv is None or face_uv_xy is None:
             return {'uvmap_features': None, 'point_uv_features': None}
 
-
         def to_batch_list(data, batch_size):
             """Convert various input formats to list of per-batch tensors"""
             if isinstance(data, list):
                 return data
             elif isinstance(data, torch.Tensor):
                 if data.ndim >= 2 and data.shape[0] == batch_size:
-
                     return [data[i] for i in range(batch_size)]
                 else:
-
                     return [data for _ in range(batch_size)]
             else:
-
                 return [data for _ in range(batch_size)]
 
         vert_uv_list = to_batch_list(vert_uv, batch_size)
         face_uv_list = to_batch_list(face_uv, batch_size)
         face_uv_xy_list = to_batch_list(face_uv_xy, batch_size)
         posed_points_list = to_batch_list(posed_points, batch_size)
-
 
         if isinstance(cam, list):
             cam_list = cam
@@ -621,34 +452,27 @@ class ModelHandLRM(nn.Module):
             else:
                 cam_list = [cam for _ in range(batch_size)]
         else:
-
             cam_list = [torch.eye(4, device=device, dtype=torch.float32) for _ in range(batch_size)]
-
 
         uvmap_feats_list = []
         point_uv_feats_list = []
         point_uv_coords_list = []
 
         for b in range(batch_size):
-
             vert_uv_b = vert_uv_list[b].to(device)
             face_uv_b = face_uv_list[b].to(device).long()
             face_uv_xy_b = face_uv_xy_list[b].to(device)
             posed_points_b = posed_points_list[b].to(device)
             cam_b = cam_list[b].to(device)
 
-
             if posed_points_b.ndim == 2:
                 posed_points_b = posed_points_b.unsqueeze(0)
-
 
             if cam_b.ndim == 2:
                 cam_b = cam_b.unsqueeze(0)
 
-
             combined_feats_b = combined_feats[b:b+1]
             if self.uv_map_bias is not None:
-
                 combined_feats_b = combined_feats_b + self.uv_map_bias
 
             uvmap_feats_b = self.convert_pixel_feature_to_uv(
@@ -657,15 +481,11 @@ class ModelHandLRM(nn.Module):
 
             uvmap_feats_list.append(uvmap_feats_b.squeeze(0))
 
-
-
             pts_b = posed_points_b.squeeze(0)
 
             try:
                 from livehand.input_encoder import get_uvd as gaussianhand_get_uvd
                 point_uv_b, _, _ = gaussianhand_get_uvd(pts_b, vert_uv_b, face_uv_b, face_uv_xy_b)
-
-
 
                 point_uv_b_expanded = point_uv_b.unsqueeze(0)
                 point_features_b = self.sample_uv_feature_at_points(
@@ -674,22 +494,11 @@ class ModelHandLRM(nn.Module):
 
                 point_uv_feats_list.append(point_features_b.squeeze(0))
                 point_uv_coords_list.append(point_uv_b)
-
             except Exception as e:
-
                 print(f"Warning: get_uvd failed for batch {b}: {e}")
                 point_uv_feats_list.append(None)
 
-
         uvmap_features = torch.stack(uvmap_feats_list, dim=0)
-
-
-
-
-
-
-
-
 
         if all(f is not None for f in point_uv_feats_list):
             point_uv_features = torch.stack(point_uv_feats_list, dim=0)
@@ -706,30 +515,20 @@ class ModelHandLRM(nn.Module):
 
     def set_grad(self, model, iter, warmup_iter=1000):
         if iter < warmup_iter:
-
             for n, p in model.named_parameters():
                 if 'part_path' in n or 'joint_path' in n:
                     p.requires_grad = False
                 else:
                     p.requires_grad = True
         else:
-
             for p in model.parameters():
                 p.requires_grad = True
-
-
-
-
-
-
-
 
     def set_grad_iter(self, model, iteration, warmup_iter=1000):
         if iteration == 0:
             print(f"[Init] Warmup for {warmup_iter} iterations.")
         if iteration == warmup_iter:
             print(f"[Iter {iteration}] Unfreezing all modules...")
-
 
         if iteration == 0:
             for n, p in self.pcl_embed.named_parameters():
@@ -738,9 +537,7 @@ class ModelHandLRM(nn.Module):
             for p in self.pcl_embed.parameters():
                 p.requires_grad = True
 
-
     def obtain_params(self):
-
         try:
             if hasattr(self.renderer, 'lora_mlp') and self.renderer.lora_mlp is not None:
                 for p in self.renderer.lora_mlp.parameters():
@@ -750,7 +547,6 @@ class ModelHandLRM(nn.Module):
                     p.requires_grad = False
         except Exception:
             pass
-
 
         no_decay_params = []
         ln_param_ids = set()
@@ -792,7 +588,6 @@ class ModelHandLRM(nn.Module):
 
         return opt_groups
 
-
     def save(self, iteration):
         print(f'============================= Save checkpoint of iter {iteration} to {self.checkpoint_path} =============================')
         pcl_embed_path = os.path.join(self.checkpoint_path, 'pcl_embed', 'iteration_' + str(iteration), 'ckpt.pth')
@@ -819,12 +614,7 @@ class ModelHandLRM(nn.Module):
         encoder_path = os.path.join(self.checkpoint_path, 'encoder', 'iteration_' + str(iteration), 'ckpt.pth')
         os.makedirs(os.path.dirname(encoder_path), exist_ok=True)
 
-
         torch.save({'encoder': self.encoder}, encoder_path, _use_new_zipfile_serialization=False)
-
-
-
-
 
         renderer_path = os.path.join(self.checkpoint_path, 'renderer', 'iteration_' + str(iteration), 'ckpt.pth')
         os.makedirs(os.path.dirname(renderer_path), exist_ok=True)
@@ -832,10 +622,7 @@ class ModelHandLRM(nn.Module):
 
             'renderer': self.renderer.state_dict(),
 
-
         }, renderer_path)
-
-
 
         if self.renderer.neural_refiner is not None:
             refiner_path = os.path.join(self.checkpoint_path, 'refiner', 'iteration_' + str(iteration), 'ckpt.pth')
@@ -844,7 +631,6 @@ class ModelHandLRM(nn.Module):
 
                 'neural_refiner': self.renderer.neural_refiner.state_dict(),
             }, refiner_path)
-
 
     def save_checkpoint(self, iteration=None, is_latest=False):
         """
@@ -858,7 +644,6 @@ class ModelHandLRM(nn.Module):
             "iteration": iteration,
             "pcl_embed": self.pcl_embed.state_dict(),
 
-
             "adapter": self.adapter.state_dict(),
             "aggregator": self.aggregator.state_dict(),
             "motion_embed_mlp": self.motion_embed_mlp.state_dict(),
@@ -868,10 +653,8 @@ class ModelHandLRM(nn.Module):
             "renderer": self.renderer.state_dict(),
         }
 
-
         if hasattr(self, "vertex_global_mapping") and self.vertex_global_mapping is not None:
             ckpt["vertex_global_mapping"] = self.vertex_global_mapping.state_dict()
-
 
         if hasattr(self, "color_shift") and self.color_shift is not None:
             ckpt["color_shift"] = self.color_shift.data.detach().cpu()
@@ -879,7 +662,6 @@ class ModelHandLRM(nn.Module):
             ckpt["color_scale"] = self.color_scale.data.detach().cpu()
         if hasattr(self, "color_bias_lowres") and self.color_bias_lowres is not None:
             ckpt["color_bias_lowres"] = self.color_bias_lowres.data.detach().cpu()
-
 
         try:
             ckpt["model_state"] = self.state_dict()
@@ -889,7 +671,6 @@ class ModelHandLRM(nn.Module):
         if self.renderer.neural_refiner is not None:
             ckpt["neural_refiner"] = self.renderer.neural_refiner.state_dict()
 
-
         try:
             if hasattr(self, "optimizer") and self.optimizer is not None:
                 ckpt["optimizer"] = self.optimizer.state_dict()
@@ -898,7 +679,6 @@ class ModelHandLRM(nn.Module):
 
         try:
             if hasattr(self, "scheduler") and self.scheduler is not None:
-
                 ckpt["scheduler"] = self.scheduler.state_dict()
         except Exception:
             pass
@@ -908,13 +688,6 @@ class ModelHandLRM(nn.Module):
         torch.save(ckpt, path)
 
         print(f"\033[92m[Checkpoint saved → {path}]\033[0m")
-
-
-
-
-
-
-
 
     def build_transformer(
         self,
@@ -950,42 +723,6 @@ class ModelHandLRM(nn.Module):
         logger.info("Using Dinov2FusionWrapper as the encoder")
         return Dinov2FusionWrapper
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     @torch.no_grad()
     def uv_pixels_to_feat_norm(self, uv_pixels, W_img, H_img, W_feat, H_feat):
         x = uv_pixels[..., 0]
@@ -996,14 +733,12 @@ class ModelHandLRM(nn.Module):
         y_norm = (y_feat / (H_feat - 1.0)) * 2.0 - 1.0
         return torch.stack([x_norm, y_norm], dim=-1)
 
-
     def make_patch_grid(self, patch_size, device):
         P = patch_size
         coords = np.linspace(-(P-1)/2.0, (P-1)/2.0, P)
         gx, gy = np.meshgrid(coords, coords)
         grid = np.stack([gx, gy], axis=-1).reshape(-1, 2)
         return torch.tensor(grid, dtype=torch.float32, device=device)
-
 
     def sample_local_patches_light(self, feat_map, uv_pixels, W_img, H_img,
                                 patch_size=8, proj=None,
@@ -1048,14 +783,8 @@ class ModelHandLRM(nn.Module):
                 batch_patches.append(patches_b)
             patches = torch.stack(batch_patches, dim=0)
 
-
             patches_flat = patches.view(B, nb, -1)
             patches_proj = self.proj(patches_flat.view(B*nb, -1)).view(B, nb, -1)
-
-
-
-
-
 
             mask_conf = None
             if mask_img is not None:
@@ -1083,7 +812,6 @@ class ModelHandLRM(nn.Module):
         patches_proj = torch.cat(patches_proj_list, dim=1)
         mask_conf = torch.cat(mask_conf_list, dim=1) if mask_conf_list else None
         return patches, patches_proj, mask_conf
-
 
     def _attach_uv_feature_maps(self, batches, query_points, point_features, texture_hw=(256, 512)):
         if query_points is None or point_features is None or not batches:
@@ -1130,7 +858,6 @@ class ModelHandLRM(nn.Module):
                 'feature': uv_texture.detach(),
             }
 
-
     def _sample_uv_features_from_token_maps(self, batches, query_points, token_feature_maps):
         """For each batch element, sample per-point features from a UV token map.
 
@@ -1158,7 +885,6 @@ class ModelHandLRM(nn.Module):
                     batch['uv_point_features'] = None
             return None
 
-
         B, C, H, W = token_feature_maps.shape
         max_samples = min(len(batches), query_points.shape[0], B)
         per_batch_feats = []
@@ -1179,20 +905,14 @@ class ModelHandLRM(nn.Module):
             face_uv = uv_template['face_uv'].to(token_feature_maps.device).long()
             face_uv_xy = uv_template['face_uv_xy'].to(token_feature_maps.device)
 
-
             sampled_uv, signed_dist, _ = gaussianhand_get_uvd(pts, vert_uv, face_uv, face_uv_xy)
-
-
-
 
             uv_norm = sampled_uv.clone()
             uv_norm[..., 0] = 2.0 * (uv_norm[..., 0] / 1.0) - 1.0
             uv_norm[..., 1] = 2.0 * (uv_norm[..., 1] / 0.5) - 1.0
 
-
             N = uv_norm.shape[0]
             grid = uv_norm.view(1, N, 1, 2)
-
 
             token_map_b = token_feature_maps[idx:idx + 1]
 
@@ -1204,7 +924,6 @@ class ModelHandLRM(nn.Module):
                 align_corners=True,
             )
 
-
             feats = sampled.view(C, N).transpose(0, 1).contiguous()
 
             batch['uv_point_features'] = feats.detach()
@@ -1212,11 +931,7 @@ class ModelHandLRM(nn.Module):
 
         per_batch_feats = torch.stack(per_batch_feats, dim=0)
 
-
-
-
         return per_batch_feats
-
 
     @staticmethod
     def _scatter_uv_features(point_features, uv_coords_norm, tex_h, tex_w):
@@ -1247,8 +962,6 @@ class ModelHandLRM(nn.Module):
         feat_map = feat_map / weight_map.clamp_min(1.0)
         return feat_map.view(feat_dim, tex_h, tex_w)
 
-
-
     def sample_local_patches_light_new(feat_pyramid,
                                 proj_uv,
                                 proj_z=None,
@@ -1270,28 +983,17 @@ class ModelHandLRM(nn.Module):
             feat = feat_pyramid[s]
             Bf, C, H, W = feat.shape
 
-
-
-
-
-
-
-
             u = proj_uv[..., 0] / (W - 1) * 2 - 1
             v = proj_uv[..., 1] / (H - 1) * 2 - 1
             grid = torch.stack([u, v], dim=-1)
-
 
             half = (patch_size // 2)
             xs = torch.linspace(-half, half, steps=patch_size, device=device) / (W - 1) * 2
             ys = torch.linspace(-half, half, steps=patch_size, device=device) / (H - 1) * 2
             delta = torch.stack(torch.meshgrid(xs, ys), dim=-1).reshape(-1,2)
 
-
             grid_exp = grid.unsqueeze(2) + delta.unsqueeze(0).unsqueeze(0)
             grid_exp = grid_exp.view(B, N*patch_size*patch_size, 2)
-
-
 
             grid_for_sample = grid_exp.view(B, N*patch_size*patch_size, 1, 2)
 
@@ -1300,13 +1002,9 @@ class ModelHandLRM(nn.Module):
             sampled = sampled.view(B, C, N, patch_size*patch_size).permute(0,2,3,1)
             patches_per_scale.append(sampled)
 
-
         patches = torch.cat(patches_per_scale, dim=2)
 
         return patches
-
-
-
 
     def sample_local_patches_from_pyramid_ori(self, feat_pyramid, proj_uv_full, patch_sizes, full_image_wh=(256,256)):
         """
@@ -1324,7 +1022,6 @@ class ModelHandLRM(nn.Module):
         for P, psize in zip(feat_pyramid, patch_sizes):
             Bf, C, H, W = P.shape
 
-
             W_full, H_full = full_image_wh
 
             u_feat_x = proj_uv_full[..., 0] * (W / W_full)
@@ -1341,7 +1038,6 @@ class ModelHandLRM(nn.Module):
             dx, dy = torch.meshgrid(xs, ys, indexing='xy')
             delta = torch.stack([dx.reshape(-1), dy.reshape(-1)], dim=1)
 
-
             grid = (center.unsqueeze(2) + delta.view(1,1,-1,2))
 
             grid_rs = grid.view(B, N * grid.shape[2], 2).unsqueeze(2)
@@ -1354,8 +1050,6 @@ class ModelHandLRM(nn.Module):
         patches = torch.cat(patches_scales, dim=2)
         coords = torch.cat(coords_scales, dim=2)
         return patches, coords
-
-
 
     def sample_local_patches_from_pyramid(self,
         feat_pyramid,
@@ -1384,7 +1078,6 @@ class ModelHandLRM(nn.Module):
         B, N, _ = proj_uv_full.shape
         W_full, H_full = full_image_wh
 
-
         if isinstance(patch_sizes, int):
             patch_sizes = [patch_sizes] * len(feat_list)
         assert len(patch_sizes) == len(feat_list)
@@ -1396,16 +1089,12 @@ class ModelHandLRM(nn.Module):
         C_out = feat_list[0].shape[1]
 
         for lvl, (P, psize) in enumerate(zip(feat_list, patch_sizes)):
-
             assert P.dim() == 4, "Each level must be [B,C,H,W]"
             Bf, C, Hf, Wf = P.shape
             assert Bf == B, "Batch mismatch between features and proj_uv"
 
-
-
             u_feat_x = proj_uv_full[..., 0] * (Wf / float(W_full))
             u_feat_y = proj_uv_full[..., 1] * (Hf / float(H_full))
-
 
             if align_corners:
                 nx = (u_feat_x / (Wf - 1)) * 2.0 - 1.0
@@ -1414,7 +1103,6 @@ class ModelHandLRM(nn.Module):
                 xs = (torch.arange(-(psize//2), psize//2 + 1, device=device).float() / (Wf - 1)) * 2.0
                 ys = (torch.arange(-(psize//2), psize//2 + 1, device=device).float() / (Hf - 1)) * 2.0
             else:
-
                 nx = ((u_feat_x + 0.5) / Wf) * 2.0 - 1.0
                 ny = ((u_feat_y + 0.5) / Hf) * 2.0 - 1.0
                 xs = (torch.arange(-(psize//2), psize//2 + 1, device=device).float() + 0.0) / Wf * 2.0
@@ -1424,20 +1112,15 @@ class ModelHandLRM(nn.Module):
             delta = torch.stack([dx.reshape(-1), dy.reshape(-1)], dim=1)
             k = delta.shape[0]
 
-
             center = torch.stack([nx, ny], dim=-1)
-
 
             grid = center.unsqueeze(2) + delta.view(1, 1, k, 2)
 
-
             valid_mask_lvl = (grid[..., 0] >= -1.0) & (grid[..., 0] <= 1.0) & (grid[..., 1] >= -1.0) & (grid[..., 1] <= 1.0)
-
 
             grid_clamped = grid.clamp(-1.0, 1.0)
 
             grid_rs = grid_clamped.view(B, N * k, 2).unsqueeze(2)
-
 
             sampled = F.grid_sample(P, grid_rs, mode='bilinear', padding_mode='zeros', align_corners=align_corners)
             sampled = sampled.view(B, C, N, k).permute(0, 2, 3, 1).contiguous()
@@ -1445,13 +1128,11 @@ class ModelHandLRM(nn.Module):
             coords_per_level.append(grid)
             masks_per_level.append(valid_mask_lvl)
 
-
         patches = torch.cat(patches_per_level, dim=2)
         coords_norm = torch.cat(coords_per_level, dim=2)
         valid_mask = torch.cat(masks_per_level, dim=2)
 
         return patches, coords_norm, valid_mask
-
 
     def compute_proj_uv_feat_from_original(self, verts_xy_orig, H0, W0, resolution, patch_size):
         """
@@ -1465,19 +1146,14 @@ class ModelHandLRM(nn.Module):
         pad_left = (max_size - W0) // 2
         pad_top  = (max_size - H0) // 2
 
-
         x0 = verts_xy_orig[..., 0]
         y0 = verts_xy_orig[..., 1]
         x_pad = x0 + pad_left
         y_pad = y0 + pad_top
 
-
         scale = float(resolution) / float(max_size)
         x_resized = x_pad * scale
         y_resized = y_pad * scale
-
-
-
 
         Wf = resolution // patch_size
         Hf = resolution // patch_size
@@ -1487,7 +1163,6 @@ class ModelHandLRM(nn.Module):
 
         proj_uv_feat = torch.stack([u_feat_x, u_feat_y], dim=-1)
         return proj_uv_feat
-
 
     def sample_feats_from_feat32_to_256(self,
         feat32,
@@ -1512,7 +1187,6 @@ class ModelHandLRM(nn.Module):
         if device is None:
             device = feat32.device
 
-
         if isinstance(nail_img, np.ndarray):
             nail_t = torch.from_numpy(nail_img).float().to(device)
         else:
@@ -1523,17 +1197,12 @@ class ModelHandLRM(nn.Module):
         C = feat32.shape[1]
         Bn = nail_t.shape[0]
         if Bn != B:
-
             if Bn == 1 and B > 1:
-
                 nail_t = nail_t.expand(B, -1, -1).contiguous()
             else:
                 raise ValueError(f"batch mismatch: feat32 batch {B} vs nail_img batch {Bn}")
 
-
         feat256 = F.interpolate(feat32, size=(256,256), mode='bilinear', align_corners=align_corners)
-
-
 
         Wt, Ht = 256, 256
 
@@ -1544,7 +1213,6 @@ class ModelHandLRM(nn.Module):
             nx = ((nail_t[..., 0] + 0.5) / Wt) * 2.0 - 1.0
             ny = ((nail_t[..., 1] + 0.5) / Ht) * 2.0 - 1.0
         centers = torch.stack([nx, ny], dim=-1)
-
 
         if psize <= 1:
             K = 1
@@ -1562,7 +1230,6 @@ class ModelHandLRM(nn.Module):
             delta = torch.stack([dx.reshape(-1), dy.reshape(-1)], dim=1)
             K = delta.shape[0]
 
-
         sampled_per_batch = []
         for b in range(B):
             feat_b = feat256[b:b+1]
@@ -1579,7 +1246,6 @@ class ModelHandLRM(nn.Module):
                     sampled = sampled.view(1, C, M).permute(0,2,1).contiguous()
                     out_chunks.append(sampled)
                 else:
-
                     grid_pts = (ci.unsqueeze(1) + delta.unsqueeze(0).to(ci.device))
 
                     grid_rs = grid_pts.clamp(-1.0, 1.0).view(1, M*K, 1, 2)
@@ -1588,9 +1254,7 @@ class ModelHandLRM(nn.Module):
                     sampled = sampled.view(1, C, M, K).permute(0,2,3,1).contiguous()
                     out_chunks.append(sampled)
 
-
             if len(out_chunks) == 0:
-
                 if psize <= 1:
                     out_b = torch.zeros((1, 0, C), device=feat32.device)
                 else:
@@ -1599,11 +1263,9 @@ class ModelHandLRM(nn.Module):
                 out_b = torch.cat(out_chunks, dim=1)
             sampled_per_batch.append(out_b)
 
-
         sampled_feats = torch.cat(sampled_per_batch, dim=0)
 
         return sampled_feats, feat256
-
 
     def forward_transformer(
         self, image_feats, camera_embeddings, query_points, nail_mask=None, nail_mask_3d=None,
@@ -1622,20 +1284,6 @@ class ModelHandLRM(nn.Module):
 
         B = image_feats.shape[0]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         x = self.transformer(
             query_points,
             cond=image_feats,
@@ -1649,24 +1297,13 @@ class ModelHandLRM(nn.Module):
             point_pos=point_pos,
             posed_pos=posed_pos,
 
-
-
-
-
         )
         return x
 
-
-
     def forward_moitonembed(self, motion_tokens):
-
-
-
-
         motion_tokens = self.motion_embed_mlp(motion_tokens).squeeze(1)
 
         return motion_tokens
-
 
     def forward_encode_image(self, image):
         """
@@ -1675,47 +1312,6 @@ class ModelHandLRM(nn.Module):
         """
         encoder_out = self.encoder(image)
         return encoder_out
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     @torch.compile
     def forward_latent_points(self, vis_mask, nail_image, uv_map_dict, image, vis_msk=None, camera=None, query_points=None, posed_points=None):
@@ -1731,143 +1327,52 @@ class ModelHandLRM(nn.Module):
             torch.Tensor: Encoded image features tensor.
         """
 
-
         if image.ndim == 5:
             image = image[:, 0]
         elif image.ndim == 4 and image.shape[-1] == 3 and image.shape[1] != 3:
-
             image = image.permute(0, 3, 1, 2)
         elif image.ndim == 3:
             image = image.unsqueeze(1)
 
         B = image.shape[0]
 
-
-
-
-
-
-
-
-
         image_fine_feats, feature, cls_tokens =self.forward_encode_image(image)
         motion_tokens = cls_tokens
         cls_four = cls_tokens
         motion_tokens = self.forward_moitonembed(cls_tokens.to('cuda:0'))
 
-
-
-
-
-
-
-
-
-
-
         merge_tokens = image_fine_feats
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         query_point = query_points
         query_points = self.pcl_embed(query_points)
 
-
-
-
-
         patches, coords_norm, valid_mask = self.sample_local_patches_from_pyramid(feature, nail_image, patch_sizes=5)
-
-
-
-
-
-
-
-
 
         point_feats = self.aggregator(patches, coords_norm, valid_mask)
 
-
-
-
-
         merge_tokens = self.adapter(point_feats)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         tokens = self.forward_transformer(
 
             merge_tokens, camera_embeddings=None, query_points=query_points, nail_mask=None, nail_mask_3d=None,
             proj_xy=nail_image, p_vis=vis_mask, feat_hw=None, motion_embed=motion_tokens, global_four=cls_four, point_pos=query_point, posed_pos=posed_points
 
-
         ).to('cuda')
 
-
-
-
-
-
-
         point_uv_feats = {}
-
 
         if point_uv_feats.get('point_uv_features') is not None:
             uv_feats = point_uv_feats['point_uv_features']
 
-
             uv_feats_norm = uv_feats / (torch.norm(uv_feats, dim=-1, keepdim=True) + 1e-8)
 
-
-
-
             tokens = tokens + uv_feats
-
-
-
 
         color_bias, opacity_bias = None, None
         if point_uv_feats.get('point_uv_coords') is not None:
             uv_coords = point_uv_feats['point_uv_coords']
 
             def _sample_bias_map(bias_map, coords):
-
                 grid = coords.clone()
                 grid[..., 0] = grid[..., 0] * 2.0 - 1.0
                 grid[..., 1] = grid[..., 1] * 2.0 - 1.0
@@ -1879,13 +1384,11 @@ class ModelHandLRM(nn.Module):
                 sampled = sampled.squeeze(2).permute(0, 2, 1).contiguous()
                 return sampled
 
-
             color_bias_base, opacity_bias_base = None, None
             if self.color_b_map is not None:
                 color_bias_base = _sample_bias_map(self.color_b_map, uv_coords)
             if self.opacity_b_map is not None:
                 opacity_bias_base = _sample_bias_map(self.opacity_b_map, uv_coords)
-
 
             color_bias_refined, opacity_bias_refined = None, None
 
@@ -1895,12 +1398,7 @@ class ModelHandLRM(nn.Module):
                 and self.color_b_map is not None
                 and self.opacity_b_map is not None
             ):
-
                 bias_input = torch.cat([self.color_b_map, self.opacity_b_map], dim=1).to(tokens.device)
-
-
-
-
 
                 if bias_input.shape[-1] != self.uvmap_size or bias_input.shape[-2] != self.uvmap_size:
                     bias_input = torch.nn.functional.interpolate(
@@ -1909,8 +1407,6 @@ class ModelHandLRM(nn.Module):
                         mode="bilinear",
                         align_corners=False,
                     )
-
-
 
                 style_code = motion_tokens
 
@@ -1921,18 +1417,12 @@ class ModelHandLRM(nn.Module):
                 color_bias_refined = _sample_bias_map(color_b_map_refined, uv_coords)
                 opacity_bias_refined = _sample_bias_map(opacity_b_map_refined, uv_coords)
 
-
-
-
-
             color_bias_refined, opacity_bias_refined = None, None
             if color_bias_base is not None:
                 if color_bias_refined is None:
                     color_bias = color_bias_base
                 else:
                     if vis_mask is not None:
-
-
                         vis = vis_mask.float()
                         if vis.dim() == 1:
                             vis = vis.unsqueeze(0)
@@ -1957,15 +1447,7 @@ class ModelHandLRM(nn.Module):
                     else:
                         opacity_bias = opacity_bias_refined
 
-
-
-
-
-
-
-
         return tokens, motion_tokens, {"color_bias": color_bias, "opacity_bias": opacity_bias}
-
 
     def forward(
         self,
@@ -1978,16 +1460,6 @@ class ModelHandLRM(nn.Module):
         smplx_params,
         **kwargs,
     ):
-
-
-
-
-
-
-
-
-
-
         assert (
             image.shape[0] == render_c2ws.shape[0]
         ), "Batch size mismatch for image and render_c2ws"
@@ -2014,8 +1486,6 @@ class ModelHandLRM(nn.Module):
         latent_points, image_feats, bias_dict = self.forward_latent_points(
             image[:, 0], camera=None, query_points=query_points
         )
-
-
 
         render_results = self.renderer(
             gs_hidden_features=latent_points,
@@ -2057,11 +1527,8 @@ class ModelHandLRM(nn.Module):
             **render_results,
         }
 
-
     def hyper_step(self, step):
-
         self.renderer.hyper_step(step)
-
 
     def infer_single_view(
         self,
@@ -2072,18 +1539,11 @@ class ModelHandLRM(nn.Module):
         verts_cam,
         image,
 
-
-
-
         batches,
         cano_pts,
         render_bg_colors,
 
     ):
-
-
-
-
         query_points = cano_pts
 
         def _select_first_view(tensor: Optional[torch.Tensor]):
@@ -2110,68 +1570,10 @@ class ModelHandLRM(nn.Module):
                     'cam': _select_first_view(cam),
                 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         vis_msk = None
-
-
 
         latent_points, global_texture_feature, bias_dict = self.forward_latent_points(
             vis_prob, nail_image, batch['uv_map'], image.permute(0, 3, 1, 2), vis_msk=vis_masks, camera=None, query_points=query_points)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         gs_model_list, gs_densify_list, query_points = self.renderer.forward_gs(
             gs_hidden_features=latent_points.to('cuda'),
@@ -2183,9 +1585,7 @@ class ModelHandLRM(nn.Module):
             color_bias=bias_dict.get("color_bias"),
             opacity_bias=bias_dict.get("opacity_bias"),
 
-
         )
-
 
         render_res_list = []
         for i in range(len(batches)):
@@ -2201,7 +1601,6 @@ class ModelHandLRM(nn.Module):
                     gs_densify_list[i],
                     query_points[i],
 
-
                     self.renderer.get_single_view_cam(batches[i], view_idx),
                     self.renderer.get_single_view_smpl_data(smplx_params, view_idx),
                     batches[i]['width'][0],
@@ -2210,51 +1609,15 @@ class ModelHandLRM(nn.Module):
                 )
                 render_res_list.append(render_res)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         out = defaultdict(list)
         for res in render_res_list:
             for k, v in res.items():
                 out[k].append(v)
         for k, v in out.items():
-
             if isinstance(v[0], torch.Tensor):
                 if k == 'offset' or k == 'scaling' or k == 'shs':
-
-
-
                     selected = [v[0]]
                     out[k] = torch.cat(selected, dim=0)
-
-
                 else:
                     out[k] = torch.concat(v, dim=1)
                     if k in ["comp_rgb", "comp_mask", "comp_depth", "comp_obj"]:
@@ -2265,14 +1628,9 @@ class ModelHandLRM(nn.Module):
             else:
                 out[k] = v
 
-
         out['vis_masks'] = vis_masks
 
         return out
-
-
-
-
 
 class VisibilityBiasNet(nn.Module):
     """
@@ -2321,7 +1679,6 @@ class VisibilityBiasNet(nn.Module):
         feats = [vis.unsqueeze(-1), conf.unsqueeze(-1)]
 
         if self.use_depth_res and depth_res is not None:
-
             dr = depth_res
             dr = dr / (dr.mean() + 1e-6)
             dr = torch.clamp(dr, 0.0, 3.0)
@@ -2337,10 +1694,6 @@ class VisibilityBiasNet(nn.Module):
         b_global = bias_normed[..., 1]
 
         return b_local, b_global
-
-
-
-
 
 class ProjCrossAttn(nn.Module):
     def __init__(self, gauss_dim, img_c, out_dim=None, num_heads=8, d_model=1024):
@@ -2359,11 +1712,9 @@ class ProjCrossAttn(nn.Module):
         self.v_proj = nn.Linear(img_c, d_model)
         self.out = nn.Linear(d_model, out_dim if out_dim is not None else gauss_dim)
 
-
         self.q_ln = nn.LayerNorm(d_model)
         self.k_ln = nn.LayerNorm(d_model)
         self.v_ln = nn.LayerNorm(d_model)
-
 
         self.nail_delta = nn.Sequential(
             nn.Linear(gauss_dim, gauss_dim//4),
@@ -2372,12 +1723,7 @@ class ProjCrossAttn(nn.Module):
         )
         self.nail_alpha = nn.Parameter(torch.tensor(0.1))
 
-
-
-
-
     def forward(self, gauss_feat, patches, coords=None, mask=None, nail_mask=None):
-
         """
         gauss_feat: [B, N, Dg]
         patches:    [B, N, K, C_img]
@@ -2395,18 +1741,14 @@ class ProjCrossAttn(nn.Module):
         k = self.k_ln(k)
         v = self.v_ln(v)
 
-
         qh = q.view(B, N, self.num_heads, self.head_dim).permute(0,2,1,3)
         kh = k.view(B, N, K, self.num_heads, self.head_dim).permute(0,3,1,2,4)
         vh = v.view(B, N, K, self.num_heads, self.head_dim).permute(0,3,1,2,4)
-
 
         logits = torch.einsum('bhnd,bhnkd->bh nk', qh, kh)
         logits = logits / math.sqrt(self.head_dim)
 
         if coords is not None:
-
-
             rel = coords.view(B*N*K, 2)
             bias = self.pos_mlp(rel)
             bias = bias.view(B, N, K, self.num_heads).permute(0,3,1,2)
@@ -2421,7 +1763,6 @@ class ProjCrossAttn(nn.Module):
         out = self.out(out)
 
         if nail_mask is not None:
-
             delta = self.nail_delta(gauss_feat)
 
             mask_f = nail_mask.float().unsqueeze(-1)
@@ -2429,10 +1770,7 @@ class ProjCrossAttn(nn.Module):
         else:
             out = out
 
-
         return out
-
-
 
 class PointToTokenAdapter(nn.Module):
     """
@@ -2453,16 +1791,13 @@ class PointToTokenAdapter(nn.Module):
         self.num_tokens = num_tokens
         self.num_heads = num_heads
 
-
         self.query_tokens = nn.Parameter(torch.randn(num_tokens, dim) * 0.02)
-
 
         self.mha = nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=False)
 
         self.use_ln = use_ln
         if use_ln:
             self.ln = nn.LayerNorm(dim)
-
 
         self.mlp = nn.Sequential(
             nn.Linear(dim, dim * 2),
@@ -2484,39 +1819,27 @@ class PointToTokenAdapter(nn.Module):
         B, N, D = point_feats.shape
         assert D == self.dim, f"dim mismatch: {D} vs adapter {self.dim}"
 
-
         q = self.query_tokens.unsqueeze(1).expand(-1, B, -1).contiguous()
-
 
         kv = point_feats.permute(1, 0, 2).contiguous()
 
-
         key_padding_mask = None
         if valid_mask is not None:
-
-
             key_padding_mask = ~valid_mask
 
             key_padding_mask = key_padding_mask.bool()
 
-
-
         attn_output, _ = self.mha(q, kv, kv, key_padding_mask=key_padding_mask)
-
 
         tokens = attn_output.permute(1, 0, 2).contiguous()
 
         if self.use_ln:
             tokens = self.ln(tokens)
 
-
         mlp_out = self.mlp(tokens)
         tokens = tokens + self.mlp_ln(mlp_out)
 
         return tokens
-
-
-
 
 class MultiHeadAttentionCustom(nn.Module):
     def __init__(self, d_model, nhead, dropout=0.0, bias=True):
@@ -2548,23 +1871,15 @@ class MultiHeadAttentionCustom(nn.Module):
         k_lin = self.k_proj(k).view(B, Lk, self.nhead, self.head_dim).permute(0,2,1,3)
         v_lin = self.v_proj(v).view(B, Lk, self.nhead, self.head_dim).permute(0,2,1,3)
 
-
-
         logits = torch.einsum('bhqd,bhkd->bhqk', q_lin, k_lin) / (self.head_dim ** 0.5)
 
-
         if pos_bias is not None:
-
             logits = logits + pos_bias
 
-
         if key_padding_mask is not None:
-
-
             kp = key_padding_mask
             if kp.dtype != torch.bool:
                 kp = kp.bool()
-
 
             mask = (~kp).unsqueeze(1).unsqueeze(1)
             logits = logits.masked_fill(mask, float('-1e9'))
@@ -2575,8 +1890,6 @@ class MultiHeadAttentionCustom(nn.Module):
         out_h = torch.einsum('bhqk,bhkd->bhqd', attn, v_lin)
         out = out_h.permute(0,2,1,3).contiguous().view(B, Lq, D)
         return self.out_proj(out)
-
-
 
 class QFormerWithSelf(nn.Module):
     def __init__(
@@ -2606,9 +1919,7 @@ class QFormerWithSelf(nn.Module):
         self.use_ln = use_ln
         self.use_pos_bias = use_pos_bias
 
-
         self.query_tokens = nn.Parameter(torch.randn(self.L, dim) * 0.02)
-
 
         if use_pos_bias:
             self.query_pos = nn.Parameter(torch.randn(self.L, 2) * 0.01)
@@ -2618,7 +1929,6 @@ class QFormerWithSelf(nn.Module):
                 nn.GELU(),
                 nn.Linear(pos_hidden, num_heads)
             )
-
 
         self.cross_attns = nn.ModuleList([ MultiHeadAttentionCustom(dim, num_heads, dropout=dropout) for _ in range(num_layers) ])
         self.self_attns  = nn.ModuleList([ MultiHeadAttentionCustom(dim, num_heads, dropout=dropout) for _ in range(num_layers) ])
@@ -2630,14 +1940,11 @@ class QFormerWithSelf(nn.Module):
                                             nn.Dropout(dropout)
                                           ) for _ in range(num_layers) ])
 
-
         self.cross_ln = nn.ModuleList([ nn.LayerNorm(dim) for _ in range(num_layers) ])
         self.self_ln  = nn.ModuleList([ nn.LayerNorm(dim) for _ in range(num_layers) ])
         self.ffn_ln   = nn.ModuleList([ nn.LayerNorm(dim) for _ in range(num_layers) ])
 
-
         self.out_ln = nn.LayerNorm(dim) if use_ln else nn.Identity()
-
 
     def forward(self, point_feats: torch.Tensor, valid_mask: Optional[torch.Tensor] = None, point_coords: Optional[torch.Tensor] = None):
         """
@@ -2650,20 +1957,14 @@ class QFormerWithSelf(nn.Module):
         B, N, D = point_feats.shape
         assert D == self.dim, f"dim mismatch {D} vs {self.dim}"
 
-
         q = self.query_tokens.unsqueeze(0).expand(B, -1, -1).contiguous()
-
 
         kp = None
         if valid_mask is not None:
             kp = valid_mask.bool()
 
-
-
         pos_bias = None
         if self.use_pos_bias and point_coords is not None:
-
-
             qp = self.query_pos.unsqueeze(0).expand(B, -1, -1)
             pc = point_coords.unsqueeze(1)
             delta = qp.unsqueeze(2) - pc
@@ -2674,101 +1975,53 @@ class QFormerWithSelf(nn.Module):
 
             pos_bias = bias.permute(0,3,1,2).contiguous()
 
-
         for i in range(self.num_layers):
-
-
-
             cross_attn = self.cross_attns[i]
             out_cross = cross_attn(q, point_feats, point_feats, key_padding_mask=kp, pos_bias=pos_bias)
 
             q = q + out_cross
             q = self.cross_ln[i](q)
 
-
             self_attn = self.self_attns[i]
             out_self = self_attn(q, q, q, key_padding_mask=None, pos_bias=None)
             q = q + out_self
             q = self.self_ln[i](q)
-
 
             ffn = self.ffns[i]
             ffn_out = ffn(q)
             q = q + ffn_out
             q = self.ffn_ln[i](q)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         tokens = self.out_ln(q)
         return tokens
-
-
 
 class PatchAggregatorWithPosWeightedPool(nn.Module):
     def __init__(self, C_in, D_hidden=256, out_dim=None):
         super().__init__()
-
-
-
-
 
         self.out_proj = None
         if out_dim is not None:
             self.out_proj = nn.Linear(C_in, out_dim)
 
     def forward(self, patches, coords_norm, valid_mask):
-
-
         B, N, K, C = patches.shape
         device = patches.device
-
-
-
-
 
         center_norm = coords_norm.mean(dim=2)
         point_coords_norm = center_norm.unsqueeze(2).expand(-1, -1, K, -1)
 
-
         dist = torch.norm(coords_norm - point_coords_norm, dim=-1)
-
 
         pos_logits = - dist / 0.1
 
-
-
         pos_logits = pos_logits.masked_fill(~valid_mask, float('-1e9'))
         weights = torch.softmax(pos_logits, dim=2)
-
 
         weighted = (patches * weights.unsqueeze(-1)).sum(dim=2)
         if self.out_proj is not None:
             BN = B*N
             return self.out_proj(weighted.view(BN, C)).view(B, N, -1)
         return weighted
-
-
-
 
 class ProjCrossAttnMatch(nn.Module):
     def __init__(self, gauss_dim, img_c, out_dim, num_heads=8, use_running_stats=True, eps=1e-6):
@@ -2783,15 +2036,12 @@ class ProjCrossAttnMatch(nn.Module):
         self.v_proj = nn.Linear(img_c, out_dim)
         self.out_proj = nn.Linear(out_dim, out_dim)
 
-
         self.out_ln = nn.LayerNorm(out_dim, eps=1e-6)
 
         self.alpha = nn.Parameter(torch.tensor(0.1))
 
-
         nn.init.constant_(self.out_proj.weight, 0.0)
         nn.init.constant_(self.out_proj.bias, 0.0)
-
 
         self.use_running_stats = use_running_stats
         self.register_buffer('running_mean', torch.zeros(out_dim))
@@ -2801,15 +2051,11 @@ class ProjCrossAttnMatch(nn.Module):
         self.eps = eps
 
     def _compute_stats(self, tensor):
-
-
-
         mean = tensor.mean(dim=(0,1), keepdim=True)
         std = tensor.std(dim=(0,1), unbiased=False, keepdim=True)
         return mean, std
 
     def _update_running(self, batch_mean, batch_std):
-
         bm = batch_mean.view(-1)
         bs = batch_std.view(-1)
         if self.running_count == 0:
@@ -2835,7 +2081,6 @@ class ProjCrossAttnMatch(nn.Module):
         k = self.k_proj(patches)
         v = self.v_proj(patches)
 
-
         qh = q.view(B, M, self.num_heads, self.head_dim).permute(0,2,1,3)
         kh = k.view(B, M, K, self.num_heads, self.head_dim).permute(0,3,1,2,4)
         vh = v.view(B, M, K, self.num_heads, self.head_dim).permute(0,3,1,2,4)
@@ -2843,7 +2088,6 @@ class ProjCrossAttnMatch(nn.Module):
         logits = torch.einsum('bhmd,bhmkd->bhmk', qh, kh) / math.sqrt(self.head_dim)
 
         if mask is not None:
-
             logits = logits.masked_fill(~mask.unsqueeze(1), float('-inf'))
 
         attn = torch.softmax(logits, dim=-1)
@@ -2853,26 +2097,20 @@ class ProjCrossAttnMatch(nn.Module):
         out = self.out_proj(out)
         out = self.out_ln(out)
 
-
         if ref_tokens is not None:
-
             assert ref_tokens.shape[-1] == out.shape[-1], "ref token dim mismatch"
-
 
             ref_mean, ref_std = self._compute_stats(ref_tokens)
             out_mean, out_std = self._compute_stats(out)
 
-
             if self.use_running_stats and self.training:
                 self._update_running(ref_mean, ref_std)
-
 
             out_normed = (out - out_mean) / (out_std + self.eps)
             matched = out_normed * (ref_std + self.eps) + ref_mean
             final = gauss_feat + self.alpha * matched
             return final
         else:
-
             if self.use_running_stats and self.running_count > 0:
                 running_mean = self.running_mean.view(1,1,-1)
                 running_std = self.running_std.view(1,1,-1)

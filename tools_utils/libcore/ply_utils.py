@@ -1,5 +1,3 @@
-
-
 from cv2 import polylines
 from .transform import *
 import os
@@ -7,25 +5,20 @@ import cv2
 
 class PlyWriter:
     def __init__(self) -> None:
-
         self.verts = []
         self.norms = []
         self.colors = []
 
-
         self.edge_idxs = []
         self.edge_colors = []
 
-
         self.tri_idxs = []
-
 
         self.with_verts = False
         self.with_norms = False
         self.with_color = False
         self.with_edge = False
         self.with_triangle = False
-
 
     def addVertex(self, vt):
         self.verts.append(vt)
@@ -109,7 +102,6 @@ class PlyWriter:
             else:
                 f.write('format binary_little_endian 1.0\n'.encode('ascii'))
 
-
             if self.with_verts:
                 f.write(('element vertex %d\n' % len(self.verts)).encode('ascii'))
                 f.write('property float x\n'.encode('ascii'))
@@ -126,7 +118,6 @@ class PlyWriter:
                     f.write('property uchar green\n'.encode('ascii'))
                     f.write('property uchar blue\n'.encode('ascii'))
 
-
             if self.with_edge:
                 f.write(('element edge %d\n' % len(self.edge_idxs)).encode('ascii'))
                 f.write('property int vertex1\n'.encode('ascii'))
@@ -136,19 +127,15 @@ class PlyWriter:
                 f.write('property uchar green\n'.encode('ascii'))
                 f.write('property uchar blue\n'.encode('ascii'))
 
-
             if self.with_triangle:
                 f.write(('element face %d\n' % len(self.tri_idxs)).encode('ascii'))
                 f.write('property list uchar int vertex_indices\n'.encode('ascii'))
 
-
             f.write('end_header\n'.encode('ascii'))
-
 
             if format != 'ascii':
                 from io import BytesIO
                 bytes_io = BytesIO()
-
 
             if self.with_verts:
                 for i in range(0, len(self.verts)):
@@ -175,7 +162,6 @@ class PlyWriter:
                     if format == 'ascii':
                         f.write(('\n').encode('ascii'))
 
-
             if self.with_edge:
                 for i in range(len(self.edge_idxs)):
                     idx0 = self.edge_idxs[i][0]
@@ -188,7 +174,6 @@ class PlyWriter:
                     else:
                         bytes_io.write(np.array([idx0, idx1]).astype(np.int32).tobytes())
                         bytes_io.write(np.array([r, g, b]).astype(np.uint8).tobytes())
-
 
             if self.with_triangle:
                 for i in range(len(self.tri_idxs)):
@@ -205,15 +190,12 @@ class PlyWriter:
                 f.write(bytes_io.getbuffer())
                 bytes_io.close()
 
-
-
 def saveCameraDepthToPly(fn, cam, depth, color=None, base_width=None):
     if base_width is not None:
         cam = cam.clone()
         cam.scaleIntrinsicsBaseWidth(base_width)
         color = cv2.resize(color, dsize=cam.sz, interpolation=cv2.INTER_CUBIC)
         depth = cv2.resize(depth, dsize=cam.sz, interpolation=cv2.INTER_NEAREST)
-
 
     print('[saveCameraDepthToPly] calc vmap, nmap')
     vmap, nmap = calcVNMap(cam, depth)

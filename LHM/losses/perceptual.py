@@ -60,7 +60,6 @@ class LPIPSLoss(nn.Module):
             Mean-reduced LPIPS loss across batch.
         """
 
-
         N, M, C, H, W = x.shape
         x = x.reshape(N*M, C, H, W)
         y = y.reshape(N*M, C, H, W)
@@ -69,16 +68,12 @@ class LPIPSLoss(nn.Module):
         all_loss = batch_loss.mean()
         return all_loss
 
-
-
     def test(self, x, y, is_training: bool = True):
         """
         Args:
 
         Returns:
         """
-
-
 
         if x.ndim == 3:
             x = x.unsqueeze(0)

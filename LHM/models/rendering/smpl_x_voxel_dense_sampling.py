@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 import copy
 import math
 import os
@@ -46,7 +39,6 @@ This one-time computation can be reused for all meshes with the same face topolo
 
 
 def avaliable_device():
-
     import torch
 
     if torch.cuda.is_available():
@@ -56,7 +48,6 @@ def avaliable_device():
         device = "cpu"
 
     return device
-
 
 class SMPLX_Mesh(object):
     def __init__(
@@ -152,13 +143,9 @@ class SMPLX_Mesh(object):
         ) as f:
             face_vertex_idx = pickle.load(f, encoding="latin1")
 
-
-
-
         self.rhand_vertex_idx = hand_vertex_idx["right_hand"]
         self.lhand_vertex_idx = hand_vertex_idx["left_hand"]
         self.expr_vertex_idx = self.get_expr_vertex_idx()
-
 
         self.joint_num = (
             55
@@ -258,7 +245,6 @@ class SMPLX_Mesh(object):
             (len(self.joint_part["body"]) - 1, 3)
         )
 
-
         if cano_pose_type == 0:
             self.neutral_body_pose[0] = torch.FloatTensor([0, 0, 1])
             self.neutral_body_pose[1] = torch.FloatTensor([0, 0, -1])
@@ -268,13 +254,11 @@ class SMPLX_Mesh(object):
 
         self.neutral_jaw_pose = torch.FloatTensor([1 / 3, 0, 0])
 
-
         self.body_head_mapping = self.get_body_face_mapping()
 
         self.register_constrain_prior()
 
     def upper_body_label(self):
-
         upper_body_name = [
             "Pelvis",
             "Spine_1",
@@ -324,7 +308,6 @@ class SMPLX_Mesh(object):
         for upper_name in upper_body_name:
             upper_idx = self.joints_name.index(upper_name)
             upper_body_idx_list.append(upper_idx)
-
 
         return upper_body_idx_list
 
@@ -431,7 +414,6 @@ class SMPLX_Mesh(object):
         return is_cavity, face_new
 
     def get_expr_vertex_idx(self):
-
         """
         SMPLX + FLAME2019 Version
         according to LBS weights to search related vertices ID
@@ -449,7 +431,6 @@ class SMPLX_Mesh(object):
         )[
             0
         ]
-
 
         flame_joints_name = ("Neck", "Head", "Jaw", "L_Eye", "R_Eye")
         expr_vertex_idx = []
@@ -493,7 +474,6 @@ class SMPLX_Mesh(object):
         is_lower_arm = is_arm * (normal[:, 1] <= math.cos(math.pi / 3))
         return is_upper_arm, is_lower_arm
 
-
 class SMPLXVoxelMeshModel(nn.Module):
     def __init__(
         self,
@@ -509,8 +489,6 @@ class SMPLXVoxelMeshModel(nn.Module):
     ) -> None:
         super().__init__()
 
-
-
         self.smpl_x = SMPLX_Mesh(
             human_model_path=human_model_path,
             shape_param_dim=shape_param_dim,
@@ -520,43 +498,10 @@ class SMPLXVoxelMeshModel(nn.Module):
         )
         self.smplx_layer = copy.deepcopy(self.smpl_x.layer[gender])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         self.pose_mean__ = self.smplx_layer.pose_mean
         self.pose_mean_ = torch.zeros_like(self.pose_mean__).to('cuda')
         self.pose_mean_[75:120] = self.smplx_layer.left_hand_mean
         self.pose_mean_[120:165] = self.smplx_layer.right_hand_mean
-
-
-
 
         self.apply_pose_blendshape = apply_pose_blendshape
         self.cano_pose_type = cano_pose_type
@@ -585,14 +530,10 @@ class SMPLXVoxelMeshModel(nn.Module):
         return dense_sample_pts
 
     def dense_sample(self, body_face_ratio, dense_sample_points):
-
         buff_path = f"./pretrained_models/dense_sample_points/{self.cano_pose_type}_{dense_sample_points}.ply"
-
-
 
         if os.path.exists(buff_path):
             dense_sample_pts, _ = load_ply(buff_path)
-
 
             _bin = dense_sample_points // (body_face_ratio + 1)
             body_pts = int(_bin * body_face_ratio)
@@ -600,7 +541,6 @@ class SMPLXVoxelMeshModel(nn.Module):
             self.is_body[:body_pts] = 1
             self.is_body[body_pts:] = 0
             self.dense_pts = dense_sample_pts
-
         else:
             smpl_x = self.smpl_x
             body_face_mapping = smpl_x.get_body_face_mapping()
@@ -609,14 +549,12 @@ class SMPLXVoxelMeshModel(nn.Module):
 
             _bin = dense_sample_points // (body_face_ratio + 1)
 
-
             body_pts = int(_bin * body_face_ratio)
             body_dict = body_face_mapping["body"]
             face = body_dict["face"]
             verts = body_dict["vert"]
 
             dense_body_pts = self.rebuild_mesh(template_verts, verts, face, body_pts)
-
 
             head_pts = int(_bin)
             head_dict = body_face_mapping["head"]
@@ -655,7 +593,6 @@ class SMPLXVoxelMeshModel(nn.Module):
 
         print(f"Using k = {smooth_k}, N={smooth_n} for LBS smoothing")
 
-
         knn_dis = knn_points(
             voxel_v.unsqueeze(0).cuda(),
             voxel_v.unsqueeze(0).cuda(),
@@ -693,7 +630,6 @@ class SMPLXVoxelMeshModel(nn.Module):
             N, _ = update_weights.shape
             new_lbs_weights_chunk_list = []
             for chunk_i in range(0, N, 1000000):
-
                 knn_weights_chunk = knn_weights[chunk_i : chunk_i + 1000000]
                 voxel_indices_chunk = voxel_indices[chunk_i : chunk_i + 1000000]
 
@@ -714,7 +650,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         return knn_lbs_weights
 
     def voxel_skinning_init(self, scale_ratio=1.05, voxel_size=256):
-
         skinning_weight = self.smplx_layer.lbs_weights.float()
 
         smplx_data = {"betas": torch.zeros(1, self.smpl_x.shape_param_dim)}
@@ -747,7 +682,6 @@ class SMPLXVoxelMeshModel(nn.Module):
 
         mini_size_bbox = scale_voxel_size(template_verts, scale_ratio)
         z_voxel_size = voxel_size // 2
-
 
         x_range = np.linspace(0, voxel_size - 1, voxel_size) / (
             voxel_size - 1
@@ -789,11 +723,9 @@ class SMPLXVoxelMeshModel(nn.Module):
 
         N, LBS_F = voxel_flat.shape
 
-
         voxel_grid_original = voxel_flat.view(
             voxel_size, voxel_size, z_voxel_size, LBS_F
         )
-
 
         voxel_grid = voxel_grid_original.permute(3, 2, 1, 0)
 
@@ -815,14 +747,12 @@ class SMPLXVoxelMeshModel(nn.Module):
         """
 
         def _query(weights, indx):
-
             weights = weights.squeeze(0)
             assert weights.dim() == 2
 
             return weights[indx]
 
         smpl_x = self.smpl_x
-
 
         dense_pts = self.dense_pts.cuda()
         template_verts = self.smplx_layer.v_template
@@ -918,7 +848,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         )
         is_cavity = is_cavity[:, 0] > 0
 
-
         self.register_buffer("skinning_weight", skinning_weight.contiguous())
         self.register_buffer("pose_dirs", pose_dirs.contiguous())
         self.register_buffer("expr_dirs", expr_dirs.contiguous())
@@ -940,11 +869,7 @@ class SMPLXVoxelMeshModel(nn.Module):
         self.register_buffer("voxel_ws", voxel_skinning_weight)
         self.register_buffer("voxel_bbox", voxel_bbox)
 
-
-
-
     def get_body_infos(self):
-
         head_id = torch.where(self.is_face == True)[0]
         body_id = torch.where(self.is_face == False)[0]
 
@@ -1044,9 +969,7 @@ class SMPLXVoxelMeshModel(nn.Module):
             _type_: _description_
         """
 
-
         transform_mat_joint_1 = transform_mat_neutral_pose
-
 
         root_pose = smplx_param["root_pose"]
         body_pose = smplx_param["body_pose"]
@@ -1055,9 +978,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         reye_pose = smplx_param["reye_pose"]
         lhand_pose = smplx_param["lhand_pose"]
         rhand_pose = smplx_param["rhand_pose"]
-
-
-
 
         pose = torch.cat(
             (
@@ -1079,7 +999,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         )
         transform_mat_joint_2 = transform_mat_joint_2
 
-
         if transform_mat_joint_1 is not None:
             transform_mat_joint = torch.matmul(
                 transform_mat_joint_2, transform_mat_joint_1
@@ -1090,7 +1009,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         return transform_mat_joint, posed_joints
 
     def get_transform_mat_vertex(self, transform_mat_joint, query_points, fix_mask):
-
         batch_size = transform_mat_joint.shape[0]
 
         query_skinning = self.query_voxel_skinning_weights(query_points)
@@ -1104,7 +1022,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         return transform_mat_vertex
 
     def get_posed_blendshape(self, smplx_param):
-
         root_pose = smplx_param["root_pose"]
         body_pose = smplx_param["body_pose"]
         jaw_pose = smplx_param["jaw_pose"]
@@ -1131,7 +1048,6 @@ class SMPLXVoxelMeshModel(nn.Module):
             axis_angle_to_matrix(pose) - torch.eye(3)[None, None, :, :].float().cuda()
         ).view(batch_size, (self.smpl_x.joint_num - 1) * 9)
 
-
         smplx_pose_offset = torch.matmul(pose.detach(), self.pose_dirs).view(
             batch_size, self.smpl_x.vertex_num_upsampled, 3
         )
@@ -1153,8 +1069,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         return xyz
 
     def lr_idx_to_hr_idx(self, idx):
-
-
         return idx
 
     def transform_to_posed_verts_from_neutral_pose(
@@ -1200,8 +1114,6 @@ class SMPLXVoxelMeshModel(nn.Module):
                     .view(-1, *joint_offset.shape[1:])
                 )
 
-
-
         try:
             smplx_expr_offset = (
                 smplx_data["expr"].unsqueeze(1).unsqueeze(1) * self.expr_dirs
@@ -1214,16 +1126,12 @@ class SMPLXVoxelMeshModel(nn.Module):
 
         mean_3d = mean_3d + smplx_expr_offset
 
-
-
-
         mask = (
 
             ((self.is_rhand + self.is_lhand) > 0)
             .unsqueeze(0)
             .repeat(batch_size, 1)
         )
-
 
         transform_mat_null_vertex = self.get_transform_mat_vertex(
             transform_mat_neutral_pose, mean_3d, mask
@@ -1233,11 +1141,8 @@ class SMPLXVoxelMeshModel(nn.Module):
             mean_3d, transform_mat_null_vertex, torch.zeros_like(smplx_data["trans"])
         )
 
-
         blend_shape_offset = blend_shapes(shape_param, self.shape_dirs)
         null_mean3d_blendshape = null_mean_3d + blend_shape_offset
-
-
 
         joint_null_pose = self.get_zero_pose_human(
             shape_param=shape_param,
@@ -1245,13 +1150,6 @@ class SMPLXVoxelMeshModel(nn.Module):
             face_offset=face_offset,
             joint_offset=joint_offset,
         )
-
-
-
-
-
-
-
 
         transform_mat_joint, j3d = self.get_transform_mat_joint(
 
@@ -1262,7 +1160,6 @@ class SMPLXVoxelMeshModel(nn.Module):
 
         null_mean3d_blendshape = null_mean3d_blendshape + pose_offsets
 
-
         transform_mat_vertex = self.get_transform_mat_vertex(
 
             transform_mat_joint, mean_3d, mask
@@ -1271,13 +1168,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         posed_mean_3d = self.lbs(
             null_mean3d_blendshape, transform_mat_vertex, smplx_data["trans"]
         )
-
-
-
-
-
-
-
 
         neutral_to_posed_vertex = torch.matmul(
             transform_mat_vertex, transform_mat_null_vertex
@@ -1311,11 +1201,9 @@ class SMPLXVoxelMeshModel(nn.Module):
             smplx_data (_type_): e.g., body_pose:[B*Nv, 21, 3], betas:[B*Nv, 100]
         """
 
-
         mesh_neutral_pose, _, transform_mat_neutral_pose = self.get_query_points(
             smplx_data, device
         )
-
 
         mean_3d, transform_matrix = self.transform_to_posed_verts_from_neutral_pose(
             mesh_neutral_pose,
@@ -1387,7 +1275,6 @@ class SMPLXVoxelMeshModel(nn.Module):
 
         skinning_weight = self.skinning_weight.unsqueeze(0).repeat(batch_size, 1, 1)
 
-
         transform_mat_vertex = torch.einsum(
             "blij,bnl->bnij", transform_mat_joint, skinning_weight
         )
@@ -1436,7 +1323,6 @@ class SMPLXVoxelMeshModel(nn.Module):
                     .view(-1, *joint_offset.shape[1:])
                 )
 
-
         smplx_expr_offset = (
             smplx_data["expr"].unsqueeze(1).unsqueeze(1) * self.expr_dirs
         ).sum(
@@ -1447,7 +1333,6 @@ class SMPLXVoxelMeshModel(nn.Module):
     def get_neutral_pose_human(
         self, jaw_zero_pose, use_id_info, shape_param, device, face_offset, joint_offset
     ):
-
         smpl_x = self.smpl_x
         batch_size = shape_param.shape[0]
 
@@ -1472,14 +1357,12 @@ class SMPLXVoxelMeshModel(nn.Module):
         if use_id_info:
             shape_param = shape_param
 
-
             face_offset = face_offset
             joint_offset = (
                 smpl_x.get_joint_offset(joint_offset)
                 if joint_offset is not None
                 else None
             )
-
         else:
             shape_param = (
                 torch.zeros((batch_size, smpl_x.shape_param_dim)).float().to(device)
@@ -1501,7 +1384,6 @@ class SMPLXVoxelMeshModel(nn.Module):
             joint_offset=joint_offset,
         )
 
-
         mesh_neutral_pose_upsampled = self.upsample_mesh_batch(
             smpl_x,
             shape_param=shape_param,
@@ -1518,7 +1400,6 @@ class SMPLXVoxelMeshModel(nn.Module):
         joint_neutral_pose = output.joints[
             :, : smpl_x.joint_num, :
         ]
-
 
         neutral_body_pose = neutral_body_pose.view(
             batch_size, len(smpl_x.joint_part["body"]) - 1, 3
@@ -1590,19 +1471,9 @@ class SMPLXVoxelMeshModel(nn.Module):
 
         return rot_mat.view(B, N, 3, 3)
 
-
 class MANOVoxelMeshModel(nn.Module):
     def __init__(self, hanco=False, center_add=True) -> None:
         super().__init__()
-
-
-
-
-
-
-
-
-
 
         self.mano = tools.model.smplx.create(**cfg.smpl_cfg)
         self.mano, _, _ = sub_mano(self.mano, cfg.smpl_cfg['manohd'])
@@ -1610,16 +1481,11 @@ class MANOVoxelMeshModel(nn.Module):
         self.mano.lbs_weights = lbs_weights
         self.pose_mean = self.mano.pose_mean.to('cuda')
 
-
-
         self.center_add = center_add
-
-
 
         self.apply_pose_blendshape = True
         self.dense_sample()
         self.manohd_init()
-
 
         self.joint_null_pose = self.get_zero_pose_hand(
             shape_param=torch.zeros(1,10).float()).to('cuda')
@@ -1627,7 +1493,6 @@ class MANOVoxelMeshModel(nn.Module):
         self.center_id = self.mano.center_id
         self.scale = self.mano.scale
         self.mano.lbs_weights.to('cuda')
-
 
     def rebuild_mesh(self, v, vertices_id, faces_id, num_dense_samples):
         choice_vertices = v[vertices_id]
@@ -1651,7 +1516,6 @@ class MANOVoxelMeshModel(nn.Module):
         return dense_sample_pts
 
     def dense_sample(self):
-
         semantic_path = "./pretrained_models/dense_sample_points/manohd_semantic.ply"
 
         manohd_pts, _ = load_ply(semantic_path)
@@ -1678,7 +1542,6 @@ class MANOVoxelMeshModel(nn.Module):
         mesh_dis = mesh_dis.squeeze()
 
         print(f"Using k = {smooth_k}, N={smooth_n} for LBS smoothing")
-
 
         knn_dis = knn_points(
             voxel_v.unsqueeze(0).cuda(),
@@ -1737,7 +1600,6 @@ class MANOVoxelMeshModel(nn.Module):
         return knn_lbs_weights
 
     def voxel_skinning_init(self, scale_ratio=1.05, voxel_size=256):
-
         skinning_weight = self.smplx_layer.lbs_weights.float()
 
         smplx_data = {"betas": torch.zeros(1, self.smpl_x.shape_param_dim)}
@@ -1770,7 +1632,6 @@ class MANOVoxelMeshModel(nn.Module):
 
         mini_size_bbox = scale_voxel_size(template_verts, scale_ratio)
         z_voxel_size = voxel_size // 2
-
 
         x_range = np.linspace(0, voxel_size - 1, voxel_size) / (
                 voxel_size - 1
@@ -1812,16 +1673,13 @@ class MANOVoxelMeshModel(nn.Module):
 
         N, LBS_F = voxel_flat.shape
 
-
         voxel_grid_original = voxel_flat.view(
             voxel_size, voxel_size, z_voxel_size, LBS_F
         )
 
-
         voxel_grid = voxel_grid_original.permute(3, 2, 1, 0)
 
         return voxel_grid, mini_size_bbox
-
 
     def manohd_init(self):
         """
@@ -1838,12 +1696,6 @@ class MANOVoxelMeshModel(nn.Module):
             None
         """
 
-
-
-
-
-
-
         dense_pts = self.hand_pts.cuda()
         template_verts = self.mano.v_template
 
@@ -1854,13 +1706,8 @@ class MANOVoxelMeshModel(nn.Module):
             return_nn=True,
         ).idx
 
-
-
-
         """ PCA regression function w.r.t vertices offset
         """
-
-
 
         self.mano.vertex_num_upsampled = self.hand_pts
 
@@ -1868,8 +1715,6 @@ class MANOVoxelMeshModel(nn.Module):
 
         self.register_buffer("hand_voxel_ws", voxel_skinning_weight)
         self.register_buffer("hand_voxel_bbox", voxel_bbox)
-
-
 
     def hand_voxel_skinning_init(self, scale_ratio=1.05, voxel_size=256):
         skinning_weight = self.mano.lbs_weights.float()
@@ -1891,7 +1736,6 @@ class MANOVoxelMeshModel(nn.Module):
 
         mini_size_bbox = scale_voxel_size(template_verts, scale_ratio)
         z_voxel_size = voxel_size // 2
-
 
         x_range = np.linspace(0, voxel_size - 1, voxel_size) / (
                 voxel_size - 1
@@ -1933,16 +1777,13 @@ class MANOVoxelMeshModel(nn.Module):
 
         N, LBS_F = voxel_flat.shape
 
-
         voxel_grid_original = voxel_flat.view(
             voxel_size, voxel_size, z_voxel_size, LBS_F
         )
 
-
         voxel_grid = voxel_grid_original.permute(3, 2, 1, 0)
 
         return voxel_grid, mini_size_bbox
-
 
     def query_voxel_skinning_weights(self, vs):
         """using voxel-based skinning method
@@ -1971,17 +1812,14 @@ class MANOVoxelMeshModel(nn.Module):
         return query_ws
 
     def get_zero_pose_hand(self, shape_param, return_mesh=False):
-
         output = self.mano(shape_param,
                            torch.zeros(1,3).float(),
                            torch.zeros(1,45).float(), return_verts=True)
         self.center = output.center.squeeze().to('cuda')
 
-
         joint_zero_pose = output.joints[:, : self.mano.NUM_JOINTS, :]
 
         return joint_zero_pose
-
 
     def get_transform_mat_joint(
             self, transform_mat_neutral_pose, joint_zero_pose, smplx_param):
@@ -1994,18 +1832,13 @@ class MANOVoxelMeshModel(nn.Module):
             _type_: _description_
         """
 
-
         transform_mat_joint_1 = transform_mat_neutral_pose
-
 
         poses_tensor = smplx_param["poses"]
         if poses_tensor.device.type == 'cpu':
             poses_tensor = poses_tensor.to('cuda')
         root_pose = poses_tensor[0, :3]
         hand_pose = poses_tensor[0, 3:]
-
-
-
 
         pose = torch.cat(
             (
@@ -2025,7 +1858,6 @@ class MANOVoxelMeshModel(nn.Module):
 
         transform_mat_joint_2 = transform_mat_joint_2
 
-
         if transform_mat_joint_1 is not None:
             transform_mat_joint = torch.matmul(
                 transform_mat_joint_2, transform_mat_joint_1
@@ -2036,9 +1868,7 @@ class MANOVoxelMeshModel(nn.Module):
         return transform_mat_joint, posed_joints
 
     def get_transform_mat_vertex(self, transform_mat_joint, query_points):
-
         batch_size = transform_mat_joint.shape[0]
-
 
         skinning_weight = self.mano.lbs_weights.repeat(batch_size, 1, 1).to('cuda')
 
@@ -2052,7 +1882,6 @@ class MANOVoxelMeshModel(nn.Module):
         return transform_mat_vertex
 
     def get_posed_blendshape(self, smplx_param):
-
         poses_tensor = smplx_param["poses"]
         if poses_tensor.device.type == 'cpu':
             poses_tensor = poses_tensor.to('cuda')
@@ -2068,11 +1897,8 @@ class MANOVoxelMeshModel(nn.Module):
                 axis_angle_to_matrix(pose) - torch.eye(3)[None, None, :, :].float().cuda()
         ).view(batch_size, (self.mano.NUM_JOINTS - 1) * 9)
 
-
         smplx_pose_offset = torch.matmul(pose.unsqueeze(1), self.mano.posedirs.to('cuda').view(
             self.mano.vertex_num_upsampled.size(0)*3, -1).transpose(1,0).unsqueeze(0)).view(batch_size, self.mano.vertex_num_upsampled.size(0), 3)
-
-
 
         return smplx_pose_offset
 
@@ -2090,8 +1916,6 @@ class MANOVoxelMeshModel(nn.Module):
         return xyz
 
     def lr_idx_to_hr_idx(self, idx):
-
-
         return idx
 
     def transform_to_posed_verts_from_neutral_pose(
@@ -2118,23 +1942,9 @@ class MANOVoxelMeshModel(nn.Module):
         merge_mean_3d = mean_3d
         mean_3d = mean_3d[0, ...]
 
-
-
-
         blend_shape_offset = blend_shapes(shape_param, self.mano.shapedirs.to('cuda'))
         null_mean3d_blendshape = mean_3d
         merge_mean_3d[0, ...] = null_mean3d_blendshape
-
-
-
-
-
-
-
-
-
-
-
 
         transform_mat_joint, j3d = self.get_transform_mat_joint(
 
@@ -2144,93 +1954,47 @@ class MANOVoxelMeshModel(nn.Module):
 
         null_mean3d_blendshape = null_mean3d_blendshape + pose_offsets
 
-
         transform_mat_vertex = self.get_transform_mat_vertex(
 
             transform_mat_joint, mean_3d
         )
-
 
         posed_mean_3d = self.lbs(
             null_mean3d_blendshape, transform_mat_vertex, None,
 
         )
 
-
-
-
-
         center = j3d[:, self.center_id:self.center_id+1].clone()
-
-
 
         if getattr(self, 'center_add', True):
             posed_mean_3d = posed_mean_3d - center
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         merge_mean_3d[1, ...] = posed_mean_3d
         return merge_mean_3d, transform_mat_vertex
-
 
     def get_transform_params_torch(self, params, rot_mats=None, correct_Rs=None):
         """ obtain the transformation parameters for linear blend skinning
         """
         v_template = self.mano.v_template.cuda()
 
-
         shapedirs = self.mano.shapedirs.cuda()
-
-
-
-
-
 
         betas = params['shape'].unsqueeze(0)
 
         v_shaped = v_template[None] + torch.sum(shapedirs[None][..., :betas.shape[-1]] * betas[:, None],
                                                 axis=-1).float()
 
-
         joints = torch.matmul(self.mano.J_regressor[None].cuda(),
                               v_shaped)
 
-
         if rot_mats is None:
-
             poses = params['poses'][0, :].reshape(-1, 3)
 
-
             rot_mats = self.batch_rodrigues_torch_new(poses).view(-1, poses.shape[0], 3, 3)
-
 
         parents = self.mano.parents.cuda()
 
         A, posed_joints = self.get_rigid_transformation_torch(rot_mats, joints, parents)
-
-
-
-
 
         return A, joints, posed_joints
 
@@ -2254,7 +2018,6 @@ class MANOVoxelMeshModel(nn.Module):
 
         return rot_mat
 
-
     def get_rigid_transformation_torch(self, rot_mats, joints, parents):
         """
         rot_mats: bs x 24 x 3 x 3
@@ -2266,14 +2029,10 @@ class MANOVoxelMeshModel(nn.Module):
         rel_joints = joints.clone()
         rel_joints[:, 1:] -= joints[:, parents[1:]]
 
-
-
         transforms_mat = torch.cat([rot_mats, rel_joints[..., None]], dim=-1)
         padding = torch.zeros([bs, joints_num, 1, 4], device=rot_mats.device)
         padding[..., 3] = 1
         transforms_mat = torch.cat([transforms_mat, padding], dim=-2)
-
-
 
         transform_chain = [transforms_mat[:, 0]]
         for i in range(1, parents.shape[0]):
@@ -2284,15 +2043,12 @@ class MANOVoxelMeshModel(nn.Module):
 
         posed_joints = transforms[:, :, :3, 3]
 
-
         padding = torch.zeros([bs, joints_num, 1], device=rot_mats.device)
         joints_homogen = torch.cat([joints, padding], dim=-1)
         rel_joints = torch.sum(transforms * joints_homogen[:, :, None], dim=3)
         transforms[..., 3] = transforms[..., 3] - rel_joints
 
         return transforms, posed_joints
-
-
 
     def get_query_points(self, smplx_data, device):
         """transform_mat_neutral_pose is function to warp pre-defined posed to zero-pose"""
@@ -2303,7 +2059,6 @@ class MANOVoxelMeshModel(nn.Module):
                 use_id_info=False,
                 shape_param=smplx_data["shape"],
                 device=device,
-
 
             )
         )
@@ -2320,11 +2075,9 @@ class MANOVoxelMeshModel(nn.Module):
             smplx_data (_type_): e.g., body_pose:[B*Nv, 21, 3], betas:[B*Nv, 100]
         """
 
-
         mesh_neutral_pose, _, transform_mat_neutral_pose = self.get_query_points(
             smplx_data, device
         )
-
 
         mean_3d, transform_matrix = self.transform_to_posed_verts_from_neutral_pose(
             mesh_neutral_pose,
@@ -2396,7 +2149,6 @@ class MANOVoxelMeshModel(nn.Module):
 
         skinning_weight = self.skinning_weight.unsqueeze(0).repeat(batch_size, 1, 1)
 
-
         transform_mat_vertex = torch.einsum(
             "blij,bnl->bnij", transform_mat_joint, skinning_weight
         )
@@ -2445,7 +2197,6 @@ class MANOVoxelMeshModel(nn.Module):
                     .view(-1, *joint_offset.shape[1:])
                 )
 
-
         smplx_expr_offset = (
                 smplx_data["expr"].unsqueeze(1).unsqueeze(1) * self.expr_dirs
         ).sum(
@@ -2456,7 +2207,6 @@ class MANOVoxelMeshModel(nn.Module):
     def get_neutral_pose_human(
             self, jaw_zero_pose, use_id_info, shape_param, device, face_offset, joint_offset
     ):
-
         smpl_x = self.smpl_x
         batch_size = shape_param.shape[0]
 
@@ -2481,14 +2231,12 @@ class MANOVoxelMeshModel(nn.Module):
         if use_id_info:
             shape_param = shape_param
 
-
             face_offset = face_offset
             joint_offset = (
                 smpl_x.get_joint_offset(joint_offset)
                 if joint_offset is not None
                 else None
             )
-
         else:
             shape_param = (
                 torch.zeros((batch_size, smpl_x.shape_param_dim)).float().to(device)
@@ -2510,7 +2258,6 @@ class MANOVoxelMeshModel(nn.Module):
             joint_offset=joint_offset,
         )
 
-
         mesh_neutral_pose_upsampled = self.upsample_mesh_batch(
             smpl_x,
             shape_param=shape_param,
@@ -2527,7 +2274,6 @@ class MANOVoxelMeshModel(nn.Module):
         joint_neutral_pose = output.joints[
                              :, : smpl_x.joint_num, :
                              ]
-
 
         neutral_body_pose = neutral_body_pose.view(
             batch_size, len(smpl_x.joint_part["body"]) - 1, 3

@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 class Inferrer_hand(Runner):
-
     EXP_TYPE: str = None
 
     def __init__(self):
@@ -54,21 +53,14 @@ class Inferrer_hand(Runner):
     def infer_single(self, *args, **kwargs):
         pass
 
-
     def save(self, iteration=None, is_latest=False):
-
         self.save_checkpoint(iteration=iteration, is_latest=is_latest)
 
-
     def load(self, iteration=None, is_latest=False, checkpoint_path=None):
-
         self.load_checkpoint(iteration=iteration, is_latest=is_latest, checkpoint_path=checkpoint_path)
-
 
     def load_model(self, iteration=None, checkpoint_path=None):
         self.load_model(iteration, checkpoint_path)
-
-
 
     def finetune_model(self, iteration, checkpoint_path=None):
         self.finetune_model(iteration, checkpoint_path)
@@ -85,7 +77,6 @@ class Inferrer_hand(Runner):
     @abstractmethod
     def infer_handavatar(self, batch):
         self.infer_handavatar(batch=batch)
-
 
     def run(self, batch=None, scaler=None, iteration=None, writer=None, pbar=None):
         self.infer(batch=batch, scaler=scaler, iter=iteration, writer=writer, pbar=pbar)
@@ -129,7 +120,6 @@ class Inferrer_hand(Runner):
             edit_mask_weight=edit_mask_weight,
         )
 
-
     def run_wild_stage_2_interhand(self, batch=None, scaler=None, iteration=None, writer=None, pbar=None, total_iters=None,
                          is_text_to_avatar=None):
         if is_text_to_avatar is not None:
@@ -166,10 +156,8 @@ class Inferrer_hand(Runner):
             color_consistency_weight=color_consistency_weight
         )
 
-
     def run_interhand(self, batch=None, scaler=None, iteration=None, writer=None, pbar=None, total_iters=None):
         self.finetune_interhand(batch=batch, scaler=scaler, iter=iteration, writer=writer, pbar=pbar, total_iters=total_iters)
-
 
     def run_t2a(self, batch=None, scaler=None, iteration=None, writer=None, pbar=None, total_iters=None):
         self.finetune_t2a(batch=batch, scaler=scaler, iter=iteration, writer=writer, pbar=pbar, total_iters=total_iters)

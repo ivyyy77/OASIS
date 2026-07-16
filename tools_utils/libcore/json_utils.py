@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import base64
 
@@ -45,9 +43,6 @@ def loadMatFromJson(value):
 
     return mat
 
-
-
-
 import json
 from _ctypes import PyObj_FromPtr
 import re
@@ -69,7 +64,6 @@ class FormatEncoder(json.JSONEncoder):
     regex = re.compile(FORMAT_SPEC.format(r'(\d+)'))
 
     def __init__(self, **kwargs):
-
         self.__sort_keys = kwargs.get('sort_keys', None)
         super(FormatEncoder, self).__init__(**kwargs)
 
@@ -83,16 +77,10 @@ class FormatEncoder(json.JSONEncoder):
         format_spec = self.FORMAT_SPEC
         json_repr = super(FormatEncoder, self).encode(obj)
 
-
-
-
         for match in self.regex.finditer(json_repr):
-
             uid = int(match.group(1))
             no_indent = PyObj_FromPtr(uid)
             json_obj_repr = json.dumps(no_indent.value, sort_keys=self.__sort_keys)
-
-
 
             json_repr = json_repr.replace(
                             '"{}"'.format(format_spec.format(uid)), json_obj_repr)

@@ -32,8 +32,6 @@ from torch.utils.tensorboard import SummaryWriter
 from LHM.losses import _is_better
 
 
-
-
 flags.DEFINE_string('output_dir', 'output', 'Output directory')
 flags.DEFINE_string('eval_subdir', 'eval_final', 'Eval subdirectory')
 flags.DEFINE_boolean('only_eval', False, 'eval or train')
@@ -64,7 +62,6 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
 def _load_runner_checkpoint(runner, iteration=None, checkpoint_path=None, checkpoint_file=None):
     """Load checkpoint with explicit file support when available."""
     if hasattr(runner, 'load_checkpoint'):
@@ -76,7 +73,6 @@ def _load_runner_checkpoint(runner, iteration=None, checkpoint_path=None, checkp
         )
     return runner.load(iteration=iteration, is_latest=False, checkpoint_path=checkpoint_path)
 
-
 def _infer_num_frames_from_test_batch(test_batch):
     """Best-effort frame count inference for FPS computation."""
     sample = test_batch
@@ -86,13 +82,11 @@ def _infer_num_frames_from_test_batch(test_batch):
     if isinstance(sample, dict) and 'original_image' in sample:
         img = sample['original_image']
         if torch.is_tensor(img):
-
             if img.dim() == 4:
                 return int(img.shape[0])
             if img.dim() >= 5:
                 return int(img.shape[1])
     return 1
-
 
 def _run_test_with_fps(runner, test_dataloader, gs_model_list, gs_densify_list, query_points, iteration):
     psnr_full, ssim_full, lpips_full, image_full = 0.0, 0.0, 0.0, 0.0
@@ -119,7 +113,6 @@ def _run_test_with_fps(runner, test_dataloader, gs_model_list, gs_densify_list, 
                     pbar,
                 )
 
-
             total_render_time += loss_dict.get('render_time', 0.0)
             total_rendered_views += loss_dict.get('render_views', 0)
 
@@ -127,7 +120,6 @@ def _run_test_with_fps(runner, test_dataloader, gs_model_list, gs_densify_list, 
             ssim_full += loss_dict['ssim'].item()
             lpips_full += loss_dict['lpips'].item()
             count += 1
-
 
             current_fps = total_rendered_views / max(total_render_time, 1e-8)
             pbar.set_postfix({
@@ -161,22 +153,7 @@ def _run_test_with_fps(runner, test_dataloader, gs_model_list, gs_densify_list, 
         'test_total_time_sec': float(total_render_time),
     }
 
-
-
 def main(argv):
-
-
-
-
-
-
-
-
-
-
-
-
-
     parser = argparse.ArgumentParser(description="OpenLRM launcher")
     parser.add_argument("runner", type=str, help="Runner to launch")
     parser.add_argument("--checkpoint-path", type=str, default=None,
@@ -194,7 +171,6 @@ def main(argv):
     resume_group.add_argument("--no-resume", dest="resume", action="store_false", help="Disable auto-resume from checkpoint")
     parser.set_defaults(resume=False)
 
-
     args, unknown = parser.parse_known_args()
 
     args.dataset_path = args.dataset_path or FLAGS['dataset-path'].value
@@ -205,12 +181,10 @@ def main(argv):
     if not args.handavatar_path:
         parser.error("--handavatar-path is required when HANDAVATAR_ROOT is not set")
 
-
     cli_checkpoint = args.checkpoint_path
     cli_checkpoint_file = args.checkpoint_file
     cli_output = args.output_path
     cli_resume = args.resume
-
 
     try:
         from absl import flags as _absl_flags
@@ -226,7 +200,6 @@ def main(argv):
             cli_resume = getattr(absl_f, 'resume', False)
     except Exception:
         pass
-
 
     for u in unknown:
         if isinstance(u, str) and u.lower().startswith("checkpoint-path=") and cli_checkpoint is None:
@@ -247,7 +220,6 @@ def main(argv):
     try:
         runner = RunnerClass(checkpoint_path=cli_checkpoint, checkpoint_file=cli_checkpoint_file, output_path=cli_output, resume=cli_resume)
     except TypeError:
-
         runner = RunnerClass()
 
         try:
@@ -264,23 +236,9 @@ def main(argv):
         except Exception:
             pass
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     dist.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:29502',
                             rank=0,
                             world_size=1,
-
 
                             )
     rank = dist.get_rank()
@@ -288,81 +246,17 @@ def main(argv):
     print(f"Start running basic DDP example on rank {rank}.")
     device_id = rank % torch.cuda.device_count()
 
-
-
     os.makedirs(FLAGS.output_dir, exist_ok=True)
     set_seed(42)
     iteration = FLAGS.iter
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     train_loader = Dataset(dataset_path=args.dataset_path,
                            data_type='train')
-
-
-
-
-
-
-
-
-
-
 
     train_dataloader = make_dataloader(train_loader, shuffle=True, batch_size=FLAGS.batch_size,
                                        num_workers=FLAGS.num_workers,
                                        persistent_workers=(FLAGS.num_workers>0),
                                        pin_memory=FLAGS.pin_memory)
-
 
     test_handavatar = HandAvatarDataset(dataset_path=args.handavatar_path,
                                                 d_type='progress',
@@ -373,7 +267,6 @@ def main(argv):
                                       persistent_workers=(FLAGS.num_workers>0),
                                       pin_memory=FLAGS.pin_memory)
 
-
     data_iterator = iter(train_dataloader)
 
     writer = SummaryWriter(log_dir=os.path.join(FLAGS.output_dir, 'exp1'))
@@ -382,7 +275,6 @@ def main(argv):
         scaler = torch.cuda.amp.GradScaler()
     else:
         scaler = None
-
 
     if FLAGS.only_eval:
         ckpt_file_flag = None
@@ -440,37 +332,24 @@ def main(argv):
 
     torch.autograd.set_detect_anomaly(False)
 
-
     pbar = tqdm(range(1, iteration + 1), desc='Training', dynamic_ncols=True)
 
     for iteration in pbar:
-
-
-
         try:
             batches = next(data_iterator)
-
         except:
             data_iterator = iter(train_dataloader)
             batches = next(data_iterator)
 
         runner.run(batch=batches, scaler=scaler, iteration=iteration, writer=writer, pbar=pbar)
 
-
-
-
-
         if iteration >= 1000 and iteration % 1000 == 0:
-
-
-
             runner.save(is_latest=True)
 
             runner.load(is_latest=True)
             print(f"\033[91m[========== Running test ! Loading model for iteration {iteration} ==========]\033[0m")
 
             infer_batch = test_handavatar.get_img()
-
 
             gs_model_list, gs_densify_list, query_points = runner.infer_handavatar(infer_batch)
 
@@ -483,11 +362,8 @@ def main(argv):
                 iteration,
             )
 
-
-
             current_metrics['iteration_tested_on'] = int(iteration)
             current_metrics['timestamp'] = time.time()
-
 
             test_results_dir = os.path.join(runner.checkpoint_path, 'test_results')
             os.makedirs(test_results_dir, exist_ok=True)
@@ -495,16 +371,8 @@ def main(argv):
             latest_results_path = os.path.join(test_results_dir, 'latest_test_results.json')
             best_results_path = os.path.join(test_results_dir, 'best_test_results.json')
 
-
             with open(latest_results_path, 'w') as f:
                 json.dump(current_metrics, f, indent=2)
-
-
-
-
-
-
-
 
             if os.path.exists(best_results_path):
                 try:
@@ -514,13 +382,9 @@ def main(argv):
                     print(f"[Warning] failed to load best_results_path ({best_results_path}): {e}")
                     best_metrics = None
             else:
-
                 best_metrics = None
 
-
-
             if (best_metrics is None) or _is_better(current_metrics, best_metrics):
-
                 best_metrics = current_metrics
                 with open(best_results_path, 'w') as f:
                     json.dump(best_metrics, f, indent=2)
@@ -529,15 +393,10 @@ def main(argv):
             else:
                 print(f"[ ] No improvement at iter {iteration}. Best stays at iteration {best_metrics.get('iteration_tested_on', 'N/A')} (LPIPS {best_metrics['lpips']:.6f}, PSNR {best_metrics['psnr']:.4f})")
 
-
-
     runner.save(iteration)
     writer.close()
 
     print("Training completed.")
 
-
-
 if __name__ == "__main__":
-
     app.run(main)

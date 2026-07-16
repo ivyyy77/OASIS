@@ -1,4 +1,3 @@
-
 #
 # Copyright (C) 2023, Inria
 # GRAPHDECO research group, https://team.inria.fr/graphdeco
@@ -50,10 +49,8 @@ def get_expon_lr_func(
 
     def helper(step):
         if step < 0 or (lr_init == 0.0 and lr_final == 0.0):
-
             return 0.0
         if lr_delay_steps > 0:
-
             delay_rate = lr_delay_mult + (1 - lr_delay_mult) * np.sin(
                 0.5 * np.pi * np.clip(step / lr_delay_steps, 0, 1)
             )

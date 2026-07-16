@@ -1,11 +1,3 @@
-
-
-
-
-
-
-
-
 from functools import partial
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -27,11 +19,9 @@ def set_vis_bias_enabled(enabled: bool):
     VIS_BIAS_ENABLED = enabled
     print(f"[VisBias] {'Enabled' if enabled else 'Disabled'}")
 
-
 def is_vis_bias_enabled() -> bool:
     """Return whether visibility bias is currently enabled."""
     return VIS_BIAS_ENABLED
-
 
 assert hasattr(F, "scaled_dot_product_attention"), print(
     "AttnProcessor2_0 requires PyTorch 2.0, to use it, please upgrade PyTorch to 2.0."
@@ -87,8 +77,6 @@ class CogVideoXBlock(nn.Module):
         dim: int,
         num_heads: int,
 
-
-
         dropout: float = 0.0,
         activation_fn: str = "gelu-approximate",
         attention_bias: bool = False,
@@ -107,7 +95,6 @@ class CogVideoXBlock(nn.Module):
         attention_head_dim = dim // num_attention_heads
         assert attention_head_dim * num_attention_heads == dim
 
-
         self.norm1 = nn.LayerNorm(
             dim, elementwise_affine=norm_elementwise_affine, eps=norm_eps, bias=True
         )
@@ -125,7 +112,6 @@ class CogVideoXBlock(nn.Module):
             out_bias=attention_out_bias,
             processor=CogVideoXAttnProcessor2_0(),
         )
-
 
         self.norm2 = nn.LayerNorm(
             dim, elementwise_affine=norm_elementwise_affine, eps=norm_eps, bias=True
@@ -152,13 +138,8 @@ class CogVideoXBlock(nn.Module):
     ) -> torch.Tensor:
         text_seq_length = encoder_hidden_states.size(1)
 
-
-
-
-
         norm_hidden_states = self.norm1(hidden_states)
         norm_encoder_hidden_states = self.norm1_context(encoder_hidden_states)
-
 
         attn_hidden_states, attn_encoder_hidden_states = self.attn1(
             hidden_states=norm_hidden_states,
@@ -169,13 +150,8 @@ class CogVideoXBlock(nn.Module):
         hidden_states = hidden_states + attn_hidden_states
         encoder_hidden_states = encoder_hidden_states + attn_encoder_hidden_states
 
-
-
-
-
         norm_hidden_states = self.norm2(hidden_states)
         norm_encoder_hidden_states = self.norm2_context(encoder_hidden_states)
-
 
         norm_hidden_states = torch.cat(
             [norm_encoder_hidden_states, norm_hidden_states], dim=1
@@ -186,7 +162,6 @@ class CogVideoXBlock(nn.Module):
         encoder_hidden_states = encoder_hidden_states + ff_output[:, :text_seq_length]
 
         return hidden_states, encoder_hidden_states
-
 
 def drop_path(x, drop_prob: float = 0., training: bool = False):
     if drop_prob == 0. or not training:
@@ -206,9 +181,6 @@ class DropPath(nn.Module):
     def forward(self, x):
         return drop_path(x, self.drop_prob, self.training)
 
-
-
-
 class SwiGLU_FF(nn.Module):
     def __init__(self, dim, inner_dim, dropout=0.0):
         super().__init__()
@@ -223,13 +195,9 @@ class SwiGLU_FF(nn.Module):
         x = self.proj_out(x)
         return self.dropout(x)
 
-
-
-
 def _chunked_feed_forward(
     ff: nn.Module, hidden_states: torch.Tensor, chunk_dim: int, chunk_size: int
 ):
-
     if hidden_states.shape[chunk_dim] % chunk_size != 0:
         raise ValueError(
             f"`hidden_states` dimension to be chunked: {hidden_states.shape[chunk_dim]} has to be divisible by chunk size: {chunk_size}. Make sure to set an appropriate `chunk_size` when calling `unet.enable_forward_chunking`."
@@ -241,7 +209,6 @@ def _chunked_feed_forward(
         dim=chunk_dim,
     )
     return ff_output
-
 
 class QKNormJointAttnProcessor2_0:
     """Attention processor used typically in processing the SD3-like self-attention projections."""
@@ -278,16 +245,13 @@ class QKNormJointAttnProcessor2_0:
 
         batch_size = encoder_hidden_states.shape[0]
 
-
         query = attn.to_q(hidden_states)
         key = attn.to_k(hidden_states)
         value = attn.to_v(hidden_states)
 
-
         encoder_hidden_states_query_proj = attn.add_q_proj(encoder_hidden_states)
         encoder_hidden_states_key_proj = attn.add_k_proj(encoder_hidden_states)
         encoder_hidden_states_value_proj = attn.add_v_proj(encoder_hidden_states)
-
 
         query = torch.cat([query, encoder_hidden_states_query_proj], dim=1)
         key = torch.cat([key, encoder_hidden_states_key_proj], dim=1)
@@ -312,12 +276,10 @@ class QKNormJointAttnProcessor2_0:
         )
         hidden_states = hidden_states.to(query.dtype)
 
-
         hidden_states, encoder_hidden_states = (
             hidden_states[:, : residual.shape[1]],
             hidden_states[:, residual.shape[1] :],
         )
-
 
         hidden_states = attn.to_out[0](hidden_states)
 
@@ -335,7 +297,6 @@ class QKNormJointAttnProcessor2_0:
             )
 
         return hidden_states, encoder_hidden_states
-
 
 class SD3JointTransformerBlock(nn.Module):
     r"""
@@ -356,7 +317,6 @@ class SD3JointTransformerBlock(nn.Module):
         dim: int,
         num_heads: int,
         eps: float,
-
 
         context_pre_only: bool = False,
         qk_norm: Optional[str] = None,
@@ -379,7 +339,6 @@ class SD3JointTransformerBlock(nn.Module):
 
         processor = JointAttnProcessor2_0()
 
-
         self.attn = Attention(
             query_dim=dim,
             cross_attention_dim=None,
@@ -393,7 +352,6 @@ class SD3JointTransformerBlock(nn.Module):
             qk_norm=qk_norm,
             eps=eps,
         )
-
 
         if use_dual_attention:
             self.attn2 = Attention(
@@ -422,13 +380,10 @@ class SD3JointTransformerBlock(nn.Module):
             self.norm2_context = None
             self.ff_context = None
 
-
         self._chunk_size = None
         self._chunk_dim = 0
 
-
     def set_chunk_feed_forward(self, chunk_size: Optional[int], dim: int = 0):
-
         self._chunk_size = chunk_size
         self._chunk_dim = dim
 
@@ -448,22 +403,15 @@ class SD3JointTransformerBlock(nn.Module):
             Tuple[torch.FloatTensor, torch.FloatTensor]: Tuple containing the updated hidden states and encoder hidden states.
         """
 
-
         norm_hidden_states = self.norm1(hidden_states)
         norm_encoder_hidden_states = self.norm1_context(encoder_hidden_states)
-
-
 
         attn_output, context_attn_output = self.attn(
             hidden_states=norm_hidden_states,
             encoder_hidden_states=norm_encoder_hidden_states,
         )
 
-
-
         hidden_states = hidden_states + attn_output
-
-
 
         if self.use_dual_attention:
             attn_output2 = self.attn2(hidden_states=norm_hidden_states)
@@ -473,27 +421,22 @@ class SD3JointTransformerBlock(nn.Module):
         norm_hidden_states = self.norm2(hidden_states)
 
         if self._chunk_size is not None:
-
             ff_output = _chunked_feed_forward(
                 self.ff, norm_hidden_states, self._chunk_dim, self._chunk_size
             )
         else:
             ff_output = self.ff(norm_hidden_states)
 
-
         hidden_states = hidden_states + ff_output
-
 
         if self.context_pre_only:
             encoder_hidden_states = None
         else:
-
             encoder_hidden_states = encoder_hidden_states + context_attn_output
 
             norm_encoder_hidden_states = self.norm2_context(encoder_hidden_states)
 
             if self._chunk_size is not None:
-
                 context_ff_output = _chunked_feed_forward(
                     self.ff_context,
                     norm_encoder_hidden_states,
@@ -506,7 +449,6 @@ class SD3JointTransformerBlock(nn.Module):
             encoder_hidden_states = encoder_hidden_states + context_ff_output
 
         return hidden_states, encoder_hidden_states
-
 
 class SD3MMJointTransformerBlock(nn.Module):
     r"""
@@ -527,7 +469,6 @@ class SD3MMJointTransformerBlock(nn.Module):
         dim: int,
         num_heads: int,
         eps: float,
-
 
         context_pre_only: bool = False,
         qk_norm: Optional[str] = None,
@@ -574,7 +515,6 @@ class SD3MMJointTransformerBlock(nn.Module):
 
         self.drop_path = DropPath(drop_prob=0.2)
 
-
         self.attn = Attention(
             query_dim=dim,
             cross_attention_dim=None,
@@ -601,11 +541,6 @@ class SD3MMJointTransformerBlock(nn.Module):
 
         self.gamma_global_boost = 0.0
 
-
-
-
-
-
         self.norm2 = nn.LayerNorm(dim, elementwise_affine=False, eps=eps)
         self.norm_global = nn.LayerNorm(dim, elementwise_affine=False, eps=eps)
 
@@ -613,30 +548,24 @@ class SD3MMJointTransformerBlock(nn.Module):
         self.beta_global = 2.0
         self.ff = FeedForward(dim=dim, dim_out=dim, activation_fn="gelu-approximate")
 
-
-
         if not context_pre_only:
             self.norm2_context = nn.LayerNorm(dim, elementwise_affine=False, eps=eps)
             self.ff_context = FeedForward(
                 dim=dim, dim_out=dim, activation_fn="gelu-approximate"
 
             )
-
         else:
             self.norm2_context = None
             self.ff_context = None
 
-
         self._chunk_size = None
         self._chunk_dim = 0
-
 
         self.part_aware_point = HierarchicalPointEmbedTransformer(
             in_feat_dim=dim, out_dim=dim, part_dim=dim
         )
 
     def set_chunk_feed_forward(self, chunk_size: Optional[int], dim: int = 0):
-
         self._chunk_size = chunk_size
         self._chunk_dim = dim
 
@@ -650,33 +579,21 @@ class SD3MMJointTransformerBlock(nn.Module):
         N_local = N_k - 1
         N_global = 1
 
-
         vis = vis_soft.clamp(0, 1)
         s = 2.0 * vis - 1.0
-
-
-
 
         local_bias_row = s * beta_local
         local_bias = local_bias_row.unsqueeze(-1).expand(-1, -1, N_local)
 
-
-
-
         global_bias_row = -s * beta_global
         global_bias = global_bias_row.unsqueeze(-1)
 
-
         bias_2d = torch.cat([local_bias, global_bias], dim=-1)
-
 
         bias = bias_2d.unsqueeze(1).to('cuda:1')
 
-
         scores = scores + bias
         return scores
-
-
 
     def build_visibility_attn_mask(self, p_vis, M, beta_local=2.0, beta_global=2.0):
         """
@@ -694,22 +611,16 @@ class SD3MMJointTransformerBlock(nn.Module):
         vis = p_vis.clamp(0.0, 1.0)
         s = 2.0 * vis - 1.0
 
-
         local_bias_row = s * beta_local
         local_bias = local_bias_row.unsqueeze(-1).expand(-1, -1, N_local)
-
-
 
         global_bias_row = -s * beta_global
         global_bias = global_bias_row.unsqueeze(-1).expand(-1, -1, N_global)
 
-
         bias_2d = torch.cat([local_bias, global_bias], dim=-1)
-
 
         attn_mask = bias_2d.unsqueeze(1)
         return attn_mask
-
 
     def build_learned_visibility_attn_mask(
         self, p_vis: torch.Tensor, depth_res: torch.Tensor | None = None
@@ -726,19 +637,15 @@ class SD3MMJointTransformerBlock(nn.Module):
         N_local = M - 1
         device, dtype = p_vis.device, p_vis.dtype
 
-
         b_local, b_global = self.vis_bias_net(p_vis, depth_res=depth_res)
-
 
         local_bias = b_local.unsqueeze(-1).expand(-1, -1, N_local)
         global_bias = b_global.unsqueeze(-1).expand(-1, -1, M-N_local)
 
         bias_2d = torch.cat([local_bias, global_bias], dim=-1)
 
-
         attn_mask = bias_2d.unsqueeze(1)
         return attn_mask
-
 
     def forward(
         self,
@@ -773,17 +680,6 @@ class SD3MMJointTransformerBlock(nn.Module):
         beta_local = getattr(self, "beta_local", 2.0)
         beta_global = getattr(self, "beta_global", 2.0)
 
-
-
-
-
-
-
-
-
-
-
-
         norm_hidden_states, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.norm1(
             hidden_states, emb=temb
         )
@@ -799,144 +695,6 @@ class SD3MMJointTransformerBlock(nn.Module):
                 c_gate_mlp,
             ) = self.norm1_context(encoder_hidden_states, emb=temb)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         norm_global = self.norm_global(global_four)
         norm_global = norm_global.reshape(norm_global.size(0), -1, 1024)
         local_global = torch.cat((norm_encoder_hidden_states, norm_global), dim=1)
@@ -950,7 +708,6 @@ class SD3MMJointTransformerBlock(nn.Module):
         H = self.pc2img_attn.heads
         head_dim = D // H
         scale = 1.0 / (head_dim ** 0.5)
-
 
         Q = Q.view(B, L, H, head_dim).transpose(1, 2)
         K = K.view(B, M, H, head_dim).transpose(1, 2)
@@ -968,7 +725,6 @@ class SD3MMJointTransformerBlock(nn.Module):
                 beta_global,
             ).to(Q.device)
 
-
             if not VIS_BIAS_ENABLED:
                 attn_mask = torch.zeros_like(attn_mask)
 
@@ -982,72 +738,15 @@ class SD3MMJointTransformerBlock(nn.Module):
         )
         cross_res = cross_res.transpose(1, 2).contiguous().view(B, L, D)
 
-
         cross_res = self.pc2img_attn.to_out[0](cross_res)
 
         cross_res = self.pc2img_attn.to_out[1](cross_res)
 
-
-
-
-
-
         cross_out = gate_msa.unsqueeze(1) * cross_res
-
-
 
         norm_hidden_states = hidden_states + cross_out
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         if use_self_attn:
-
             Q_sa = self.attn.to_q(norm_hidden_states)
             K_sa = self.attn.to_k(norm_hidden_states)
             V_sa = self.attn.to_v(norm_hidden_states)
@@ -1058,7 +757,6 @@ class SD3MMJointTransformerBlock(nn.Module):
             Q_sa = Q_sa.view(B_sa, L_sa, H_sa, head_dim_sa).transpose(1, 2)
             K_sa = K_sa.view(B_sa, L_sa, H_sa, head_dim_sa).transpose(1, 2)
             V_sa = V_sa.view(B_sa, L_sa, H_sa, head_dim_sa).transpose(1, 2)
-
 
             if hasattr(self.attn, 'norm_q') and self.attn.norm_q is not None:
                 Q_sa = self.attn.norm_q(Q_sa)
@@ -1084,51 +782,26 @@ class SD3MMJointTransformerBlock(nn.Module):
                 encoder_hidden_states=norm_encoder_hidden_states,
             )
 
-
             attn_output = gate_msa.unsqueeze(1) * attn_output
             hidden_states = hidden_states + attn_output
         else:
-
             hidden_states = norm_hidden_states
             context_attn_output = None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         norm_hidden_states = self.norm2(hidden_states)
         norm_hidden_states = (
             norm_hidden_states * (1 + scale_mlp[:, None]) + shift_mlp[:, None]
         )
         if self._chunk_size is not None:
-
             ff_output = _chunked_feed_forward(
                 self.ff, norm_hidden_states, self._chunk_dim, self._chunk_size
             )
         else:
             ff_output = self.ff(norm_hidden_states)
 
-
-
         ff_output = gate_mlp.unsqueeze(1) * ff_output
 
         hidden_states = hidden_states + ff_output
-
 
         if self.context_pre_only:
             encoder_hidden_states = None
@@ -1143,7 +816,6 @@ class SD3MMJointTransformerBlock(nn.Module):
                 + c_shift_mlp[:, None]
             )
             if self._chunk_size is not None:
-
                 context_ff_output = _chunked_feed_forward(
                     self.ff_context,
                     norm_encoder_hidden_states,
@@ -1158,11 +830,7 @@ class SD3MMJointTransformerBlock(nn.Module):
 
             encoder_hidden_states = encoder_hidden_states + context_ff_output
 
-
         return hidden_states, encoder_hidden_states
-
-
-
 
 class SD3BodyHeadMMJointTransformerBlock(nn.Module):
     r"""
@@ -1183,7 +851,6 @@ class SD3BodyHeadMMJointTransformerBlock(nn.Module):
         dim: int,
         num_heads: int,
         eps: float,
-
 
         context_pre_only: bool = False,
         qk_norm: Optional[str] = None,
@@ -1232,7 +899,6 @@ class SD3BodyHeadMMJointTransformerBlock(nn.Module):
             body_temb, head_temb = temb[:, :temb_size], temb[:, temb_size:]
             cond_dim=1536,
 
-
         body_encoder_hidden_states, head_encoder_hidden_states = (
             encoder_hidden_states[:, :4096],
             encoder_hidden_states[:, 4096:],
@@ -1255,15 +921,12 @@ class SD3BodyHeadMMJointTransformerBlock(nn.Module):
 
         return hidden_states, encoder_hidden_states
 
-
-
     def forward_hand(
         self,
         hidden_states: torch.FloatTensor,
         encoder_hidden_states: torch.FloatTensor,
         temb: torch.FloatTensor = None,
     ):
-
         hand_temb = temb
         hand_hidden_states = hidden_states
         hand_encoder_hidden_states = encoder_hidden_states

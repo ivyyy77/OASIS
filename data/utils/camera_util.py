@@ -59,7 +59,6 @@ def _update_extrinsics(
 
     return new_E
 
-
 def get_camrot(campos, lookat=None, inv_camera=False):
     r""" Compute rotation part of extrinsic matrix from camera posistion and
          where it looks at.
@@ -78,7 +77,6 @@ def get_camrot(campos, lookat=None, inv_camera=False):
     if lookat is None:
         lookat = np.array([0., 0., 0.], dtype=np.float32)
 
-
     up = np.array([0., 1., 0.], dtype=np.float32)
     if inv_camera:
         up[1] *= -1.0
@@ -91,7 +89,6 @@ def get_camrot(campos, lookat=None, inv_camera=False):
 
     camrot = np.array([right, up, forward], dtype=np.float32)
     return camrot
-
 
 def rotate_camera_by_frame_idx(
         extrinsics,
@@ -119,7 +116,6 @@ def rotate_camera_by_frame_idx(
         angle = -angle
     return _update_extrinsics(
                 extrinsics, angle, trans, rotate_axis)
-
 
 def apply_global_tfm_to_camera(E, Rh, Th):
     r""" Get camera extrinsics that considers global transformation.
@@ -166,9 +162,7 @@ def apply_global_tfm_to_camera_mv(E, Rh, Th):
     ret[:3, :3] = rotation
     ret[:3, 3:4] = trans
 
-
     return ret
-
 
 def get_rays_from_KRT(H, W, K, R, T):
     r""" Sample rays on an image based on camera matrices (K, R and T)
@@ -185,7 +179,6 @@ def get_rays_from_KRT(H, W, K, R, T):
         - rays_d: Array (H, W, 3)
     """
 
-
     rays_o = -np.dot(R.T, T).ravel()
 
     i, j = np.meshgrid(np.arange(W, dtype=np.float32),
@@ -198,7 +191,6 @@ def get_rays_from_KRT(H, W, K, R, T):
     rays_d = pixel_world - rays_o[None, None]
     rays_o = np.broadcast_to(rays_o, rays_d.shape)
     return rays_o, rays_d
-
 
 def rays_intersect_3d_bbox(bounds, ray_o, ray_d):
     r"""calculate intersections with 3d bounding box
@@ -236,7 +228,6 @@ def rays_intersect_3d_bbox(bounds, ray_o, ray_d):
     mask_at_box = p_mask_at_box.sum(-1) == 2
     p_intervals = p_intersect[mask_at_box][p_mask_at_box[mask_at_box]].reshape(
         -1, 2, 3)
-
 
     ray_o = ray_o[mask_at_box]
     ray_d = ray_d[mask_at_box]

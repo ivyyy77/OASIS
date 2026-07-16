@@ -27,7 +27,6 @@ from .utils import to_tensor
 
 
 class VertexJointSelector(nn.Module):
-
     def __init__(self, vertex_ids=None,
                  use_hands=True,
                  use_feet_keypoints=True, **kwargs):
@@ -72,8 +71,6 @@ class VertexJointSelector(nn.Module):
 
     def forward(self, vertices, joints):
         extra_joints = torch.index_select(vertices, 1, self.extra_joints_idxs.to(torch.long))
-
-
 
         joints = torch.cat([joints, extra_joints], dim=1)
 
