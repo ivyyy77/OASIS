@@ -1,10 +1,28 @@
-# OASIS
+# OASIS: Occlusion-aware Single-image Hand Avatar Reconstruction via 3D Gaussian Splatting
 
-OASIS reconstructs and adapts an animatable 3D Gaussian hand avatar from a single image. This repository contains the training, InterHand adaptation, wild-image adaptation, editing, annotation generation, and inference code required by the OASIS pipeline.
+This repository contains the official code release for **OASIS: Occlusion-aware Single-image Hand Avatar Reconstruction via 3D Gaussian Splatting**.
 
-## Installation
+[![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://mova-hand.github.io/MOVA/)
 
-The release was validated on Linux with Python 3.10, PyTorch 2.12.0+cu126, and an NVIDIA GH200 GPU. Install a PyTorch build compatible with the CUDA toolkit on your machine before building the CUDA extensions.
+<p align="center">
+  <img src="static/images/teaser.jpg" width="95%" alt="OASIS teaser">
+</p>
+
+<p align="center">
+  <b><i>OASIS</i></b> is a 3DGS-based one-shot hand avatar reconstruction model with efficient adaptation (~5 minutes) and real-time rendering (~390 FPS). We showcase a gallery of one-shot hand avatars that highlights both robustness and diversity: it reconstructs high-fidelity hands under challenging poses, complex textures, and extreme side-view observations, while also supporting human-image inputs and downstream applications such as texture editing and text-to-avatar generation.
+</p>
+
+## 🚀 Getting Started
+
+### 📢 Updates
+
+- [07/2026] Code released.
+
+### ⚙️ Installation
+
+---
+
+We test the CUDA 11.8 environment with Linux, Python 3.10, PyTorch 2.3.0, and torchvision 0.18.0.
 
 ```bash
 git clone https://github.com/ivyyy77/oasis-hand-code.git
@@ -13,148 +31,187 @@ cd oasis-hand-code
 conda create -n oasis python=3.10 -y
 conda activate oasis
 
+pip install rembg
+pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu118
+pip install -U xformers==0.0.26.post1 --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
+
+pip uninstall basicsr -y
+pip install git+https://github.com/XPixelGroup/BasicSR
 pip install "git+https://github.com/facebookresearch/pytorch3d.git"
-pip install "git+https://github.com/ashawkey/diff-gaussian-rasterization.git"
-pip install ./third_party/simple-knn
+pip install git+https://github.com/hitsz-zuoqi/sam2/
+pip install git+https://github.com/ashawkey/diff-gaussian-rasterization/
+pip install git+https://github.com/camenduru/simple-knn/
 ```
 
-`xformers` is optional. The DINOv2 encoder falls back to the standard PyTorch attention implementation when it is unavailable.
+### 📦 Required Assets and Models
 
-## Runtime assets and checkpoint
+---
 
-Small OASIS-specific MANO runtime files are included under `runtime_assets/`. The LHM prior assets are downloaded automatically on the first run when `pretrained_models/` does not exist. A prepared prior directory has the following runtime layout:
+Place the hand model, segmentation, dense-point, and UV assets under the repository root. Prepared examples use MANO annotation pickle files directly, so no separate HaMeR checkpoint is required for the commands below.
+
+Download third-party assets from the official [MANO](https://mano.is.tue.mpg.de/), [SAM 2](https://github.com/facebookresearch/sam2), [Sapiens](https://github.com/facebookresearch/sapiens), and [BiRefNet](https://github.com/ZhengPeng7/BiRefNet) pages, then keep the filenames and folders as below.
 
 ```text
+checkpoint/
+  iteration_30000.ckpt
 pretrained_models/
+  BiRefNet-general-epoch_244.pth
   dense_sample_points/manohd_semantic.ply
-  human_model_files/mano/
+  human_model_files/
+    mano/
   mano_subdiv/mano_subdiv_2.pth
+  sam2/
+  sapiens/pretrained/checkpoints/sapiens_1b/
+mano_uv/
+  change/change_r.npy
+  original mano template/hand.obj
 ```
 
-Download the released OASIS checkpoint and retain its iteration number in the filename:
+### 🧠 Pre-trained Model
+
+---
+
+Use the released OASIS checkpoint as the default prior for reconstruction, evaluation, and finetuning.
+
+```text
+checkpoint/
+  iteration_30000.ckpt
+```
+
+Download the pretrained checkpoint from [Google Drive](https://drive.google.com/file/d/1UVMyPexOIp4GT0We31dW5kTJjEd7Wcdw/view?usp=drive_link) and place it under `checkpoint/iteration_30000.ckpt`. The filename is parsed automatically by the scripts, so the iteration number should remain in the checkpoint name.
 
 ```bash
 mkdir -p checkpoint
-gdown --fuzzy "https://drive.google.com/file/d/1UVMyPexOIp4GT0We31dW5kTJjEd7Wcdw/view?usp=drive_link" \
-  -O checkpoint/iteration_30000.ckpt
+gdown --fuzzy "https://drive.google.com/file/d/1UVMyPexOIp4GT0We31dW5kTJjEd7Wcdw/view?usp=drive_link" -O checkpoint/iteration_30000.ckpt
 ```
 
-Model weights, datasets, experiment outputs, and compiled CUDA binaries are intentionally excluded from Git.
+### 🗂️ Data Preparation
 
-## Data layout
+---
 
-Training uses InterHand2.6M at 5 fps with the HandAvatar/OHTA preprocessing layout:
+Training and evaluation are organized around [InterHand2.6M](https://mks0601.github.io/InterHand2.6M/) 5fps, following the preprocessing pipeline of [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/) for the detailed data processing steps. For in-the-wild samples, refer to [WiLoR](https://github.com/rolpotamias/WiLoR) for hand localization and reconstruction preprocessing, then convert the WiLoR outputs into the image, mask, and MANO annotation triplets shown below.
 
 ```text
-${INTERHAND_ROOT}/
+${DATA_ROOT}/
   annotations/
     train/InterHand2.6M_train_data.json
     train/InterHand2.6M_train_camera.json
     train/InterHand2.6M_train_joint_3d.json
     train/InterHand2.6M_train_MANO_NeuralAnnot.json
-    test/
+    test/...
   InterHand2.6M_5fps_batch1/
     images/
     masks_removeblack/
     preprocess_ohta_our_full/
+
+example_data/text-to-avatar/
+  images/{avatar_3.jpg,iron_man_1.jpg,light_yellow_new.jpg}
+  masks/{avatar_3.png,iron_man_1.png,light_yellow_new.png}
+  anno/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.pkl
+example_data/interhand2.6m/
+  images/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.jpg
+  masks/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.png
+  anno/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.pkl
+example_data/editing/
+  images/rose.jpg
+  masks/{rose.png,rose_edit.png,rose_only.png}
+  anno/rose.pkl
 ```
 
-Wild-image and editing inputs use sibling `images`, `masks`, and `anno` directories. Each image needs a foreground mask and a MANO annotation pickle with the same basename. Editing additionally uses `masks/<name>_edit.png`.
-
-```text
-sample/
-  images/name.jpg
-  masks/name.png
-  masks/name_edit.png
-  anno/name.pkl
-```
-
-The repository includes runnable examples under `example_data/interhand2.6m`, `example_data/editing`, and `example_data/text-to-avatar`.
-
-To export a prepared InterHand frame into this format:
+Generate per-frame InterHand annotations with:
 
 ```bash
 python generate_interhand_anno.py \
-  --dataset-root "$INTERHAND_ROOT" \
-  --output-root example_data/interhand2.6m \
+  --dataset-root ${DATA_ROOT} \
   --subject test/Capture0/ROM03_RT_No_Occlusion \
   --phase test \
   --frame test/Capture0/ROM03_RT_No_Occlusion/cam400272/image15012.jpg
 ```
 
-## One-shot adaptation and inference
+### ✨ Inference / One-shot Reconstruction
 
-The command below runs color inversion, pseudo-view generation, finetuning, and evaluation for the included InterHand image:
+---
+
+For an in-the-wild image, provide a matching mask and MANO annotation in the sibling folders shown above.
 
 ```bash
-python finetune_wild_id2_ohta.py infer.hand_lrm model_name=LHM-1B \
-  --input-dir example_data/interhand2.6m/images/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.jpg \
+python finetune_wild_id2_ohta.py \
+  --input-dir example_data/in_the_wild/images/name.png \
   --checkpoint-file checkpoint/iteration_30000.ckpt \
-  --output-path output/finetune_wild \
+  --output-path output/finetune \
   --iter=400 \
-  --iter_inversion_stage1=100 \
-  --iter_inversion_stage2=0 \
-  --pseudo-views=8 \
+  --iter_inversion_stage1=200 \
   --animate_to_handavatar=False
 ```
 
-Set `--iter=0` to run inversion and inference without the subsequent finetuning stage. Set both inversion counts and `--iter` to zero for a checkpoint-loading and dataset-construction smoke test.
+### 📈 Training and Evaluation
 
-## Training
+---
 
-Both the InterHand preprocessing root and the HandAvatar evaluation root are explicit inputs. They can also be supplied through `INTERHAND_ROOT` and `HANDAVATAR_ROOT`.
+The prior training entry is `train_interhand.py`.
 
 ```bash
 python train_interhand.py infer.hand_lrm model_name=LHM-1B \
-  --dataset-path "$INTERHAND_ROOT" \
-  --handavatar-path "$HANDAVATAR_ROOT" \
   --checkpoint-path checkpoint/interhand \
   --output-path output/interhand \
   --iter=40000
 ```
 
-Evaluate a released checkpoint with the same prepared datasets:
+Evaluation from the released checkpoint:
 
 ```bash
 python train_interhand.py infer.hand_lrm model_name=LHM-1B \
-  --dataset-path "$INTERHAND_ROOT" \
-  --handavatar-path "$HANDAVATAR_ROOT" \
+  --only_eval \
   --checkpoint-file checkpoint/iteration_30000.ckpt \
-  --output-path output/eval_interhand \
-  --only_eval
+  --output-path output/eval_interhand
 ```
 
-## InterHand adaptation
+InterHand adaptation and evaluation use `finetune_interhand_ohta.py` with inversion, pseudo-view generation, and pseudo-GT finetuning.
 
 ```bash
-python finetune_interhand_ohta.py infer.hand_lrm model_name=LHM-1B \
-  --input-dir example_data/interhand2.6m/images/test_Capture0_ROM03_RT_No_Occlusion_cam400272_image15012.jpg \
-  --handavatar-path "$HANDAVATAR_ROOT" \
+python finetune_interhand_ohta.py \
   --checkpoint-file checkpoint/iteration_30000.ckpt \
-  --output-path output/finetune_interhand \
+  --output-path output/finetune_interhand_ohta \
   --iter=1200 \
+  --use_two_stage_inversion=True \
   --iter_inversion_stage1=100 \
   --iter_inversion_stage2=0 \
-  --pseudo-views=8 \
-  --animate_to_handavatar=False
+  --pseudo-views=8
 ```
 
-## Editing
+### 🎨 Editing Finetune
+
+---
+
+For texture or text-to-avatar editing, use the edit-specific wild-image entry. Place the edited target in `images/`, the foreground mask in `masks/`, the edit mask as `masks/name_edit.png`, and the MANO annotation in `anno/`.
 
 ```bash
-python finetune_edit_wild_ohta.py infer.hand_lrm model_name=LHM-1B \
-  --input-dir example_data/editing/images/rose.jpg \
+python finetune_edit_wild_ohta.py \
+  --input-dir example_data/editing/images/pikachu.jpg \
   --checkpoint-file checkpoint/iteration_30000.ckpt \
   --output-path output/finetune_edit \
   --iter=800 \
   --iter_inversion=100 \
   --edit-unmask-iter=0 \
   --edit-mask-weight=30 \
-  --pseudo-views=8 \
-  --animate_to_handavatar=False
+  --pseudo-views=8
 ```
 
-## License
+## 📄 License and Acknowledgements
 
-The code is released under the Apache License 2.0. MANO, InterHand2.6M, LHM, HandAvatar, OHTA, and other third-party components remain subject to their respective licenses.
+The released code is provided under the Apache License 2.0. Please also respect the licenses of MANO, InterHand2.6M, and any downloaded third-party model weights.
+
+We thank [LHM](https://github.com/aigc3d/LHM), [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/), [OHTA](https://github.com/bytedance/OHTA), and [WiLoR](https://github.com/rolpotamias/WiLoR) for their excellent work.
+
+## 📚 Citation
+
+```bibtex
+@inproceedings{oasis2026,
+  title={OASIS: Occlusion-aware Single-image Hand Avatar Reconstruction via 3D Gaussian Splatting},
+  author={Anonymous Authors},
+  booktitle={Conference Name},
+  year={2026},
+  note={Placeholder citation}
+}
+```

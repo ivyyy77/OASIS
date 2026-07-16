@@ -3,7 +3,6 @@ accelerate
 albumentations
 decord
 diffusers
-gin-config
 gdown
 imageio
 imageio-ffmpeg

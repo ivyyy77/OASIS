@@ -32,9 +32,6 @@ from LHM.models.utils import linear
 from .embedder import CameraEmbedder
 from .transformer import TransformerDecoder
 
-from splatformer.utils import loss_utils
-from splatformer.utils.metrics import psnr, ssim
-
 from data.interhand.train import Renderer_mesh
 
 logger = logging.getLogger(__name__)

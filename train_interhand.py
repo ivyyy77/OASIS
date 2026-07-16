@@ -20,7 +20,7 @@ from LHM.runners import REGISTRY_RUNNERS
 from data.interhand.train import Dataset, HandAvatarDataset
 from data.wild_hand_dataset import make_dataloader
 import torch.distributed as dist
-import torch, os, random, gin
+import torch, os, random
 from absl import flags, app
 import numpy as np
 import time
@@ -46,12 +46,6 @@ flags.DEFINE_boolean('resume', False, 'Enable auto-resume from latest checkpoint
 flags.DEFINE_string('checkpoint-file', None, 'Specific checkpoint file to load (overrides checkpoint-path)')
 flags.DEFINE_string('dataset-path', os.environ.get('INTERHAND_ROOT'), 'InterHand2.6M root')
 flags.DEFINE_string('handavatar-path', os.environ.get('HANDAVATAR_ROOT'), 'HandAvatar evaluation root')
-flags.DEFINE_multi_string(
-  'gin_file', 'splatformer/configs/train/default.gin', 'List of paths to the config files.')
-flags.DEFINE_multi_string(
-  'gin_param', '"build_trainloader.batch_size="32', 'Newline separated list of Gin parameter bindings.')
-
-
 flags.DEFINE_integer('iter', '40000', 'Training iteration')
 flags.DEFINE_integer('num_workers', 4, 'Number of DataLoader workers')
 flags.DEFINE_integer('batch_size', 2, 'Default training batch size')
@@ -61,7 +55,6 @@ flags.DEFINE_boolean('pin_memory', True, 'Use pin_memory for DataLoader')
 
 FLAGS = flags.FLAGS
 
-@gin.configurable
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)

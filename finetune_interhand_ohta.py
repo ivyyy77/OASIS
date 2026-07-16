@@ -31,7 +31,7 @@ from data.interhand.train import Dataset, HandAvatarDataset
 from data.wild_hand_dataset import make_dataloader
 import torch.nn as nn
 import torch.distributed as dist
-import torch, os, random, gin
+import torch, os, random
 from absl import flags, app
 import numpy as np
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -61,11 +61,6 @@ flags.DEFINE_string('handavatar-path', os.environ.get('HANDAVATAR_ROOT'), 'HandA
 flags.DEFINE_boolean('compare_with_input', False, 'Compare with input')
 flags.DEFINE_boolean('save_viewer', False, 'Save viewer')
 flags.DEFINE_boolean('use_amp', True, 'Use automatic mixed precision (AMP)')
-flags.DEFINE_multi_string(
-  'gin_file', 'splatformer/configs/train/default.gin', 'List of paths to the config files.')
-flags.DEFINE_multi_string(
-  'gin_param', '"build_trainloader.batch_size="32', 'Newline separated list of Gin parameter bindings.')
-
 flags.DEFINE_integer('test-iter', 9000, 'Test iteration')
 flags.DEFINE_integer('iter', '1200', 'Total training iterations (inversion + finetune)')
 flags.DEFINE_boolean('use_two_stage_inversion', True, 'Whether to use two-stage inversion (stage1 + stage2 with color consistency)')
@@ -84,7 +79,6 @@ DEFAULT_RUNNER = "infer.hand_lrm"
 DEFAULT_MODEL_NAME = "LHM-1B"
 os.environ.setdefault("APP_MODEL_NAME", DEFAULT_MODEL_NAME)
 
-@gin.configurable
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)

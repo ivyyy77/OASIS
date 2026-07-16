@@ -605,7 +605,7 @@ class HandLRMInferrer(Inferrer_hand):
             dump_image_dir: str,
             dump_video_path: str,
             shape_param=None,
-            splatformer_model=None,
+            render_model=None,
             batch=None,
             image_paths=None,
             mask_paths=None,
@@ -733,7 +733,7 @@ class HandLRMInferrer(Inferrer_hand):
                                              render_bg_colors=motion_seq["render_bg_colors"][
                                                               :, batch_i: batch_i + batch_size
                                                               ].to(device),
-                                             model=splatformer_model,
+                                             model=render_model,
                                              gt_img=image_paths[
                                                     batch_i: batch_i + batch_size, :
                                                     ].to(device),
@@ -779,7 +779,7 @@ class HandLRMInferrer(Inferrer_hand):
             dump_image_dir: str,
             dump_video_path: str,
             shape_param=None,
-            splatformer_model=None,
+            render_model=None,
             batch=None,
             image_paths=None,
             mask_paths=None,
@@ -908,7 +908,7 @@ class HandLRMInferrer(Inferrer_hand):
                                             render_intrs=motion_seq["render_intrs"][:, sampled_indices].to(device),
                                             render_bg_colors=motion_seq["render_bg_colors"][:, sampled_indices].to(
                                                 device),
-                                            model=splatformer_model,
+                                            model=render_model,
                                             gt_img=image_paths[sampled_indices, :].to(device),
                                             gt_msk=mask_paths[sampled_indices, :].to(device),
                                             optimizer=optimizer, scheduler=scheduler, scaler=scaler)
@@ -923,7 +923,7 @@ class HandLRMInferrer(Inferrer_hand):
 
 
             shape_param=None,
-            splatformer_model=None,
+            render_model=None,
             batch=None,
             image_paths=None,
             mask_paths=None,
@@ -1006,7 +1006,7 @@ class HandLRMInferrer(Inferrer_hand):
                                             render_intrs=motion_seq["render_intrs"][:, sampled_indices].to(device),
                                             render_bg_colors=motion_seq["render_bg_colors"][:, sampled_indices].to(
                                                 device),
-                                            model=splatformer_model,
+                                            model=render_model,
                                             gt_img=image_paths[sampled_indices, :].to(device),
                                             gt_msk=mask_paths[sampled_indices, :].to(device),
                                             optimizer=optimizer, scheduler=scheduler, scaler=scaler)
