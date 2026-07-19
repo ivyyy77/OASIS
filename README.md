@@ -211,7 +211,7 @@ We thank [LHM](https://github.com/aigc3d/LHM), [3D Gaussian Splatting](https://r
 @inproceedings{oasis2026,
   title={OASIS: Occlusion-aware Single-image Hand Avatar Reconstruction via 3D Gaussian Splatting},
   author={Zhisheng Han and Shiyao Wu and Jiayan Qiu and Yakun Ju and Lu Liu and Le Zhang and Pengfei Feng and Huiyu Zhou and Zheheng Jiang},
-  booktitle={ACM MM},
+  booktitle={Proceedings of the 34th ACM International Conference on Multimedia},
   year={2026}
 }
 ```
