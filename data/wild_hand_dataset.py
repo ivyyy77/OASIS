@@ -1057,7 +1057,6 @@ def _resolve_mano_uv_root():
         base_path = Path(base_str)
 
     candidates = [
-        base_path.parents[1] / 'runtime_assets' / 'mano_uv',
         base_path.parents[1] / 'mano_uv',
         base_path.parents[2] / 'mano_uv',
         base_path.parents[3] / 'mano_uv',
@@ -1069,4 +1068,4 @@ def _resolve_mano_uv_root():
         if change_file.exists() and obj_file.exists():
             print(f"Using MANO UV assets from: {candidate}")
             return candidate
-    raise FileNotFoundError('Unable to locate runtime_assets/mano_uv.')
+    raise FileNotFoundError('Unable to locate mano_uv.')

@@ -81,8 +81,12 @@ finetune_interhand.py
 !data/**/README.md
 !data/**/put_*
 
-!runtime_assets/
-!runtime_assets/**/
-!runtime_assets/manohd_lbs_weights.pth
-!runtime_assets/mano_uv/change/change_r.npy
-!runtime_assets/mano_uv/original mano template/hand.obj
+!mano_uv/
+!mano_uv/**/
+!mano_uv/change/change_r.npy
+!mano_uv/original mano template/hand.obj
+!pretrained_models/
+!pretrained_models/**/
+!pretrained_models/manohd_lbs_weights.pth
+!pretrained_models/dense_sample_points/
+!pretrained_models/dense_sample_points/manohd_semantic.ply

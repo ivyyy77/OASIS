@@ -54,7 +54,7 @@ def make_cfg():
     cfg.set_new_allowed(True)
     cfg.merge_from_file(str(config_dir / 'interhand' / 'test_cap0.yaml'))
     cfg.smpl_cfg.lbs_weights = str(
-        config_dir.parents[3] / 'runtime_assets' / 'manohd_lbs_weights.pth'
+        config_dir.parents[3] / 'pretrained_models' / 'manohd_lbs_weights.pth'
     )
     parse_cfg(cfg)
 
@@ -69,7 +69,7 @@ def make_cfg_left():
     cfg.set_new_allowed(True)
     cfg.merge_from_file(str(config_dir / 'interhand' / 'test_cap0_left.yaml'))
     cfg.smpl_cfg.lbs_weights = str(
-        config_dir.parents[3] / 'runtime_assets' / 'manohd_lbs_weights.pth'
+        config_dir.parents[3] / 'pretrained_models' / 'manohd_lbs_weights.pth'
     )
     parse_cfg(cfg)
 

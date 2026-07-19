@@ -135,7 +135,6 @@ def _read_mano_uv_obj(filename: str):
 def _resolve_mano_uv_root():
     base_path = Path(__file__).resolve()
     candidates = [
-        base_path.parents[2] / 'runtime_assets' / 'mano_uv',
         base_path.parents[2] / 'mano_uv',
         base_path.parents[3] / 'mano_uv',
         base_path.parents[3] / 'GuassianHand' / 'mano_uv',
@@ -145,7 +144,7 @@ def _resolve_mano_uv_root():
         obj_file = candidate / 'original mano template' / 'hand.obj'
         if change_file.exists() and obj_file.exists():
             return candidate
-    raise FileNotFoundError('Unable to locate runtime_assets/mano_uv.')
+    raise FileNotFoundError('Unable to locate mano_uv.')
 
 class Dataset(torch.utils.data.Dataset):
     @torch.no_grad()

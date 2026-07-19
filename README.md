@@ -59,6 +59,7 @@ checkpoint/
   iteration_30000.ckpt
 pretrained_models/
   dense_sample_points/manohd_semantic.ply
+  manohd_lbs_weights.pth
   human_model_files/
     mano/
 mano_uv/
