@@ -145,7 +145,6 @@ For an in-the-wild image, provide a matching mask and MANO annotation in the sib
 python finetune_wild_id2_ohta.py \
   --input-dir example_data/in_the_wild/images/name.png \
   --checkpoint-file checkpoint/iteration_30000.ckpt \
-  --output-path output/finetune \
   --iter=400 \
   --iter_inversion_stage1=200 \
   --animate_to_handavatar=False
@@ -162,7 +161,7 @@ Here `--iter` is the number of training iterations, while `checkpoint/iteration_
 python train_interhand.py infer.hand_lrm model_name=LHM-1B \
   --checkpoint-path checkpoint/interhand \
   --output-path output/interhand \
-  --iter=40000
+  --iter=30000
 ```
 
 Evaluation from the released checkpoint:
@@ -178,13 +177,7 @@ InterHand adaptation and evaluation use `finetune_interhand_ohta.py` with invers
 
 ```bash
 python finetune_interhand_ohta.py \
-  --checkpoint-file checkpoint/iteration_30000.ckpt \
-  --output-path output/finetune_interhand_ohta \
-  --iter=1200 \
-  --use_two_stage_inversion=True \
-  --iter_inversion_stage1=100 \
-  --iter_inversion_stage2=0 \
-  --pseudo-views=8
+  --checkpoint-file checkpoint/iteration_30000.ckpt
 ```
 
 ### 🎨 Editing Finetune
@@ -196,13 +189,7 @@ For texture or text-to-avatar editing, use the edit-specific wild-image entry. P
 ```bash
 python finetune_edit_wild_ohta.py \
   --input-dir example_data/editing/images/pikachu.jpg \
-  --checkpoint-file checkpoint/iteration_30000.ckpt \
-  --output-path output/finetune_edit \
-  --iter=800 \
-  --iter_inversion=100 \
-  --edit-unmask-iter=0 \
-  --edit-mask-weight=30 \
-  --pseudo-views=8
+  --checkpoint-file checkpoint/iteration_30000.ckpt
 ```
 
 ## 📄 License and Acknowledgements
