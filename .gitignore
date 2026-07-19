@@ -68,8 +68,6 @@ test_hand.py
 test_hanco.py
 render_piano.py
 finetune_wild_ohta.py
-finetune_wild.py
-finetune_interhand.py
 
 # Keep the lightweight dataset source/config package while excluding real data.
 !data/

@@ -142,7 +142,7 @@ python generate_interhand_anno.py \
 For an in-the-wild image, provide a matching mask and MANO annotation in the sibling folders shown above.
 
 ```bash
-python finetune_wild_id2_ohta.py \
+python finetune_wild.py \
   --input-dir example_data/in_the_wild/images/name.png \
   --checkpoint-file checkpoint/iteration_30000.ckpt \
   --iter=400 \
@@ -173,10 +173,10 @@ python train_interhand.py infer.hand_lrm model_name=LHM-1B \
   --output-path output/eval_interhand
 ```
 
-InterHand adaptation and evaluation use `finetune_interhand_ohta.py` with inversion, pseudo-view generation, and pseudo-GT finetuning.
+InterHand adaptation and evaluation use `finetune_interhand.py` with inversion, pseudo-view generation, and pseudo-GT finetuning.
 
 ```bash
-python finetune_interhand_ohta.py \
+python finetune_interhand.py \
   --checkpoint-file checkpoint/iteration_30000.ckpt
 ```
 
@@ -187,8 +187,8 @@ python finetune_interhand_ohta.py \
 For texture or text-to-avatar editing, use the edit-specific wild-image entry. Place the edited target in `images/`, the foreground mask in `masks/`, the edit mask as `masks/name_edit.png`, and the MANO annotation in `anno/`.
 
 ```bash
-python finetune_edit_wild_ohta.py \
-  --input-dir example_data/editing/images/pikachu.jpg \
+python finetune_edit.py \
+  --input-dir example_data/editing/images/rose.jpg \
   --checkpoint-file checkpoint/iteration_30000.ckpt
 ```
 
