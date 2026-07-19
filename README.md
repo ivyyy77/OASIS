@@ -48,21 +48,18 @@ pip install git+https://github.com/camenduru/simple-knn/
 
 ---
 
-Place the hand model, segmentation, dense-point, and UV assets under the repository root. Prepared examples use MANO annotation pickle files directly, so no separate HaMeR checkpoint is required for the commands below.
+Place the runtime assets under the repository root. The cleaned release no longer needs the old segmentation / preprocessing weights for the commands below. Prepared examples use MANO annotation pickle files directly, so no separate HaMeR checkpoint is required.
 
-Download third-party assets from the official [MANO](https://mano.is.tue.mpg.de/), [SAM 2](https://github.com/facebookresearch/sam2), [Sapiens](https://github.com/facebookresearch/sapiens), and [BiRefNet](https://github.com/ZhengPeng7/BiRefNet) pages, then keep the filenames and folders as below.
+Download the required third-party assets from the official [MANO](https://mano.is.tue.mpg.de/) page and keep the filenames and folders as below.
 
 ```text
 checkpoint/
   iteration_30000.ckpt
 pretrained_models/
-  BiRefNet-general-epoch_244.pth
   dense_sample_points/manohd_semantic.ply
   human_model_files/
     mano/
   mano_subdiv/mano_subdiv_2.pth
-  sam2/
-  sapiens/pretrained/checkpoints/sapiens_1b/
 mano_uv/
   change/change_r.npy
   original mano template/hand.obj
