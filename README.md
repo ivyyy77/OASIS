@@ -48,11 +48,16 @@ pip install git+https://github.com/camenduru/simple-knn/
 
 ---
 
-Place the runtime assets under the repository root. The cleaned release no longer needs the old segmentation / preprocessing weights for the commands below. Prepared examples use MANO annotation pickle files directly, so no separate HaMeR checkpoint is required.
+Required runtime assets:
 
-`pretrained_models/dense_sample_points/manohd_semantic.ply` is derived from the [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/) pipeline and is kept in the same `pretrained_models/` layout used by the code.
+- `checkpoint/iteration_30000.ckpt`
+- `pretrained_models/dense_sample_points/manohd_semantic.ply`
+- `pretrained_models/manohd_lbs_weights.pth`
+- `pretrained_models/human_model_files/mano/`
+- `mano_uv/change/change_r.npy`
+- `mano_uv/original mano template/hand.obj`
 
-Download the required third-party assets from the official [MANO](https://mano.is.tue.mpg.de/) page and keep the filenames and folders as below.
+`pretrained_models/dense_sample_points/manohd_semantic.ply` is derived from the [HandAvatar](https://seanchenxy.github.io/HandAvatarWeb/) pipeline.
 
 ```text
 checkpoint/
