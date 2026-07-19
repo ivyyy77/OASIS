@@ -156,6 +156,7 @@ python finetune_wild_id2_ohta.py \
 ---
 
 The prior training entry is `train_interhand.py`.
+Here `--iter` is the number of training iterations, while `checkpoint/iteration_30000.ckpt` is the released checkpoint used for evaluation and finetuning demos.
 
 ```bash
 python train_interhand.py infer.hand_lrm model_name=LHM-1B \
