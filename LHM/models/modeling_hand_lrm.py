@@ -1307,94 +1307,11 @@ class ModelHandLRM(nn.Module):
 
     def forward_encode_image(self, image):
         """
-        Return the three image representations consumed by ``forward_latent_points``:
-        local tokens ``[B, N, C]``, a spatial feature map ``[B, C, H, W]``,
-        and a global token ``[B, C]``.
-
-        The released checkpoint serializes an older encoder module.  That
-        module may return a single tensor instead of the current
-        ``(local_tokens, feature_map, cls_token)`` tuple, so normalise both
-        interfaces here rather than relying on tuple unpacking at the call
-        site.
+        Encode image and construct combined feature map (RGB + DINO) for UV mapping.
+        Returns: image_feats (feature map), feature (intermediate), cls_token, combined_feats
         """
         encoder_out = self.encoder(image)
-
-        local_tokens = feature_map = cls_token = None
-        if isinstance(encoder_out, dict):
-            local_tokens = encoder_out.get("local_tokens", encoder_out.get("features"))
-            feature_map = encoder_out.get("feature_map", encoder_out.get("feature"))
-            cls_token = encoder_out.get("cls_token")
-        elif isinstance(encoder_out, (tuple, list)):
-            if len(encoder_out) >= 3:
-                local_tokens, feature_map, cls_token = encoder_out[:3]
-            elif len(encoder_out) == 1:
-                encoder_out = encoder_out[0]
-            else:
-                raise RuntimeError(
-                    "Image encoder must return a tensor or "
-                    "(local_tokens, feature_map, cls_token); "
-                    f"received {len(encoder_out)} values."
-                )
-
-        if local_tokens is None and isinstance(encoder_out, torch.Tensor):
-            local_tokens = encoder_out
-        if local_tokens is None and isinstance(feature_map, torch.Tensor):
-            local_tokens = feature_map
-
-        if not isinstance(local_tokens, torch.Tensor):
-            raise RuntimeError(
-                "Unsupported image encoder output type: "
-                f"{type(encoder_out).__name__}."
-            )
-
-        if local_tokens.ndim == 4:
-            # Legacy encoders can return only a spatial feature map.
-            feature_map = local_tokens if feature_map is None else feature_map
-            local_tokens = feature_map.flatten(2).transpose(1, 2).contiguous()
-        elif local_tokens.ndim == 3:
-            # A legacy token-only encoder may append one global token after a
-            # square local grid.
-            token_count = local_tokens.shape[1]
-            grid_tokens = token_count
-            side = math.isqrt(grid_tokens)
-            if side * side != grid_tokens:
-                grid_tokens = token_count - 1
-                side = math.isqrt(grid_tokens)
-                if side * side != grid_tokens:
-                    raise RuntimeError(
-                        "Token-only image encoder must return a square token grid "
-                        "or a square grid followed by one global token; "
-                        f"received {token_count} tokens."
-                    )
-                if cls_token is None:
-                    cls_token = local_tokens[:, -1, :]
-                local_tokens = local_tokens[:, :grid_tokens, :]
-
-            if feature_map is None:
-                feature_map = local_tokens.transpose(1, 2).reshape(
-                    local_tokens.shape[0], local_tokens.shape[2], side, side
-                ).contiguous()
-        else:
-            raise RuntimeError(
-                "Image encoder features must have shape [B, N, C] or [B, C, H, W], "
-                f"got {tuple(local_tokens.shape)}."
-            )
-
-        if not isinstance(feature_map, torch.Tensor) or feature_map.ndim != 4:
-            raise RuntimeError(
-                "Image encoder feature map must have shape [B, C, H, W], "
-                f"got {getattr(feature_map, 'shape', None)}."
-            )
-
-        if cls_token is None:
-            cls_token = local_tokens.mean(dim=1)
-        if not isinstance(cls_token, torch.Tensor) or cls_token.ndim != 2:
-            raise RuntimeError(
-                "Image encoder global token must have shape [B, C], "
-                f"got {getattr(cls_token, 'shape', None)}."
-            )
-
-        return local_tokens, feature_map, cls_token
+        return encoder_out
 
     @torch.compile
     def forward_latent_points(self, vis_mask, nail_image, uv_map_dict, image, vis_msk=None, camera=None, query_points=None, posed_points=None):
